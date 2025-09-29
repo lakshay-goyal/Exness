@@ -28,11 +28,10 @@ async function main() {
         const trade_id = trade.data.t;
         const side = trade.data.m ? "sell" : "buy";
 
-        // Insert into TimescaleDB
         await db.getClient().query(
           `INSERT INTO trades (time, symbol, price, volume, trade_id, side)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT DO NOTHING;`,
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT DO NOTHING;`,
           [time, symbol, price, volume, trade_id, side]
         );
 
