@@ -1,10 +1,20 @@
-export function Button({ children, className, ...props }: React.ComponentPropsWithoutRef<"button">) {
+"use client";
+
+import { ReactNode } from "react";
+
+interface ButtonProps {
+  children: ReactNode;
+  className?: string;
+  appName: string;
+}
+
+export const Button = ({ children, className, appName }: ButtonProps) => {
   return (
     <button
-      className={`relative rounded-full px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-opacity-80 ${className}`}
-      {...props}
+      className={className}
+      onClick={() => alert(`Hello from your ${appName} app!`)}
     >
       {children}
     </button>
   );
-}
+};

@@ -64,9 +64,9 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
           constant.secondaryRedisStream,
           (result: any) => {
             if (result.function === "createUser") {
-              if (result.message === userId) {
+              if (result.message === userId || result.message === "user Already Exist") {
                 console.log("user created")
-                return res.redirect(config.FRONTEND_URL);
+                return res.redirect(`${config.FRONTEND_URL}/dashboard`);
               } else {
                 console.log(result.message);
                 return res.send("User already existed")

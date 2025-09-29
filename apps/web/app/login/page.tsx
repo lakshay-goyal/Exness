@@ -1,68 +1,74 @@
-// "use client"; // Not present, but good to check if it was added
+"use client";
 
-// import { useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import axios from 'axios';
+import {config} from "@repo/config"
 
 const Login = () => {
-  // const [email, setEmail] = useState('');
-  // const [isSubmitted, setIsSubmitted] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!email) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
 
-  //   setIsLoading(true);
+    setIsLoading(true);
     
-  //   // Simulate API call
-  //   setTimeout(() => {
-  //     setIsLoading(false);
-  //     // Redirect to dashboard after successful "login"
-  //     window.location.href = '/dashboard';
-  //   }, 1500);
-  // };
+    try {
+      const response = await axios.post(`${config.BACKEND_URL}/api/v1/auth/login`, {
+        email: email
+      });
+      console.log('Login successful:', response.data);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Login failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // if (isSubmitted) {
-  //   return (
-  //     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-  //       <div className="max-w-md w-full">
-  //         <div className="text-center">
-  //           <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
-  //             <svg className="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-  //               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  //             </svg>
-  //           </div>
-  //           <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
-  //           <p className="text-muted-foreground mb-8">
-  //             We've sent a trading account setup link to <strong>{email}</strong>. 
-  //             Click the link in the email to complete your registration and start trading.
-  //           </p>
-  //           <div className="space-y-4">
-  //             <button 
-  //               onClick={() => {
-  //                 setIsSubmitted(false);
-  //                 setEmail('');
-  //               }}
-  //               className="w-full px-6 py-3 border border-border rounded-lg font-medium hover:bg-accent transition-colors"
-  //             >
-  //               Use Different Email
-  //             </button>
-  //             <Link 
-  //               href="/"
-  //               className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90 transition-colors"
-  //             >
-  //               Back to Home
-  //             </Link>
-  //           </div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
+            <p className="text-muted-foreground mb-8">
+              We've sent a trading account setup link to <strong>{email}</strong>. 
+              Click the link in the email to complete your registration and start trading.
+            </p>
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setEmail('');
+                }}
+                className="w-full px-6 py-3 border border-border rounded-lg font-medium hover:bg-accent transition-colors"
+              >
+                Use Different Email
+              </button>
+              <Link 
+                href="/"
+                className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90 transition-colors"
+              >
+                Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -89,7 +95,7 @@ const Login = () => {
           </div>
 
           <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
                   Email Address
@@ -97,8 +103,8 @@ const Login = () => {
                 <input
                   type="email"
                   id="email"
-                  // value={email}
-                  // onChange={(e) => setEmail(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
                   placeholder="Enter your email address"
                   required
@@ -107,10 +113,10 @@ const Login = () => {
 
               <button
                 type="submit"
-                // disabled={!email || isLoading}
+                disabled={!email || isLoading}
                 className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               >
-                {/* {isLoading ? (
+                {isLoading ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -120,8 +126,7 @@ const Login = () => {
                   </>
                 ) : (
                   'Get Started'
-                )} */}
-                Get Started
+                )}
               </button>
             </form>
 
@@ -139,7 +144,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Benefits */}
           <div className="mt-12 space-y-4">
             <h3 className="text-lg font-semibold text-center mb-6">Why Choose CryptoCFD?</h3>
             
@@ -182,7 +186,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Risk Warning */}
           <div className="mt-8 p-4 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground">
               <strong>Risk Warning:</strong> CFDs are complex instruments and come with a high risk of losing money rapidly due to leverage. 

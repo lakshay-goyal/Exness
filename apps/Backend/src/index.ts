@@ -3,6 +3,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { config } from "@repo/config";
 import helmet from "helmet";
+import cors from 'cors';
 
 const app = express();
 const PORT = config.PORT;
@@ -12,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(helmet());
+app.use(cors())
 
 // Now, modify the CSP to be less restrictive
 app.use(

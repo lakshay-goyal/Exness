@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 export default function Page(){
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 text-foreground font-bricolage">
-      {/* Navigation */}
       <nav className="fixed top-0 w-full bg-background/80 backdrop-blur-md border-b border-border/50 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -36,7 +35,6 @@ export default function Page(){
               <Button 
                 variant="ghost" 
                 size="sm"
-                // onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -46,21 +44,8 @@ export default function Page(){
           </div>
         </div>
 
-        {/* Mobile menu */}
-        {/* {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-b border-border">
-              <a href="#features" className="block px-3 py-2 hover:bg-accent rounded-md">Features</a>
-              <a href="#how-it-works" className="block px-3 py-2 hover:bg-accent rounded-md">How it Works</a>
-              <a href="#markets" className="block px-3 py-2 hover:bg-accent rounded-md">Markets</a>
-              <a href="#security" className="block px-3 py-2 hover:bg-accent rounded-md">Security</a>
-              <Link href="/login" className="block px-3 py-2 hover:bg-accent rounded-md font-medium">Login</Link>
-            </div>
-          </div>
-        )} */}
       </nav>
 
-      {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="max-w-7xl mx-auto text-center">
           <div className="animate-fade-in">
@@ -86,7 +71,6 @@ export default function Page(){
             </Button>
           </div>
           
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 pt-12 border-t border-border/50">
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">$2.4B+</div>
@@ -108,7 +92,6 @@ export default function Page(){
         </div>
       </section>
 
-      {/* Features Section */}
       <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-accent/5 to-background">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
@@ -218,7 +201,6 @@ export default function Page(){
         </div>
       </section>
 
-      {/* How It Works */}
       <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -288,7 +270,6 @@ export default function Page(){
         </div>
       </section>
 
-      {/* Markets */}
       <section id="markets" className="py-20 px-4 sm:px-6 lg:px-8 bg-accent/20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -339,7 +320,6 @@ export default function Page(){
         </div>
       </section>
 
-      {/* Security */}
       <section id="security" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -424,7 +404,6 @@ export default function Page(){
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-8">
@@ -438,14 +417,13 @@ export default function Page(){
             <Button size="lg" className="px-8 py-6 text-lg font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90" asChild>
               <Link href="/login">Open Live Account</Link>
             </Button>
-            <Button variant="ghost" size="lg" className="px-8 py-6 text-lg font-semibold border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+            <Button variant="outline" size="lg" className="px-8 py-6 text-lg font-semibold border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
               Try Demo Account
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-accent/20 border-t border-border">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
