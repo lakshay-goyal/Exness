@@ -637,17 +637,6 @@ const Dashboard = () => {
                   </div>
                 </Button>
               </div>
-
-              <Tabs defaultValue="market" className="mb-4">
-                <TabsList className="grid w-full grid-cols-2 h-8">
-                  <TabsTrigger value="market" className="text-xs">
-                    Market
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="text-xs">
-                    Pending
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
             </div>
 
             {/* Order Parameters */}
@@ -776,9 +765,6 @@ const Dashboard = () => {
             <TabsList className="h-8">
               <TabsTrigger value="open" className="text-xs">
                 Open ({orders.filter((o) => o.status === "open").length})
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs">
-                Pending
               </TabsTrigger>
               <TabsTrigger value="closed" className="text-xs">
                 Closed
