@@ -1,14 +1,13 @@
 {
-  "name": "batch_upload",
+  "name": "@repo/timescaledb",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch ./index.ts"
   },
-  "dependencies": {
-    "@repo/config": "workspace:*",
-    "@repo/timescaledb": "workspace:*"
+  "exports":{
+    ".": "./index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

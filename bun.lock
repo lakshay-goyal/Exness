@@ -47,6 +47,7 @@
       "name": "batch_upload",
       "dependencies": {
         "@repo/config": "workspace:*",
+        "@repo/timescaledb": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -199,6 +200,15 @@
       "devDependencies": {
         "postcss": "^8.5.3",
         "tailwindcss": "^4.1.5",
+      },
+    },
+    "packages/timescaledb": {
+      "name": "@repo/timescaledb",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
       },
     },
     "packages/types": {
@@ -421,6 +431,8 @@
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
 
     "@repo/tailwind-config": ["@repo/tailwind-config@workspace:packages/tailwind-config"],
+
+    "@repo/timescaledb": ["@repo/timescaledb@workspace:packages/timescaledb"],
 
     "@repo/types": ["@repo/types@workspace:packages/types"],
 

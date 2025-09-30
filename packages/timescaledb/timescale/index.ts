@@ -1,6 +1,6 @@
 import pkg from "pg";
 const { Client } = pkg;
-import { config } from "../env/index";
+import { config } from "@repo/config";
 
 class TimeScaleDB {
   private client: pkg.Client;

@@ -1,6 +1,6 @@
-import { constant, timeScaleDB, config, redisClient } from "@repo/config";
+import { constant, config, redisClient } from "@repo/config";
 import "dotenv/config";
-
+import { timeScaleDB } from "@repo/timescaledb";
 const db = timeScaleDB();
 
 async function main() {

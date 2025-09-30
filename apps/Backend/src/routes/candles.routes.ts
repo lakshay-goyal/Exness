@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { timeScaleDB } from "@repo/config";
+import { timeScaleDB } from "@repo/timescaledb";
 
 const candleRouter = Router();
 const client = timeScaleDB();
