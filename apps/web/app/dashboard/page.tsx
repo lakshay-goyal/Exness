@@ -13,6 +13,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createChart, ColorType } from "lightweight-charts";
 import type { UTCTimestamp } from "lightweight-charts";
 import axios from "axios";
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp,
   TrendingDown,
@@ -304,6 +306,15 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, loading, router]);
+
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:7070/");
 
@@ -370,8 +381,8 @@ const Dashboard = () => {
       console.log("WebSocket connection closed");
     };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    ws.onerror = (event) => {
+      console.error("WebSocket error:", JSON.stringify(event));
     };
 
     return () => {

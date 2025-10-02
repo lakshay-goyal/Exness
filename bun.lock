@@ -137,6 +137,7 @@
       },
       "devDependencies": {
         "@next/eslint-plugin-next": "^15.4.6",
+        "@repo/config": "workspace:*",
         "@repo/eslint-config": "*",
         "@repo/tailwind-config": "*",
         "@repo/typescript-config": "*",

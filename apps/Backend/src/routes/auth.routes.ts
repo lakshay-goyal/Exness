@@ -24,7 +24,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
     } else {
       console.log(`${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
     }
-    res.json({ message: "Verification link send", email, token });
+    res.json({ message: "Verification link send", email});
   } catch (error) {
     res.status(401).send(error);
   }
@@ -43,11 +43,12 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
     const verify = jwt.verify(realToken, jwtSecret);
 
     if (verify) {
-      res.cookie("token", realToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 15 * 60 * 1000 * 60 * 60, // 15 days
-      });
+      // Removed cookie setting to rely solely on localStorage for token management
+      // res.cookie("token", realToken, {
+      //   httpOnly: true,
+      //   sameSite: "lax",
+      //   maxAge: 15 * 60 * 1000 * 60 * 60, // 15 days
+      // });
 
       const userEmail = (verify as jwt.JwtPayload).email;
       const userId = (verify as jwt.JwtPayload).userId;
@@ -66,7 +67,8 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
             if (result.function === "createUser") {
               if (result.message === userId || result.message === "user Already Exist") {
                 console.log("user created")
-                return res.redirect(`${config.FRONTEND_URL}/dashboard`);
+                // Redirect to frontend dashboard with token as query parameter
+                return res.redirect(`${config.FRONTEND_URL}/dashboard?token=${realToken}`);
               } else {
                 console.log(result.message);
                 return res.send("User already existed")

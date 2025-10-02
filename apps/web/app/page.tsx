@@ -417,7 +417,7 @@ export default function Page(){
             <Button size="lg" className="px-8 py-6 text-lg font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90" asChild>
               <Link href="/login">Open Live Account</Link>
             </Button>
-            <Button variant="outline" size="lg" className="px-8 py-6 text-lg font-semibold border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+            <Button variant="ghost" size="lg" className="px-8 py-6 text-lg font-semibold border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
               Try Demo Account
             </Button>
           </div>

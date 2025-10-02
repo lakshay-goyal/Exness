@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import {config} from "@repo/config"
+import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,10 +18,12 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${config.BACKEND_URL}/api/v1/auth/login`, {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/login`, {
         email: email
       });
       console.log('Login successful:', response.data);
+      // Assuming response.data contains a token field
+      login(response.data.token);
       setIsSubmitted(true);
     } catch (error) {
       console.error('Login failed:', error);
