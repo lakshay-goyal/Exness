@@ -1,11 +1,9 @@
 import express, { type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { authMiddleware } from "../middleware/auth.js";
-import { config, constant, redisStreams } from "@repo/config";
+import { config, constant } from "@repo/config";
 
-// connect redis streams
-const RedisStreams = redisStreams(config.REDIS_URL);
-await RedisStreams.connect();
+// Use shared Redis Streams client from app.locals (initialized in index.ts)
 
 const balanceRouter = express.Router();
 const jwtSecret = config.JWT_SECRET;
@@ -26,36 +24,40 @@ balanceRouter.get("/", async (req: Request, res: Response) => {
     const userId = '1003d930-5530-4527-a6d1-db50530316f8';
     console.log("userId", userId);
 
+    const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
+
     await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "getBalance",
       userId,
     });
 
     try {
-      await RedisStreams.readRedisStream(
+      const payload = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        (payload: any) => {
-          console.log(payload.message / 100);
-          if (payload.function === "getBalance") {
-            if (payload.message > 0) {
-              if (!res.headersSent) {
-                return res.json({
-                  status: "success",
-                  message: payload.message,
-                });
-              }
-            } else {
-              console.log("Check", payload, userId);
-              if (!res.headersSent) {
-                return res.json({
-                  status: "exists",
-                  message: "User already existed ❌",
-                });
-              }
-            }
+        0
+      );
+
+      if (!payload) {
+        return res.status(504).json({ status: "timeout", message: "No data" });
+      }
+
+      if (payload.function === "getBalance") {
+        if (payload.message > 0) {
+          if (!res.headersSent) {
+            return res.json({
+              status: "success",
+              message: payload.message,
+            });
+          }
+        } else {
+          if (!res.headersSent) {
+            return res.json({
+              status: "exists",
+              message: "User already existed ❌",
+            });
           }
         }
-      );
+      }
     } catch (e) {
       return res.status(411).json({
         message: "Trade not placed",

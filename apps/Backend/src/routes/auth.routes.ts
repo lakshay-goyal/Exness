@@ -2,14 +2,11 @@ import express, { type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { nodemailerSender } from "@repo/utils";
 import { v4 as uuidv4 } from "uuid";
-import { config, constant, redisStreams } from "@repo/config";
-import {readRedisStreams} from '../utils/readRedisStreams';
+import { config, constant } from "@repo/config";
 
 const authRouter = express.Router();
 
-// connect redis streams
-const RedisStreams = redisStreams(config.REDIS_URL);
-const readRedisStream = readRedisStreams(config.REDIS_URL);
+// Use shared Redis Streams client from app.locals (initialized in index.ts)
 const jwtSecret = config.JWT_SECRET;
 
 authRouter.post("/login", async (req: Request, res: Response) => {
@@ -38,8 +35,6 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
   // const startTime = Date.now();
 
   try {
-    await RedisStreams.connect();
-    await readRedisStream.connect();
     const verify = jwt.verify(realToken, jwtSecret);
 
     if (verify) {
@@ -54,6 +49,8 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
       const userId = (verify as jwt.JwtPayload).userId;
       console.log("Token Value: ", userEmail, userId);
 
+      const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
+
       await RedisStreams.addToRedisStream(constant.redisStream, {
         function: "createUser",
         userId,
@@ -61,21 +58,17 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
       });
 
       try {
-        await readRedisStream.readRedisStream(
+        const result = await RedisStreams.readNextFromRedisStream(
           constant.secondaryRedisStream,
-          (result: any) => {
-            if (result.function === "createUser") {
-              if (result.message === userId || result.message === "user Already Exist") {
-                console.log("user created")
-                // Redirect to frontend dashboard with token as query parameter
-                return res.redirect(`${config.FRONTEND_URL}/dashboard?token=${realToken}`);
-              } else {
-                console.log(result.message);
-                return res.send("User already existed")
-              }
-            }
-          }
+          0
         );
+        if (result && result.function === "createUser") {
+          if (result.message === userId || result.message === "user Already Exist") {
+            return res.redirect(`${config.FRONTEND_URL}/dashboard?token=${realToken}`);
+          } else {
+            return res.send("User already existed")
+          }
+        }
       } catch (e) {
         res.status(411).json({
           message: "Trade not placed",
@@ -84,7 +77,6 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
 
     }
 
-    await RedisStreams.disconnect();
     return res.status(401).send("Invalid token ❌");
   } catch (err) {
     return res.status(401).send("Token expired or invalid ❌");

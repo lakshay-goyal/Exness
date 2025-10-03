@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { config } from "@repo/config";
+import { config, redisStreams } from "@repo/config";
 import helmet from "helmet";
 import cors from 'cors';
 
@@ -31,6 +31,11 @@ import balanceRouter from './routes/balance.routes.js';
 import assetRouter from './routes/assets.routes.js';
 import candleRouter from './routes/candles.routes.js';
 import tradeRouter from './routes/trade.routes.js';
+
+// Initialize a single Redis Streams client and share via app.locals
+const RedisStreams = redisStreams(config.REDIS_URL);
+await RedisStreams.connect();
+app.locals.redisStreams = RedisStreams;
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/balance', balanceRouter)
 app.use('/api/v1/supportedAssets', assetRouter)

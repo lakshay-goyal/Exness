@@ -5,7 +5,13 @@ import { tradeFunction } from "./functions/tradeFunction.js";
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
-await RedisStreams.readRedisStream(
-  constant.redisStream,
-  tradeFunction
-);
+// Continuously consume next messages and dispatch to tradeFunction
+while (true) {
+  const result = await RedisStreams.readNextFromRedisStream(
+    constant.redisStream,
+    0
+  );
+  if (result) {
+    await tradeFunction(result);
+  }
+}

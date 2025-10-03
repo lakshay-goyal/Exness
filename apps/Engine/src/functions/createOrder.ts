@@ -9,7 +9,7 @@ const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function createOrderFunction(result: any) {
-  console.log(result);
+  console.log(prices);
 
   console.log("Good");
   // Check if a user with the same email already exists
