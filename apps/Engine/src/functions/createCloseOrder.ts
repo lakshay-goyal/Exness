@@ -25,10 +25,22 @@ export async function createCloseOrderFunction(result: any) {
       });
     } else {
       openOrders.splice(openOrders.indexOf(order), 1);
-      
+
+      const orderResult = {
+        ...order,
+        closePrice: 0,
+        closeTime: new Date(),
+        profitLoss: 0,
+      };
+
+      await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+        function:"createCloseOrder",
+        message: orderResult,
+      });
+
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function:"createCloseOrder",
-        message: order,
+        message: orderResult,
       });
       console.log("Closing order found", order);
     }
@@ -40,12 +52,3 @@ export async function createCloseOrderFunction(result: any) {
   }
   
 }
-
-
-
-export interface CloseOrders {
-    closePrice: number;
-    closeTime: Date;
-    profitLoss: number;
-  }
-  

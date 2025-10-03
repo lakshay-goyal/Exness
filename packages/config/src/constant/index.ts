@@ -3,4 +3,5 @@ export const constant = {
   redisStream: "stream:exness",
   secondaryRedisStream: "stream:exnessReceive",
   redisQueue: "binance:trades",
+  dbStorageStream: "stream:dbStorage",
 };
