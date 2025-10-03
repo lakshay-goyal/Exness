@@ -18,4 +18,36 @@ model User {
   id      Int     @id       @default(autoincrement())
   userID  String  @unique
   email   String  @unique
+  Orders Orders[]
+}
+
+enum Symbol {
+  btc
+  sol
+  eth
+}
+
+enum OrderSide {
+  buy
+  sell
+}
+
+model Orders {
+  orderId     String    @id
+  userId      String
+  user        User      @relation(fields: [userId], references: [userID], onDelete: Cascade)
+  symbol      Symbol
+  type        OrderSide
+  quantity    Float
+  leverage    Int
+  takeProfit  Float?
+  stopLoss    Float?
+  stippage    Float?
+  openPrice   Float
+  closePrice  Float
+  openTime    DateTime
+  closeTime   DateTime
+  profitLoss  Float
+
+  @@index([userId])
 }

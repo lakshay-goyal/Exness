@@ -15,5 +15,5 @@ export function pricePollerFunction(payload: any) {
 
   const results: Prices[] = JSON.parse(payload.message);
   updatePrices(results);
-  console.log("Updated prices:", prices);
+  // console.log("Updated prices:", prices);
 }

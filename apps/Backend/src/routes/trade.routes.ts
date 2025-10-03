@@ -20,15 +20,15 @@ tradeRouter.post("/create", async (req: Request, res: Response) => {
     });
   }
 
-    const token = req.cookies.token;
-    if (!token) {
-      return res.send("No token found");
-    }
+  // const token = req.cookies.token;
+  // if (!token) {
+  //   return res.send("No token found");
+  // }
 
   try {
-    const decoded = jwt.verify(token, jwtSecret);
-    const userId = (decoded as jwt.JwtPayload).userId;
-    // const userId = "1003d930-5530-4527-a6d1-db50530316f8";
+    // const decoded = jwt.verify(token, jwtSecret);
+    // const userId = (decoded as jwt.JwtPayload).userId;
+    const userId = "1003d930-5530-4527-a6d1-db50530316f8";
     console.log("userId", userId);
 
     await RedisStreams.addToRedisStream(constant.redisStream, {
@@ -39,6 +39,26 @@ tradeRouter.post("/create", async (req: Request, res: Response) => {
       quantity,
       leverage,
     });
+
+    try {
+      await RedisStreams.readRedisStream(
+        constant.secondaryRedisStream,
+        (result: any) => {
+          // const jsonString = Object.values(payload).join("");
+          // const result = JSON.parse(jsonString);
+          console.log("Create Order Result:", result);
+          if (!res.headersSent) {
+            res.json({
+              message: result.message,
+            });
+          }
+        }
+      );
+    } catch (e) {
+      return res.status(411).json({
+        message: "Create Order not placed",
+      });
+    }
   } catch (err) {
     res.status(401).send("Token expired or invalid ❌");
   }
@@ -63,12 +83,8 @@ tradeRouter.get("/open", async (req: Request, res: Response) => {
 
     try {
       await RedisStreams.readRedisStream(
-        "exness:tradeReceive",
-        "tradeReceiveGroup",
-        "tradeConsumer",
-        (payload: any) => {
-          const jsonString = Object.values(payload).join("");
-          const result = JSON.parse(jsonString);
+        constant.secondaryRedisStream,
+        (result: any) => {
           console.log("Trade Result:", result);
           if (!res.headersSent) {
             res.json({
@@ -87,8 +103,8 @@ tradeRouter.get("/open", async (req: Request, res: Response) => {
   }
 });
 
-tradeRouter.get("/close/:id", async (req: Request, res: Response) => {
-  const orderId = req.params.id;
+tradeRouter.post("/close", async (req: Request, res: Response) => {
+  const orderId = req.body.orderId;
   if (!orderId) {
     return res.status(400).json({
       error: "Missing required parameters: orderId",
@@ -96,23 +112,31 @@ tradeRouter.get("/close/:id", async (req: Request, res: Response) => {
   }
   console.log("orderId: ", orderId);
 
+  //   const token = req.cookies.token;
+  //   if (!token) {
+  //     return res.send("No token found");
+  //   }
+  // const decoded = jwt.verify(token, jwtSecret);
+  // const userId = (decoded as jwt.JwtPayload).userId;
+  const userId = "1003d930-5530-4527-a6d1-db50530316f8";
+  console.log("userId: ", userId);
+
   try {
-    await RedisStreams.addToRedisStream("exness:trade", {
+    await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "createCloseOrder",
       orderId,
+      userId,
     });
 
     try {
       await RedisStreams.readRedisStream(
-        "exness:tradeReceive",
-        (payload: any) => {
-          const jsonString = Object.values(payload).join("");
-          const result = JSON.parse(jsonString);
+        constant.secondaryRedisStream,
+        (result: any) => {
           console.log("Trade Result:", result);
           if (result.function === "createCloseOrder") {
             console.log("Good 1:", result.message.order);
             if (result.message.orderId == orderId) {
-              console.log("Good 2:", result)
+              console.log("Good 2:", result);
               if (!res.headersSent) {
                 res.json({
                   message: result.message,
@@ -120,12 +144,12 @@ tradeRouter.get("/close/:id", async (req: Request, res: Response) => {
               }
             } else {
               if (!res.headersSent) {
-                res.json({ message: "Error closing order"});
+                res.json({ message: "Error closing order" });
               }
             }
           } else {
             if (!res.headersSent) {
-              res.json({ message: "Error closing order"});
+              res.json({ message: "Error closing order" });
             }
           }
         }
@@ -140,8 +164,6 @@ tradeRouter.get("/close/:id", async (req: Request, res: Response) => {
   }
 });
 
-tradeRouter.get("/close", (req: Request, res: Response) => {
-  res.send("Hello Trade");
-});
+tradeRouter.get("/close", async (req: Request, res: Response) => {});
 
 export default tradeRouter;

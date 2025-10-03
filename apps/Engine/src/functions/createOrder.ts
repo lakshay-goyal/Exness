@@ -1,4 +1,4 @@
-import { redisStreams, config } from "@repo/config";
+import { redisStreams, config, constant } from "@repo/config";
 import { v4 as uuid } from "uuid";
 import { users } from "../data/users.js";
 import { openOrders } from "../data/orders.js";
@@ -47,20 +47,18 @@ export async function createOrderFunction(result: any) {
     console.log("Open Orders:", openOrders);
     
 
-    // await RedisStreams.addToRedisStream(
-    //   "exness:tradeReceive",
-    //   "tradeReceiveGroup",
-    //   { function: "createUser", message: result.userId }
-    // );
-    // console.log(users, "users after creation");
+    await RedisStreams.addToRedisStream(
+      constant.secondaryRedisStream,
+      { function: "createOrder", message: result.userId }
+    );
+    console.log(users, "Order created");
   } else {
     const existingUser = users.find(
-      (user: any) => user.userEmail === result.userEmail
+      (user: any) => user.userId === result.userId
     );
     await RedisStreams.addToRedisStream(
-      "exness:createOrderReceive",
-      "createOrderReceiveGroup",
-      { message: existingUser?.userId }
+      constant.secondaryRedisStream,
+      { function:"createOrder", message: existingUser?.userId }
     );
   }
 }

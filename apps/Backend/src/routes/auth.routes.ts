@@ -55,7 +55,7 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
       console.log("Token Value: ", userEmail, userId);
 
       await RedisStreams.addToRedisStream(constant.redisStream, {
-        function: "createUsers",
+        function: "createUser",
         userId,
         userEmail,
       });
