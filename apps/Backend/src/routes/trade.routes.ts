@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 const jwtSecret = config.JWT_SECRET;
 import { config, constant, redisStreams } from "@repo/config";
 import express, { type Request, type Response } from "express";
+import { prisma } from "@repo/db";
 const tradeRouter = express.Router();
 
 // connect redis streams
@@ -164,6 +165,19 @@ tradeRouter.post("/close", async (req: Request, res: Response) => {
   }
 });
 
-tradeRouter.get("/close", async (req: Request, res: Response) => {});
+tradeRouter.get("/close/:id", async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId in request body" });
+  }
+  try {
+    const result = await prisma.orders.findMany({
+      where: { userId: userId }
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
 
 export default tradeRouter;
