@@ -20,6 +20,7 @@ export async function dbStorageFunction(result: any) {
   if (result.function === "createUser") {
     const { userId, userEmail } = result.message || {};
     if (userId && userEmail) {
+      console.log("createUser upserted 1 : ", { userId, userEmail });
       await prisma.user.upsert({
         where: { userID: userId },
         update: { email: userEmail },
