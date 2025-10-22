@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@repo/config": "workspace:*",
-    "@repo/utils":"workspace:*"
+    "@repo/utils":"workspace:*",
+    "@repo/db":"workspace:*",
+    "@repo/timescaledb":"workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

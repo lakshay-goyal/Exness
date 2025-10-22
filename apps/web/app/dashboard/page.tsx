@@ -63,6 +63,7 @@ type CryptoAsset = {
   signal: "buy" | "sell";
   bid: number;
   ask: number;
+  lastUpdated?: number;
 };
 
 const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BTCUSDT", heightPx = 500 }) => {
@@ -71,7 +72,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
   const [time, setTime] = React.useState("1m");
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  
+
   const timeIntervals = [
     { value: "1m", label: "1m" },
     { value: "5m", label: "5m" },
@@ -95,12 +96,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await axios.get(
         `http://localhost:8000/api/v1/candles?symbol=${asset}&interval=${time}`
       );
-      
-      console.log(response.data);
 
       const formattedData = response.data.data.map((candle: any) => ({
         open: parseFloat(candle.open),
@@ -109,8 +108,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
         close: parseFloat(candle.close),
         time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp,
       }));
-      console.log(formattedData);
-      
+
       return formattedData;
     } catch (error) {
       console.error("Error fetching candles:", error);
@@ -131,12 +129,12 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
       },
       width: chartRef.current.clientWidth,
       height: heightPx,
-      grid: { 
+      grid: {
         vertLines: { color: "#e5e7eb" }, // Lighter grid lines
         horzLines: { color: "#e5e7eb" } // Lighter grid lines
       },
-      timeScale: { 
-        timeVisible: true, 
+      timeScale: {
+        timeVisible: true,
         secondsVisible: false,
         borderColor: "#e5e7eb" // Lighter border
       },
@@ -159,7 +157,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
       },
     });
 
-    const candlestick = chart.addCandlestickSeries({
+    const candlestick = (chart as any).addCandlestickSeries({
       upColor: "#10b981",
       downColor: "#ef4444",
       borderVisible: false,
@@ -201,11 +199,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
           {timeIntervals.map((interval) => (
             <button
               key={interval.value}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                time === interval.value
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${time === interval.value
                   ? "bg-blue-600 text-white"
                   : "text-gray-400 hover:text-white hover:bg-gray-700"
-              }`}
+                }`}
               onClick={() => setTime(interval.value)}
             >
               {interval.label}
@@ -234,7 +231,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
                 </svg>
               </div>
               <p className="text-red-400 text-sm">{error}</p>
-              <button 
+              <button
                 className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
                 onClick={() => window.location.reload()}
               >
@@ -266,36 +263,6 @@ const Dashboard = () => {
   const [realTimeCryptoData, setRealTimeCryptoData] = useState<
     Record<string, CryptoAsset>
   >({
-    BTCUSDT: {
-      symbol: "BTCUSDT",
-      name: "Bitcoin",
-      price: 0,
-      change: 0,
-      changePercent: 0,
-      signal: "buy",
-      bid: 0,
-      ask: 0,
-    },
-    ETHUSDT: {
-      symbol: "ETHUSDT",
-      name: "Ethereum",
-      price: 0,
-      change: 0,
-      changePercent: 0,
-      signal: "buy",
-      bid: 0,
-      ask: 0,
-    },
-    SOLUSDT: {
-      symbol: "SOLUSDT",
-      name: "Solana",
-      price: 0,
-      change: 0,
-      changePercent: 0,
-      signal: "buy",
-      bid: 0,
-      ask: 0,
-    },
   });
   const [priceData, setPriceData] = useState<any[]>([]);
   const [orderVolume, setOrderVolume] = useState("0.01");
@@ -324,13 +291,18 @@ const Dashboard = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      
       if (data.asset && data.bid && data.ask) {
         setRealTimeCryptoData((prevData) => {
           const symbol = data.asset;
           const prevAsset = prevData[symbol];
 
+          // Convert from micro-units to regular units
+          const bidPrice = Number(data.bid) / 100000000;
+          const askPrice = Number(data.ask) / 100000000;
+          const newPrice = (bidPrice + askPrice) / 2;
+          
           if (prevAsset) {
-            const newPrice = (data.bid + data.ask) / 2;
             const change = newPrice - prevAsset.price;
             const changePercent =
               prevAsset.price === 0 ? 0 : (change / prevAsset.price) * 100;
@@ -338,11 +310,12 @@ const Dashboard = () => {
             const updatedAsset = {
               ...prevAsset,
               price: newPrice,
-              bid: Number(data.bid) / 100000000,
-              ask: Number(data.ask) / 100000000,
+              bid: bidPrice,
+              ask: askPrice,
               change: change,
               changePercent: changePercent,
               signal: change > 0 ? "buy" : "sell",
+              lastUpdated: Date.now(),
             };
 
             // Update priceData for the selected crypto
@@ -355,34 +328,46 @@ const Dashboard = () => {
                   volume: Math.random() * 1000 + 500,
                 },
               ]);
-              // Fix: Ensure 'signal' is typed as 'buy' | 'sell'
+              // Update selected crypto with new data
               setSelectedCrypto((prev) =>
                 prev && prev.symbol === symbol
                   ? {
-                      ...prev,
-                      price: updatedAsset.price,
-                      bid: updatedAsset.bid,
-                      ask: updatedAsset.ask,
-                      change: updatedAsset.change,
-                      changePercent: updatedAsset.changePercent,
-                      signal: updatedAsset.signal as "buy" | "sell",
-                    }
+                    ...prev,
+                    price: updatedAsset.price,
+                    bid: updatedAsset.bid,
+                    ask: updatedAsset.ask,
+                    change: updatedAsset.change,
+                    changePercent: updatedAsset.changePercent,
+                    signal: updatedAsset.signal as "buy" | "sell",
+                  }
                   : prev
               );
             }
-            return { ...prevData, [symbol]: updatedAsset };
+            const newState = { ...prevData, [symbol]: updatedAsset };
+            return newState;
+          } else {
+            // Create new asset if it doesn't exist
+            const newAsset = {
+              symbol: symbol,
+              name: symbol.replace('USDT', ''),
+              price: newPrice,
+              bid: bidPrice,
+              ask: askPrice,
+              change: 0,
+              changePercent: 0,
+              signal: "buy" as const,
+              lastUpdated: Date.now(),
+            };
+            
+            const newState = { ...prevData, [symbol]: newAsset };
+            return newState;
           }
-          return prevData;
         });
       }
     };
 
     ws.onclose = () => {
       console.log("WebSocket connection closed");
-    };
-
-    ws.onerror = (event) => {
-      console.error("WebSocket error:", JSON.stringify(event));
     };
 
     return () => {
@@ -409,11 +394,11 @@ const Dashboard = () => {
       volume: parseFloat(orderVolume),
       openPrice:
         type === "buy"
-          ? selectedCrypto?.bid !== undefined
-            ? selectedCrypto.bid / 100000000
+          ? selectedCrypto?.ask !== undefined
+            ? selectedCrypto.ask
             : 0
-          : selectedCrypto?.ask !== undefined
-            ? selectedCrypto.ask / 100000000
+          : selectedCrypto?.bid !== undefined
+            ? selectedCrypto.bid
             : 0,
       currentPrice: selectedCrypto?.price ?? 0,
       pnl: 0,
@@ -482,14 +467,16 @@ const Dashboard = () => {
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-sm">INSTRUMENTS</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="lg:hidden"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="lg:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -505,14 +492,16 @@ const Dashboard = () => {
                 </div>
 
                 <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Last render: {new Date().toLocaleTimeString()}
+                  </div>
                   {Object.values(realTimeCryptoData).map((crypto) => (
                     <Card
-                      key={crypto.symbol}
-                      className={`p-3 cursor-pointer transition-all hover:shadow-md ${
-                        selectedCrypto?.symbol === crypto.symbol
+                      key={`${crypto.symbol}-${crypto.lastUpdated || 'initial'}`}
+                      className={`p-3 cursor-pointer transition-all hover:shadow-md ${selectedCrypto?.symbol === crypto.symbol
                           ? "bg-primary/10 border-primary/30"
                           : "hover:bg-accent/50"
-                      }`}
+                        }`}
                       onClick={() => setSelectedCrypto(crypto)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -544,6 +533,19 @@ const Dashboard = () => {
                             {crypto.bid?.toFixed(5)}/{crypto.ask?.toFixed(5)}
                           </span>
                         </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs text-muted-foreground">
+                            Price
+                          </span>
+                          <span className="text-xs font-mono">
+                            ${crypto.price?.toFixed(2)}
+                          </span>
+                          {crypto.lastUpdated && (
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(crypto.lastUpdated).toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -565,17 +567,16 @@ const Dashboard = () => {
                 <span className="text-2xl font-mono">
                   $
                   {selectedCrypto?.price !== undefined
-                    ? (selectedCrypto.price / 100000000).toFixed(2)
+                    ? selectedCrypto.price.toFixed(2)
                     : "--"}
                 </span>
                 <div
-                  className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${
-                    selectedCrypto?.change !== undefined
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${selectedCrypto?.change !== undefined
                       ? selectedCrypto.change > 0
                         ? "bg-green-500/20 text-green-400"
                         : "bg-red-500/20 text-red-400"
                       : "bg-muted text-muted-foreground"
-                  }`}
+                    }`}
                 >
                   {selectedCrypto?.change !== undefined ? (
                     selectedCrypto.change > 0 ? (
@@ -585,11 +586,11 @@ const Dashboard = () => {
                     )
                   ) : null}
                   {selectedCrypto?.change !== undefined
-                    ? `${selectedCrypto.change > 0 ? "+" : ""}${(selectedCrypto.change / 100000000).toFixed(2)}`
+                    ? `${selectedCrypto.change > 0 ? "+" : ""}${selectedCrypto.change.toFixed(2)}`
                     : "--"}{" "}
                   (
                   {selectedCrypto?.changePercent !== undefined
-                    ? `${(selectedCrypto.changePercent / 100000000).toFixed(2)}%`
+                    ? `${selectedCrypto.changePercent.toFixed(2)}%`
                     : "--"}
                   )
                 </div>
@@ -818,11 +819,10 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <div
-                              className={`w-2 h-2 rounded-full ${
-                                order.type === "Buy"
+                              className={`w-2 h-2 rounded-full ${order.type === "Buy"
                                   ? "bg-green-500"
                                   : "bg-red-500"
-                              }`}
+                                }`}
                             ></div>
                             {order.type}
                           </div>

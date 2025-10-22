@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "bun run --watch ./index.ts"
   },
-  "exports":{
+  "exports": {
     ".": "./index.ts"
+  },
+  "dependencies": {
+    "@repo/config": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

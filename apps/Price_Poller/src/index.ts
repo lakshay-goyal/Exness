@@ -48,7 +48,7 @@ ws.on("open", function open() {
       await RedisClient.pushData(constant.redisQueue, JSON.stringify(msg));
 
       // 3. Send to WS through pubsub
-      if (!symbols.includes(asset)) return;
+      if (!crypto_trades.includes(asset)) return;
       const BidAsk = {
         asset,
         bid: bidValue,

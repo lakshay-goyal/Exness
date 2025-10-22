@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts"
   },
-  "exports":{
+  "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@repo/config": "workspace:*",
+    "@types/nodemailer": "^7.0.2"
   },
   "devDependencies": {
     "@types/bun": "latest"

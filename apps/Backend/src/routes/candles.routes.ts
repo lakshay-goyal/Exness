@@ -10,6 +10,8 @@ async function initDB() {
   try {
     await client.connect();
     console.log("Connected to TimescaleDB");
+    // Ensure schema, hypertable, views and policies exist
+    await client.setupTimescale();
   } catch (err) {
     console.error("Failed to connect to TimescaleDB:", err);
     process.exit(1);
@@ -62,6 +64,17 @@ async function retrieveData(
 ) {
   try {
     const table = `candles_${interval}`;
+    // Ensure the requested window is materialized before querying
+    try {
+      await client
+        .getClient()
+        .query(
+          `CALL refresh_continuous_aggregate('candles_${interval}', $1::timestamptz, $2::timestamptz);`,
+          [from, to]
+        );
+    } catch (e) {
+      console.warn("Refresh aggregate failed (continuing):", e);
+    }
 
     const query = `
       SELECT bucket AS time,

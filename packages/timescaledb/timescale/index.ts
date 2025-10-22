@@ -61,11 +61,11 @@ class TimeScaleDB {
         timescaledb.compress_orderby = 'time DESC'
       );
     `);
-    await this.client.query("SELECT add_compression_policy('trades', INTERVAL '30 days');");
+    await this.client.query("SELECT add_compression_policy('trades', INTERVAL '30 days', if_not_exists => TRUE);");
 
     // Apply best practice: Add data retention policy
     // Drops chunks of data older than 90 days
-    await this.client.query("SELECT add_retention_policy('trades', INTERVAL '90 days');");
+    await this.client.query("SELECT add_retention_policy('trades', INTERVAL '90 days', if_not_exists => TRUE);");
 
     // Create an index on the symbol column for faster queries
     await this.client.query(`
