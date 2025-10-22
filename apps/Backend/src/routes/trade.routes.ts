@@ -5,61 +5,59 @@ import express, { type Request, type Response } from "express";
 import { prisma } from "@repo/db";
 const tradeRouter = express.Router();
 
-// Use shared Redis Streams client from app.locals (initialized in index.ts)
-
 tradeRouter.get("/", (req: Request, res: Response) => {
   res.send("Hello Trade");
 });
 
-tradeRouter.post("/create", async (req: Request, res: Response) => {
-  const { symbol, type, quantity, leverage } = req.body;
-  if (!symbol || !type || !quantity || !leverage) {
-    return res.status(400).json({
-      error: "Missing required parameters: symbol, type, quantity, leverage",
-    });
-  }
+// tradeRouter.post("/create", async (req: Request, res: Response) => {
+//   const { symbol, type, quantity, leverage } = req.body;
+//   if (!symbol || !type || !quantity || !leverage) {
+//     return res.status(400).json({
+//       error: "Missing required parameters: symbol, type, quantity, leverage",
+//     });
+//   }
 
-  // const token = req.cookies.token;
-  // if (!token) {
-  //   return res.send("No token found");
-  // }
+//   // const token = req.cookies.token;
+//   // if (!token) {
+//   //   return res.send("No token found");
+//   // }
 
-  try {
-    // const decoded = jwt.verify(token, jwtSecret);
-    // const userId = (decoded as jwt.JwtPayload).userId;
-    const userId = "1003d930-5530-4527-a6d1-db50530316f8";
-    console.log("userId", userId);
+//   try {
+//     // const decoded = jwt.verify(token, jwtSecret);
+//     // const userId = (decoded as jwt.JwtPayload).userId;
+//     const userId = "1003d930-5530-4527-a6d1-db50530316f8";
+//     console.log("userId", userId);
 
-    const RedisStreams = req.app.locals.redisStreams as any;
-    await RedisStreams.addToRedisStream(constant.redisStream, {
-      function: "createOrder",
-      userId,
-      symbol,
-      type,
-      quantity,
-      leverage,
-    });
+//     const RedisStreams = req.app.locals.redisStreams as any;
+//     await RedisStreams.addToRedisStream(constant.redisStream, {
+//       function: "createOrder",
+//       userId,
+//       symbol,
+//       type,
+//       quantity,
+//       leverage,
+//     });
 
-    try {
-      const result = await RedisStreams.readNextFromRedisStream(
-        constant.secondaryRedisStream,
-        0
-      );
-      console.log("Create Order Result:", result);
-      if (!res.headersSent) {
-        res.json({
-          message: result?.message,
-        });
-      }
-    } catch (e) {
-      return res.status(411).json({
-        message: "Create Order not placed",
-      });
-    }
-  } catch (err) {
-    res.status(401).send("Token expired or invalid ❌");
-  }
-});
+//     try {
+//       const result = await RedisStreams.readNextFromRedisStream(
+//         constant.secondaryRedisStream,
+//         0
+//       );
+//       console.log("Create Order Result:", result);
+//       if (!res.headersSent) {
+//         res.json({
+//           message: result?.message,
+//         });
+//       }
+//     } catch (e) {
+//       return res.status(411).json({
+//         message: "Create Order not placed",
+//       });
+//     }
+//   } catch (err) {
+//     res.status(401).send("Token expired or invalid ❌");
+//   }
+// });
 
 tradeRouter.get("/open", async (req: Request, res: Response) => {
   //   const token = req.cookies.token;
@@ -70,7 +68,7 @@ tradeRouter.get("/open", async (req: Request, res: Response) => {
   try {
     // const decoded = jwt.verify(token, jwtSecret);
     // const userId = (decoded as jwt.JwtPayload).userId;
-    const userId = "1003d930-5530-4527-a6d1-db50530316f8";
+    const userId = "123";
     console.log("userId", userId);
 
     const RedisStreams = req.app.locals.redisStreams as any;

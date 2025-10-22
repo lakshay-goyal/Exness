@@ -7,11 +7,11 @@ class TimeScaleDB {
 
   constructor() {
     this.client = new Client({
-      user: config.DB_USER,
-      password: config.DB_PASSWORD,
-      host: config.DB_HOST,
-      port: config.DB_PORT,
-      database: config.DB_NAME,
+      user: config.TIMESCALE_DB_USER,
+      password: config.TIMESCALE_DB_PASSWORD,
+      host: config.TIMESCALE_DB_HOST,
+      port: config.TIMESCALE_DB_PORT,
+      database: config.TIMESCALE_DB_NAME,
     });
   }
 
