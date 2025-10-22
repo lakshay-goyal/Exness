@@ -13,11 +13,21 @@ export interface OpenOrders {
 }
 export const openOrders: OpenOrders[] = [
   {
-    "userId": "123",
-    "orderId": "order_98765",
+    "userId": "ab5c1292-530d-41ac-bfbf-e49faf01ac4d",
+    "orderId": "order_98766",
     "symbol": "btc",
     "type": "buy",
-    "quantity": 0.5,
+    "quantity": 0.4,
+    "leverage": 10,
+    "openPrice": 60000,
+    "openTime": new Date()
+  },
+    {
+    "userId": "ab5c1292-530d-41ac-bfbf-e49faf01ac4d",
+    "orderId": "order_98767",
+    "symbol": "btc",
+    "type": "buy",
+    "quantity": 0.4,
     "leverage": 10,
     "openPrice": 60000,
     "openTime": new Date()

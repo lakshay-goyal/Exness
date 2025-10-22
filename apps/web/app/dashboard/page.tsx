@@ -31,28 +31,35 @@ import {
 } from "lucide-react";
 
 // Mock orders data
-const mockOrders = [
-  {
-    id: 1,
-    symbol: "BTC",
-    type: "Buy",
-    volume: 0.02,
-    openPrice: 109035.24,
-    currentPrice: 111220,
-    pnl: 43.49,
-    status: "open",
-  },
-  {
-    id: 2,
-    symbol: "XAU/USD",
-    type: "Buy",
-    volume: 0.01,
-    openPrice: 3409.875,
-    currentPrice: 3535.4,
-    pnl: 125.59,
-    status: "open",
-  },
-];
+interface OpenOrder {
+  id: number;
+  symbol: string;
+  type: string;
+  volume: number;
+  openPrice: number;
+  currentPrice: number;
+  pnl: number;
+  status: string;
+}
+
+const openOrders: OpenOrder[] = [];
+
+// Mock orders data
+interface CloseOrder {
+  id: number;
+  symbol: string;
+  type: string;
+  volume: number;
+  openPrice: number;
+  closePrice:number;
+  openTime:string;
+  closeTime: string;
+  pnl: number;
+  status: string;
+  
+}
+
+const closeOrder: CloseOrder[] = [];
 
 type CryptoAsset = {
   symbol: string;
@@ -200,8 +207,8 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
             <button
               key={interval.value}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${time === interval.value
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-700"
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-gray-700"
                 }`}
               onClick={() => setTime(interval.value)}
             >
@@ -257,9 +264,7 @@ interface TradingViewChartProps {
 }
 
 const Dashboard = () => {
-  const [selectedCrypto, setSelectedCrypto] = useState<CryptoAsset | null>(
-    null
-  );
+  const [selectedCrypto, setSelectedCrypto] = useState<CryptoAsset | null>(null);
   const [realTimeCryptoData, setRealTimeCryptoData] = useState<
     Record<string, CryptoAsset>
   >({
@@ -268,13 +273,59 @@ const Dashboard = () => {
   const [orderVolume, setOrderVolume] = useState("0.01");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState(openOrders);
+  const [closeOrdersData, setCloseOrdersData] = useState(closeOrder);
   const [activeTab, setActiveTab] = useState("open");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    async function fetchOpenOrders() {
+      const response = await axios.get('http://localhost:8000/api/v1/trade/open/')
+      const data = await response.data
+      const orders = JSON.parse(data.message)
+      console.log(orders);
+      setOrders(orders.map((orderData:any) => ({
+        id: orderData.orderId,
+        symbol: orderData.symbol.toUpperCase(),
+        type: orderData.type === "buy" ? "Buy" : "Sell",
+        volume: orderData.quantity,
+        openPrice: orderData.openPrice,
+        currentPrice: orderData.openPrice, // Initially set to openPrice
+        pnl: 0, // Initial P/L is 0
+        status: "open"
+      })));
+    }
+    fetchOpenOrders()
+
+    async function fetchCloseOrders() {
+      const response = await axios.get('http://localhost:8000/api/v1/trade/close/ab5c1292-530d-41ac-bfbf-e49faf01ac4d')
+      const data = await response.data
+      console.log("Test: ",data);
+
+      data.map((orderData:any) => {
+        console.log(orderData.orderId, orderData)
+        return orderData
+      })
+      
+      setCloseOrdersData(data.map((orderData:any) => ({
+        id: orderData.orderId,
+        symbol: orderData.symbol.toUpperCase(),
+        type: orderData.type === "buy" ? "Buy" : "Sell", 
+        volume: orderData.quantity,
+        openPrice: orderData.openPrice,
+        closePrice: orderData.closePrice,
+        openTime: orderData.openTime,
+        closeTime: orderData.closeTime,
+        pnl: orderData.profitLoss,
+        status: "closed"
+      })));
+    }
+    fetchCloseOrders()
+  }, [])
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -291,7 +342,7 @@ const Dashboard = () => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
+
       if (data.asset && data.bid && data.ask) {
         setRealTimeCryptoData((prevData) => {
           const symbol = data.asset;
@@ -301,7 +352,7 @@ const Dashboard = () => {
           const bidPrice = Number(data.bid) / 100000000;
           const askPrice = Number(data.ask) / 100000000;
           const newPrice = (bidPrice + askPrice) / 2;
-          
+
           if (prevAsset) {
             const change = newPrice - prevAsset.price;
             const changePercent =
@@ -358,7 +409,7 @@ const Dashboard = () => {
               signal: "buy" as const,
               lastUpdated: Date.now(),
             };
-            
+
             const newState = { ...prevData, [symbol]: newAsset };
             return newState;
           }
@@ -499,8 +550,8 @@ const Dashboard = () => {
                     <Card
                       key={`${crypto.symbol}-${crypto.lastUpdated || 'initial'}`}
                       className={`p-3 cursor-pointer transition-all hover:shadow-md ${selectedCrypto?.symbol === crypto.symbol
-                          ? "bg-primary/10 border-primary/30"
-                          : "hover:bg-accent/50"
+                        ? "bg-primary/10 border-primary/30"
+                        : "hover:bg-accent/50"
                         }`}
                       onClick={() => setSelectedCrypto(crypto)}
                     >
@@ -572,10 +623,10 @@ const Dashboard = () => {
                 </span>
                 <div
                   className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${selectedCrypto?.change !== undefined
-                      ? selectedCrypto.change > 0
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-red-500/20 text-red-400"
-                      : "bg-muted text-muted-foreground"
+                    ? selectedCrypto.change > 0
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-red-500/20 text-red-400"
+                    : "bg-muted text-muted-foreground"
                     }`}
                 >
                   {selectedCrypto?.change !== undefined ? (
@@ -820,8 +871,8 @@ const Dashboard = () => {
                           <div className="flex items-center gap-2">
                             <div
                               className={`w-2 h-2 rounded-full ${order.type === "Buy"
-                                  ? "bg-green-500"
-                                  : "bg-red-500"
+                                ? "bg-green-500"
+                                : "bg-red-500"
                                 }`}
                             ></div>
                             {order.type}
@@ -864,8 +915,80 @@ const Dashboard = () => {
             </TabsContent>
 
             <TabsContent value="closed" className="h-full m-0 p-4">
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No closed orders
+              <div className="h-full overflow-y-auto">
+                <div className="min-w-full">
+                  <div className="grid grid-cols-9 gap-4 text-xs font-medium text-muted-foreground pb-2 border-b border-border">
+                    <div>Symbol</div>
+                    <div>Type</div>
+                    <div>Volume</div>
+                    <div>Open Price</div>
+                    <div>Close Price</div>
+                    <div>Open Time</div>
+                    <div>Close Time</div>
+                    <div>P/L</div>
+                    <div>Status</div>
+                  </div>
+                  <div className="space-y-2 mt-2">
+                    {closeOrdersData.length > 0 ? (
+                      closeOrdersData.map((order) => (
+                        <div
+                          key={order.id}
+                          className="grid grid-cols-9 gap-4 text-sm py-2 hover:bg-accent/30 rounded-md px-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span className="font-medium">{order.symbol}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                order.type === "Buy"
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
+                              }`}
+                            ></div>
+                            {order.type}
+                          </div>
+                          <div className="font-mono">
+                            {order.volume.toFixed(2)}
+                          </div>
+                          <div className="font-mono">
+                            {order.openPrice.toLocaleString()}
+                          </div>
+                          <div className="font-mono">
+                            {order.closePrice.toLocaleString()}
+                          </div>
+                          <div className="font-mono text-xs">
+                            {new Date(order.openTime).toLocaleString()}
+                          </div>
+                          <div className="font-mono text-xs">
+                            {new Date(order.closeTime).toLocaleString()}
+                          </div>
+                          <div
+                            className={`font-mono ${
+                              order.pnl > 0 ? "text-green-500" : "text-red-500"
+                            }`}
+                          >
+                            {order.pnl > 0 ? "+" : ""}
+                            {order.pnl.toFixed(2)}
+                          </div>
+                          <div>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {order.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">
+                        No closed orders
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </div>

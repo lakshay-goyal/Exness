@@ -2,6 +2,7 @@ import { redisStreams, config, constant } from "@repo/config";
 import { prisma } from "@repo/db";
 
 export async function dbStorageFunction(result: any) {
+  
   if (result.function === "createCloseOrder") {
     console.log("createCloseOrder", result.message);
     const userId = result?.message?.userId;
@@ -9,6 +10,7 @@ export async function dbStorageFunction(result: any) {
       console.log("createCloseOrder missing userId", result.message);
       return;
     }
+    
     const user = await prisma.user.findUnique({ where: { userID: userId } });
     if (!user) {
       console.log("createCloseOrder aborted: user not found", userId);

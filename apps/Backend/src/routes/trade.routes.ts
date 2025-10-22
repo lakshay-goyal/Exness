@@ -68,7 +68,7 @@ tradeRouter.get("/open", async (req: Request, res: Response) => {
   try {
     // const decoded = jwt.verify(token, jwtSecret);
     // const userId = (decoded as jwt.JwtPayload).userId;
-    const userId = "123";
+    const userId = "ab5c1292-530d-41ac-bfbf-e49faf01ac4d";
     console.log("userId", userId);
 
     const RedisStreams = req.app.locals.redisStreams as any;
@@ -113,7 +113,7 @@ tradeRouter.post("/close", async (req: Request, res: Response) => {
   //   }
   // const decoded = jwt.verify(token, jwtSecret);
   // const userId = (decoded as jwt.JwtPayload).userId;
-  const userId = "1003d930-5530-4527-a6d1-db50530316f8";
+  const userId = "ab5c1292-530d-41ac-bfbf-e49faf01ac4d";
   console.log("userId: ", userId);
 
   try {
