@@ -6,14 +6,17 @@ const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function getBalanceFunction(payload: any) {
+  console.log("=== getBalanceFunction called ===");
+  console.log("Payload:", payload);
+  
   const userId: string = payload.userId;
-  console.log(userId);
+  console.log("Looking for userId:", userId);
+  console.log("Available users:", users);
 
   const user = users.find((item) => item.userId === userId);
 
   if (user) {
-    console.log(users);
-
+    console.log("User found:", user);
     console.log(`Balance for ${userId}: ${user.balance}`);
 
     try {
@@ -21,7 +24,9 @@ export async function getBalanceFunction(payload: any) {
         function: "getBalance",
         message: user.balance,
       });
+      console.log("Sent balance response to secondaryRedisStream");
     } catch (error) {
+      console.error("Error sending balance response:", error);
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "getBalance",
         message: (user.balance = 0),
@@ -29,7 +34,7 @@ export async function getBalanceFunction(payload: any) {
     }
     console.log(user.balance / 100, "maybe");
   } else {
-    console.log(users);
+    console.log("Available users:", users);
     console.log(`User ${userId} not found ❌`);
     return null;
   }

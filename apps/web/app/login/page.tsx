@@ -5,7 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 
-const Login = () => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,9 +21,8 @@ const Login = () => {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/login`, {
         email: email
       });
-      console.log('Login successful:', response.data);
-      // Assuming response.data contains a token field
-      login(response.data.token);
+      console.log('Login request submitted:', response.data);
+      // For magic-link flow, we do not receive token here; user must click email link
       setIsSubmitted(true);
     } catch (error) {
       console.error('Login failed:', error);

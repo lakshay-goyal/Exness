@@ -27,7 +27,7 @@ export async function getOpenOrderFunction(result: any) {
 } else {
     await RedisStreams.addToRedisStream(
         constant.secondaryRedisStream,
-      { function:"getOpenOrder", message: "Open Order Not Found" }
+      { function:"getOpenOrder", message: JSON.stringify([]) }
     );
     return;
   }

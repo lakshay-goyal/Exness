@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -23,29 +24,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
     setIsAuthenticated(true);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    console.log('AuthContext: Set Authorization header in login function');
     router.push('/dashboard');
   };
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('token');
+    const url = new URL(window.location.href);
+    const tokenFromUrl = url.searchParams.get('token');
 
     if (tokenFromUrl) {
-      login(tokenFromUrl); // Use the login function to set token and redirect
+      localStorage.setItem('token', tokenFromUrl);
+      setToken(tokenFromUrl);
+      setIsAuthenticated(true);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${tokenFromUrl}`;
+      console.log('AuthContext: Set Authorization header from URL token');
+      url.searchParams.delete('token');
+      window.history.replaceState({}, '', url.toString());
     } else {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         setToken(storedToken);
         setIsAuthenticated(true);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        console.log('AuthContext: Set Authorization header from stored token');
+      } else {
+        console.log('AuthContext: No token found');
       }
     }
     setLoading(false);
-  }, [router, login]); // Add login to dependency array
+  }, [router]);
 
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
     setIsAuthenticated(false);
+    delete axios.defaults.headers.common['Authorization'];
     router.push('/login');
   };
 

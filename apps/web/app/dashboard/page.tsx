@@ -32,7 +32,7 @@ import {
 
 // Mock orders data
 interface OpenOrder {
-  id: number;
+  id: string;
   symbol: string;
   type: string;
   volume: number;
@@ -42,11 +42,37 @@ interface OpenOrder {
   status: string;
 }
 
+// Backend interfaces
+interface BackendOpenOrder {
+  orderId: string;
+  symbol: string;
+  type: "buy" | "sell";
+  quantity: number;
+  openPrice: number;
+  currentPrice: number; // Assuming backend sends current price for open orders
+  status: "open";
+  // Add other fields as they become clear from backend response
+}
+
+interface BackendClosedOrder {
+  orderId: string;
+  symbol: string;
+  type: "buy" | "sell";
+  quantity: number;
+  openPrice: number;
+  closePrice: number;
+  openTime: string;
+  closeTime: string;
+  profitLoss: number;
+  status: "closed";
+  // Add other fields as they become clear from backend response
+}
+
 const openOrders: OpenOrder[] = [];
 
 // Mock orders data
 interface CloseOrder {
-  id: number;
+  id: string;
   symbol: string;
   type: string;
   volume: number;
@@ -273,58 +299,161 @@ const Dashboard = () => {
   const [orderVolume, setOrderVolume] = useState("0.01");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
-  const [orders, setOrders] = useState(openOrders);
-  const [closeOrdersData, setCloseOrdersData] = useState(closeOrder);
+  const [orders, setOrders] = useState<OpenOrder[]>([]);
+  const [closeOrdersData, setCloseOrdersData] = useState<CloseOrder[]>([]);
   const [activeTab, setActiveTab] = useState("open");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [createOrderLoading, setCreateOrderLoading] = useState(false);
+  const [closeOrderLoading, setCloseOrderLoading] = useState(false);
+  const [openOrdersLoading, setOpenOrdersLoading] = useState(false);
+  const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
 
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchOpenOrders() {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/open/')
-      const data = await response.data
-      const orders = JSON.parse(data.message)
-      console.log(orders);
-      setOrders(orders.map((orderData:any) => ({
-        id: orderData.orderId,
-        symbol: orderData.symbol.toUpperCase(),
-        type: orderData.type === "buy" ? "Buy" : "Sell",
-        volume: orderData.quantity,
-        openPrice: orderData.openPrice,
-        currentPrice: orderData.openPrice, // Initially set to openPrice
-        pnl: 0, // Initial P/L is 0
-        status: "open"
-      })));
-    }
-    fetchOpenOrders()
-
-    async function fetchCloseOrders() {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/close/ab5c1292-530d-41ac-bfbf-e49faf01ac4d')
-      const data = await response.data
-      console.log("Test: ",data);
-
-      data.map((orderData:any) => {
-        console.log(orderData.orderId, orderData)
-        return orderData
-      })
+  async function fetchBalance() {
+    try {
+      console.log('=== Starting fetchBalance ===');
+      setBalanceLoading(true);
       
-      setCloseOrdersData(data.map((orderData:any) => ({
-        id: orderData.orderId,
-        symbol: orderData.symbol.toUpperCase(),
-        type: orderData.type === "buy" ? "Buy" : "Sell", 
-        volume: orderData.quantity,
-        openPrice: orderData.openPrice,
-        closePrice: orderData.closePrice,
-        openTime: orderData.openTime,
-        closeTime: orderData.closeTime,
-        pnl: orderData.profitLoss,
-        status: "closed"
-      })));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found for balance.');
+        setBalanceLoading(false);
+        return;
+      }
+
+      console.log('Making request to http://localhost:8000/api/v1/balance');
+      
+      const response = await axios.get('http://localhost:8000/api/v1/balance', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000 // 10 second timeout
+      });
+      
+      console.log('Balance response received:', response.data);
+      console.log("Balance value:", response.data.message);
+      
+      if (response.data.status === 'success') {
+        setBalance(response.data.message);
+        console.log('Balance set in state:', response.data.message);
+      } else {
+        console.error('Failed to fetch balance:', response.data.message);
+      }
+    } catch (error: any) {
+      console.error('=== ERROR in fetchBalance ===');
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Full error:', error);
+      
+      if (error.response) {
+        console.error('Response error - Status:', error.response.status);
+        console.error('Response error - Data:', error.response.data);
+        console.error('Response error - Headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Request error - No response received');
+        console.error('Request error - Request:', error.request);
+      } else {
+        console.error('Other error:', error.message);
+      }
+    } finally {
+      setBalanceLoading(false);
+      console.log('=== fetchBalance completed ===');
     }
-    fetchCloseOrders()
+  }
+
+  async function fetchOpenOrders() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("No authentication token found for open orders.");
+      return;
+    }
+    setOpenOrdersLoading(true);
+    try {
+      const response = await axios.get('http://localhost:8000/api/v1/trade/open/', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = response.data;
+      console.log("Raw Open Orders Data:", data);
+      if (data.message) {
+        const orders = JSON.parse(data.message) as BackendOpenOrder[];
+        console.log("Parsed Open Orders:", orders);
+        setOrders(orders.map((orderData: BackendOpenOrder) => ({
+          id: orderData.orderId,
+          symbol: orderData.symbol.toUpperCase(),
+          type: orderData.type === "buy" ? "Buy" : "Sell",
+          volume: orderData.quantity,
+          openPrice: orderData.openPrice,
+          currentPrice: orderData.currentPrice, 
+          pnl: 0, // Initial P/L is 0. Will need to be calculated based on current price if backend doesn't send it.
+          status: orderData.status
+        })));
+      } else {
+        console.log("No open orders message found.", data);
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error("Error fetching open orders:", error);
+      setOrders([]);
+    } finally {
+      setOpenOrdersLoading(false);
+    }
+  }
+
+  async function fetchCloseOrders() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("No authentication token found for closed orders.");
+      return;
+    }
+    setClosedOrdersLoading(true);
+    try {
+      const response = await axios.get('http://localhost:8000/api/v1/trade/open/', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = response.data;
+      console.log("Raw Closed Orders Data:", data);
+      if (data.message) {
+        const allOrders = JSON.parse(data.message) as (BackendOpenOrder | BackendClosedOrder)[];
+        console.log("Parsed All Orders for filtering closed:", allOrders);
+        const closed = allOrders.filter((orderData): orderData is BackendClosedOrder => orderData.status === "closed");
+        setCloseOrdersData(closed.map((orderData: BackendClosedOrder) => ({
+          id: orderData.orderId,
+          symbol: orderData.symbol.toUpperCase(),
+          type: orderData.type === "buy" ? "Buy" : "Sell", 
+          volume: orderData.quantity,
+          openPrice: orderData.openPrice,
+          closePrice: orderData.closePrice,
+          openTime: orderData.openTime,
+          closeTime: orderData.closeTime,
+          pnl: orderData.profitLoss,
+          status: orderData.status
+        })));
+      } else {
+        console.log("No closed orders message found.", data);
+        setCloseOrdersData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching closed orders:", error);
+      setCloseOrdersData([]);
+    } finally {
+      setClosedOrdersLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchBalance();
+    fetchOpenOrders();
+    fetchCloseOrders();
   }, [])
 
   useEffect(() => {
@@ -437,33 +566,84 @@ const Dashboard = () => {
     }
   }, [realTimeCryptoData, selectedCrypto]);
 
-  const handleOrder = (type: "buy" | "sell") => {
-    const newOrder = {
-      id: orders.length + 1,
-      symbol: selectedCrypto?.symbol,
-      type: type === "buy" ? "Buy" : "Sell",
-      volume: parseFloat(orderVolume),
-      openPrice:
-        type === "buy"
-          ? selectedCrypto?.ask !== undefined
-            ? selectedCrypto.ask
-            : 0
-          : selectedCrypto?.bid !== undefined
-            ? selectedCrypto.bid
-            : 0,
-      currentPrice: selectedCrypto?.price ?? 0,
-      pnl: 0,
-      status: "open",
-    };
-    setOrders([
-      ...orders,
-      {
-        ...newOrder,
-        symbol: selectedCrypto?.symbol ?? "",
-        openPrice: newOrder.openPrice ?? 0,
-        currentPrice: selectedCrypto?.price ?? 0,
-      },
-    ]);
+  const handleOrder = async (type: "buy" | "sell") => {
+    if (!selectedCrypto) {
+      console.error("No crypto asset selected.");
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("No authentication token found.");
+      router.push('/login');
+      return;
+    }
+
+    setCreateOrderLoading(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/trade/create",
+        {
+          symbol: selectedCrypto.symbol,
+          type: type,
+          quantity: parseFloat(orderVolume),
+          leverage: 100, // Assuming a default leverage for now
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Create Order Response:", response.data);
+      if (response.data.message) {
+        await fetchOpenOrders();
+        alert("Order created successfully!");
+      } else {
+        alert("Failed to create order.");
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("Error creating order. Please try again.");
+    } finally {
+      setCreateOrderLoading(false);
+    }
+  };
+
+  const handleCloseOrder = async (orderId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("No authentication token found for closing order.");
+      router.push('/login');
+      return;
+    }
+
+    setCloseOrderLoading(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/trade/close",
+        { orderId: orderId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("Close Order Response:", response.data);
+      if (response.data.message) {
+        alert("Order closed successfully!");
+        await fetchOpenOrders(); // Refresh open orders
+        await fetchCloseOrders(); // Refresh closed orders
+      } else {
+        alert("Failed to close order.");
+      }
+    } catch (error) {
+      console.error("Error closing order:", error);
+      alert("Error closing order. Please try again.");
+    } finally {
+      setCloseOrderLoading(false);
+    }
   };
 
   return (
@@ -486,7 +666,15 @@ const Dashboard = () => {
           <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
             <span>
               Balance:{" "}
-              <span className="text-foreground font-medium">$10,007.65</span>
+              <span className="text-foreground font-medium">
+                {balanceLoading ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : balance !== null ? (
+                  `$${balance.toLocaleString()}`
+                ) : (
+                  <span className="text-red-500">Error</span>
+                )}
+              </span>
             </span>
           </div>
         </div>
@@ -684,8 +872,9 @@ const Dashboard = () => {
                   onClick={() => handleOrder("sell")}
                   variant="destructive"
                   className="h-14 flex flex-col"
+                  disabled={createOrderLoading}
                 >
-                  <div className="text-lg font-bold">Sell</div>
+                  <div className="text-lg font-bold">Sell {createOrderLoading && <span className="animate-pulse">...</span>}</div>
                   <div className="text-xs opacity-90">
                     {selectedCrypto?.bid?.toFixed(5)}
                   </div>
@@ -693,8 +882,9 @@ const Dashboard = () => {
                 <Button
                   onClick={() => handleOrder("buy")}
                   className="h-14 flex flex-col bg-green-600 hover:bg-green-700"
+                  disabled={createOrderLoading}
                 >
-                  <div className="text-lg font-bold">Buy</div>
+                  <div className="text-lg font-bold">Buy {createOrderLoading && <span className="animate-pulse">...</span>}</div>
                   <div className="text-xs opacity-90">
                     {selectedCrypto?.ask?.toFixed(5)}
                   </div>
@@ -721,6 +911,7 @@ const Dashboard = () => {
                           ).toFixed(2)
                         )
                       }
+                      disabled={createOrderLoading}
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
@@ -728,6 +919,7 @@ const Dashboard = () => {
                       value={orderVolume}
                       onChange={(e) => setOrderVolume(e.target.value)}
                       className="text-center text-sm h-8"
+                      disabled={createOrderLoading}
                     />
                     <span className="text-xs text-muted-foreground min-w-fit">
                       Lots
@@ -740,6 +932,7 @@ const Dashboard = () => {
                           (parseFloat(orderVolume) + 0.01).toFixed(2)
                         )
                       }
+                      disabled={createOrderLoading}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
@@ -756,11 +949,12 @@ const Dashboard = () => {
                       value={takeProfit}
                       onChange={(e) => setTakeProfit(e.target.value)}
                       className="text-sm h-8"
+                      disabled={createOrderLoading}
                     />
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
                       <Minus className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
@@ -776,11 +970,12 @@ const Dashboard = () => {
                       value={stopLoss}
                       onChange={(e) => setStopLoss(e.target.value)}
                       className="text-sm h-8"
+                      disabled={createOrderLoading}
                     />
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
                       <Minus className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
@@ -827,10 +1022,10 @@ const Dashboard = () => {
           <div className="flex items-center justify-between px-4 py-2 border-b border-border min-h-[3rem]">
             <TabsList className="h-8">
               <TabsTrigger value="open" className="text-xs">
-                Open ({orders.filter((o) => o.status === "open").length})
+                Open ({openOrdersLoading ? <span className="animate-pulse">...</span> : orders.filter((o) => o.status === "open").length})
               </TabsTrigger>
               <TabsTrigger value="closed" className="text-xs">
-                Closed
+                Closed ({closedOrdersLoading ? <span className="animate-pulse">...</span> : closeOrdersData.length})
               </TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2">
@@ -857,7 +1052,9 @@ const Dashboard = () => {
                     <div>Action</div>
                   </div>
                   <div className="space-y-2 mt-2">
-                    {orders
+                    {openOrdersLoading ? (
+                      <div className="text-center py-4 text-muted-foreground">Loading open orders...</div>
+                    ) : orders
                       .filter((o) => o.status === "open")
                       .map((order) => (
                         <div
@@ -897,8 +1094,14 @@ const Dashboard = () => {
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleCloseOrder(order.id)}
+                              disabled={closeOrderLoading}
                             >
-                              <X className="h-3 w-3" />
+                              {closeOrderLoading ? (
+                                <span className="animate-pulse">...</span>
+                              ) : (
+                                <X className="h-3 w-3" />
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -929,7 +1132,9 @@ const Dashboard = () => {
                     <div>Status</div>
                   </div>
                   <div className="space-y-2 mt-2">
-                    {closeOrdersData.length > 0 ? (
+                    {closedOrdersLoading ? (
+                      <div className="text-center py-4 text-muted-foreground">Loading closed orders...</div>
+                    ) : closeOrdersData.length > 0 ? (
                       closeOrdersData.map((order) => (
                         <div
                           key={order.id}

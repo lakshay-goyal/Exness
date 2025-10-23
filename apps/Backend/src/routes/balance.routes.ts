@@ -8,22 +8,18 @@ import { config, constant } from "@repo/config";
 const balanceRouter = express.Router();
 const jwtSecret = config.JWT_SECRET;
 
-// balanceRouter.get("/",authMiddleware, async (req: Request, res: Response) => {
-balanceRouter.get("/", async (req: Request, res: Response) => {
-// const token = req.cookies.token;
-  // console.log("token", token);
-  // if (!token) {
-  //   return res.send("No token found");
-  // }
-
+balanceRouter.get("/", authMiddleware as any, async (req: Request, res: Response) => {
   try {
-    // verify & decode token
-    // console.log("token",token);
-    // const decoded = jwt.verify(token, jwtSecret);
-    // const userId = (decoded as jwt.JwtPayload).userId;
-    const userId = '1003d930-5530-4527-a6d1-db50530316f8';
-    console.log("userId", userId);
-
+    console.log("Entry Balance");
+    console.log("Request headers:", req.headers);
+    console.log("Authorization header:", req.header('Authorization'));
+    
+    const authReq = req as Request & { user?: { id: string } };
+    const userId = authReq.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    console.log("Balance UserID: ", userId)
     const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
     await RedisStreams.addToRedisStream(constant.redisStream, {

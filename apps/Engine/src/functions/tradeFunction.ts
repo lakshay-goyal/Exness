@@ -8,12 +8,15 @@ import { pricePollerFunction } from "./pricePoller.js";
 
 
 export async function tradeFunction(result: any) {
-  console.log(result.function, "trade function payload");
+  console.log("tradeFunction received:", result);
+  console.log("Function type:", result.function);
 
   if (result.function === "createCloseOrder") {
+    console.log("Calling createCloseOrderFunction");
     await createCloseOrderFunction(result);
   }
   if (result.function === "createUser") {
+    console.log("Calling createUserFunction");
     await createUserFunction(result);
   }
   if (result.function === "getBalance") {

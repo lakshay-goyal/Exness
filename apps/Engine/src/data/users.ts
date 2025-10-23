@@ -6,8 +6,8 @@ interface Users {
 
 export const users: Users[] = [
   {
-    userId: "ab5c1292-530d-41ac-bfbf-e49faf01ac4d",
-    userEmail: "lakshaygoyal110@gmail.com",
+    userId: "5a2b9cb1-35cc-4b8b-ab93-44102f06c458",
+    userEmail: "lakshaygoyal201@gmail.com",
     balance: 50000000,
   },
 ];
