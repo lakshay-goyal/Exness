@@ -23,6 +23,7 @@
   ],
   "dependencies": {
     "@prisma/extension-accelerate": "^2.0.2",
+    "@radix-ui/react-separator": "^1.1.7",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
