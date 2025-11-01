@@ -360,14 +360,17 @@ const Dashboard = () => {
     
     setClosedOrdersLoading(true);
     try {
-      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`);
+      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/close`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       const data = response.data;
       console.log("Raw Closed Orders Data:", data);
-      if (data.message) {
-        const allOrders = JSON.parse(data.message) as (BackendOpenOrder | BackendClosedOrder)[];
-        console.log("Parsed All Orders for filtering closed:", allOrders);
-        const closed = allOrders.filter((orderData): orderData is BackendClosedOrder => orderData.status === "closed");
-        setCloseOrdersData(closed.map((orderData: BackendClosedOrder) => ({
+      if (data.message && Array.isArray(data.message)) {
+        const closedOrders = data.message as any[];
+        console.log("Parsed Closed Orders:", closedOrders);
+        setCloseOrdersData(closedOrders.map((orderData: any) => ({
           id: orderData.orderId,
           symbol: orderData.symbol.toUpperCase(),
           type: orderData.type === "buy" ? "Buy" : "Sell", 
@@ -376,8 +379,8 @@ const Dashboard = () => {
           closePrice: orderData.closePrice,
           openTime: orderData.openTime,
           closeTime: orderData.closeTime,
-          pnl: orderData.profitLoss,
-          status: orderData.status
+          pnl: orderData.profitLoss || 0,
+          status: "closed"
         })));
       } else {
         console.log("No closed orders message found.", data);

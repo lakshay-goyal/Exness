@@ -156,21 +156,47 @@ tradeRouter.post("/close", authMiddleware as any, async (req: Request, res: Resp
   }
 });
 
-tradeRouter.get("/close/:id", authMiddleware as any, async (req: Request, res: Response) => {
-  const authReq = req as Request & { user?: { id: string } };
-  const userId = authReq.user?.id;
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  console.log("userId from token for closed orders:", userId);
-
+tradeRouter.get("/close", authMiddleware as any, async (req: Request, res: Response) => {
   try {
-    const result = await prisma.orders.findMany({
-      where: { userId: userId }
+    const authReq = req as Request & { user?: { id: string } };
+    const userId = authReq.user?.id;
+    if (!userId) {
+      console.error("Error: Unauthorized - userId not found for get close orders.");
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    console.log("Get Close Orders Request: User ID - ", userId);
+
+    const RedisStreams = req.app.locals.redisStreams as any;
+    await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+      function: "getCloseOrders",
+      userId,
     });
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch orders" });
+
+    try {
+      const result = await RedisStreams.readNextFromRedisStream(
+        constant.secondaryRedisStream,
+        0
+      );
+      console.log("Close Orders Result from Redis Stream:", result);
+      if (!res.headersSent) {
+        if (result && result.function === "getCloseOrders") {
+          const closeOrders = JSON.parse(result.message);
+          res.json({
+            message: closeOrders,
+          });
+        } else {
+          res.status(500).json({ error: "Unexpected response from DBStorage" });
+        }
+      }
+    } catch (e) {
+      console.error("Error reading from secondary Redis stream for close orders:", e);
+      return res.status(500).json({
+        message: "Failed to fetch close orders",
+      });
+    }
+  } catch (err) {
+    console.error("Error in get close orders endpoint:", err);
+    res.status(401).send("Token expired or invalid ❌");
   }
 });
 
