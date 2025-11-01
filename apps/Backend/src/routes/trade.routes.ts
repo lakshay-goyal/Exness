@@ -11,7 +11,7 @@ tradeRouter.get("/", (req: Request, res: Response) => {
 });
 
 tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Response) => {
-  const { symbol, type, quantity, leverage } = req.body;
+  const { symbol, type, quantity, leverage, slippage, takeProfit, stopLoss } = req.body;
   if (!symbol || !type || !quantity || !leverage) {
     return res.status(400).json({
       error: "Missing required parameters: symbol, type, quantity, leverage",
@@ -28,20 +28,70 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
 
   try {
     const RedisStreams = req.app.locals.redisStreams as any;
-    await RedisStreams.addToRedisStream(constant.redisStream, {
+    
+    // Build the order payload, only including defined values
+    const orderPayload: any = {
       function: "createOrder",
       userId,
       symbol,
       type,
       quantity,
       leverage,
+    };
+    
+    // Only add optional fields if they are provided
+    if (slippage !== undefined && slippage !== null && slippage !== "") {
+      const slippageValue = parseFloat(slippage as string);
+      if (!isNaN(slippageValue)) {
+        orderPayload.slippage = slippageValue;
+      }
+    }
+    
+    if (takeProfit !== undefined && takeProfit !== null && takeProfit !== "") {
+      const takeProfitValue = parseFloat(takeProfit as string);
+      if (!isNaN(takeProfitValue)) {
+        orderPayload.takeProfit = takeProfitValue;
+      }
+    }
+    
+    if (stopLoss !== undefined && stopLoss !== null && stopLoss !== "") {
+      const stopLossValue = parseFloat(stopLoss as string);
+      if (!isNaN(stopLossValue)) {
+        orderPayload.stopLoss = stopLossValue;
+      }
+    }
+    
+    console.log("Sending order payload to Engine:", JSON.stringify(orderPayload));
+    await RedisStreams.addToRedisStream(constant.redisStream, orderPayload);
+
+    // Create a timeout promise that rejects after 3 seconds
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Order creation request timed out after 3 seconds"));
+      }, 3000);
     });
 
+    // Race between the Redis stream read and the timeout
     try {
-      const result = await RedisStreams.readNextFromRedisStream(
+      const readPromise = RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
         0
       );
+      
+      const result = await Promise.race([readPromise, timeoutPromise]) as any;
+      
+      // Check if result is null (which means no message was received)
+      if (!result) {
+        if (!res.headersSent) {
+          return res.status(408).json({
+            error: "Request timeout: No response received within 3 seconds",
+            message: "Order creation request timed out. The order may have been cancelled.",
+            timeout: true,
+          });
+        }
+        return;
+      }
+      
       console.log("Create Order Result from Redis Stream:", result);
       
       if (!res.headersSent) {
@@ -90,6 +140,14 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
     } catch (e) {
       console.error("Error reading from secondary Redis stream for create order:", e);
       if (!res.headersSent) {
+        // Check if it's a timeout error
+        if (e instanceof Error && e.message.includes("timed out")) {
+          return res.status(408).json({
+            error: "Request timeout: Order creation took longer than 3 seconds",
+            message: "Order creation request timed out. The order may have been cancelled.",
+            timeout: true,
+          });
+        }
         return res.status(500).json({
           error: "Failed to read response from Engine",
           message: "Failed to create order",

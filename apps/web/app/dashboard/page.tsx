@@ -303,6 +303,7 @@ const Dashboard = () => {
   const [orderVolume, setOrderVolume] = useState("0.01");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
+  const [slippage, setSlippage] = useState("0.5");
   const [orders, setOrders] = useState<OpenOrder[]>([]);
   const [closeOrdersData, setCloseOrdersData] = useState<CloseOrder[]>([]);
   const [activeTab, setActiveTab] = useState("open");
@@ -527,6 +528,9 @@ const Dashboard = () => {
           type: type,
           quantity: parseFloat(orderVolume),
           leverage: 100,
+          slippage: slippage ? parseFloat(slippage) : undefined,
+          takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
+          stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
         }
       );
 
@@ -907,6 +911,27 @@ const Dashboard = () => {
                     <Button variant="outline" size="sm" disabled={createOrderLoading}>
                       <Plus className="h-3 w-3" />
                     </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">
+                    Slippage (%)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="0.5"
+                      value={slippage}
+                      onChange={(e) => setSlippage(e.target.value)}
+                      className="text-sm h-8"
+                      disabled={createOrderLoading}
+                      type="number"
+                      step="0.1"
+                      min="0"
+                    />
+                    <span className="text-xs text-muted-foreground min-w-fit">
+                      %
+                    </span>
                   </div>
                 </div>
 

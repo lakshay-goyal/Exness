@@ -41,18 +41,18 @@ export async function createCloseOrderFunction(result: any) {
 
     // Get current price for the symbol
     // Prices use format like "BTC_USDC_PERP", "ETH_USDC_PERP", "SOL_USDC_PERP"
-    const priceAssetName = getPriceAssetName(order.symbol);
+    const priceAssetName = getPriceAssetName(order?.symbol || "");
     const priceData = prices.find((p: any) => {
       // Try matching with price asset name (e.g., BTC_USDC_PERP)
       if (p.asset === priceAssetName) return true;
       // Try exact match with order symbol
-      if (p.asset === order.symbol) return true;
+      if (p.asset === order?.symbol) return true;
       // Try case-insensitive match
       return p.asset?.toUpperCase() === priceAssetName.toUpperCase();
     });
     
     if (!priceData) {
-      console.error(`Price data not found for symbol: ${order.symbol} (expected asset: ${priceAssetName})`);
+      console.error(`Price data not found for symbol: ${order?.symbol} (expected asset: ${priceAssetName})`);
       console.error(`Available price assets:`, prices.map(p => p.asset));
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "createCloseOrder",
@@ -64,16 +64,16 @@ export async function createCloseOrderFunction(result: any) {
     // Calculate close price based on order type
     // For buy orders, close at bid price (sell price)
     // For sell orders, close at ask price (buy price)
-    const closePrice = order.type === "buy" ? priceData.bidValue : priceData.askValue;
+    const closePrice = order?.type === "buy" ? priceData.bidValue : priceData.askValue;
     
     // Calculate profit/loss
     // For buy orders: profit if closePrice > openPrice
     // For sell orders: profit if closePrice < openPrice
     let profitLoss: number;
-    if (order.type === "buy") {
-      profitLoss = (closePrice - order.openPrice) * order.quantity;
+    if (order?.type === "buy") {
+      profitLoss = (closePrice - order?.openPrice) * order?.quantity;
     } else {
-      profitLoss = (order.openPrice - closePrice) * order.quantity;
+      profitLoss = (order?.openPrice || 0 - closePrice) * (order?.quantity || 0);
     }
 
     // Remove order from in-memory openOrders array
@@ -83,18 +83,18 @@ export async function createCloseOrderFunction(result: any) {
     // Create the closed order result matching Prisma schema
     const closeTime = new Date();
     const orderResult = {
-      orderId: order.orderId,
-      userId: order.userId,
-      symbol: order.symbol,
-      type: order.type,
-      quantity: order.quantity,
-      leverage: order.leverage,
-      takeProfit: order.takeProfit || null,
-      stopLoss: order.stopLoss || null,
-      stippage: order.stippage || null,
-      openPrice: order.openPrice,
+      orderId: order?.orderId,
+      userId: order?.userId,
+      symbol: order?.symbol,
+      type: order?.type,
+      quantity: order?.quantity,
+      leverage: order?.leverage,
+      takeProfit: order?.takeProfit || null,
+      stopLoss: order?.stopLoss || null,
+      stippage: order?.stippage || null,
+      openPrice: order?.openPrice,
       closePrice: closePrice,
-      openTime: order.openTime,
+      openTime: order?.openTime,
       closeTime: closeTime,
       profitLoss: profitLoss,
     };
