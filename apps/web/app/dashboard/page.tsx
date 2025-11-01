@@ -13,8 +13,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createChart, ColorType } from "lightweight-charts";
 import type { UTCTimestamp } from "lightweight-charts";
 import axios from "axios";
-import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { Navbar } from '@/components/Navbar';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 import {
   TrendingUp,
   TrendingDown,
@@ -309,28 +311,23 @@ const Dashboard = () => {
   const [openOrdersLoading, setOpenOrdersLoading] = useState(false);
   const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
 
-  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const { token, isAuthenticated } = useAuth();
 
   async function fetchBalance() {
+    if (!token || !isAuthenticated) {
+      console.log('User not authenticated, skipping balance fetch');
+      return;
+    }
+
     try {
       console.log('=== Starting fetchBalance ===');
       setBalanceLoading(true);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No authentication token found for balance.');
-        setBalanceLoading(false);
-        return;
-      }
 
       console.log('Making request to http://localhost:8000/api/v1/balance');
       
       const response = await axios.get('http://localhost:8000/api/v1/balance', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000
       });
       
       console.log('Balance response received:', response.data);
@@ -366,18 +363,14 @@ const Dashboard = () => {
   }
 
   async function fetchOpenOrders() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error("No authentication token found for open orders.");
+    if (!token || !isAuthenticated) {
+      console.log('User not authenticated, skipping open orders fetch');
       return;
     }
+    
     setOpenOrdersLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/open/', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get('http://localhost:8000/api/v1/trade/open/');
       const data = response.data;
       console.log("Raw Open Orders Data:", data);
       if (data.message) {
@@ -406,18 +399,14 @@ const Dashboard = () => {
   }
 
   async function fetchCloseOrders() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error("No authentication token found for closed orders.");
+    if (!token || !isAuthenticated) {
+      console.log('User not authenticated, skipping closed orders fetch');
       return;
     }
+    
     setClosedOrdersLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/open/', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get('http://localhost:8000/api/v1/trade/open/');
       const data = response.data;
       console.log("Raw Closed Orders Data:", data);
       if (data.message) {
@@ -449,16 +438,12 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    fetchBalance();
-    fetchOpenOrders();
-    fetchCloseOrders();
-  }, [])
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/login');
+    if (isAuthenticated && token) {
+      fetchBalance();
+      fetchOpenOrders();
+      fetchCloseOrders();
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, token]);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:7070/");
@@ -570,8 +555,7 @@ const Dashboard = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || !isAuthenticated) {
       console.error("No authentication token found.");
       router.push('/login');
       return;
@@ -585,12 +569,7 @@ const Dashboard = () => {
           symbol: selectedCrypto.symbol,
           type: type,
           quantity: parseFloat(orderVolume),
-          leverage: 100, // Assuming a default leverage for now
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          leverage: 100,
         }
       );
 
@@ -610,8 +589,7 @@ const Dashboard = () => {
   };
 
   const handleCloseOrder = async (orderId: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || !isAuthenticated) {
       console.error("No authentication token found for closing order.");
       router.push('/login');
       return;
@@ -621,12 +599,7 @@ const Dashboard = () => {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/v1/trade/close",
-        { orderId: orderId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { orderId: orderId }
       );
       console.log("Close Order Response:", response.data);
       if (response.data.message) {
@@ -645,9 +618,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="h-screen bg-background text-foreground font-bricolage flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="h-14 border-b border-border flex items-center px-4 bg-card/50 backdrop-blur-sm z-50">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background text-foreground font-bricolage flex flex-col">
+        <Navbar showNavLinks={false} />
+        <div className="flex flex-col flex-1 overflow-hidden mt-16">
+      <header className="h-14 border-b border-border flex items-center px-4 bg-card/50 backdrop-blur-sm z-40">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -694,8 +669,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Main Dashboard - Fixed Height Layout */}
-      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Instruments */}
         <div
           className={`${sidebarOpen ? "w-80" : "w-0"} lg:w-80 transition-all duration-300 overflow-hidden border-r border-border bg-card/30`}
@@ -1197,7 +1171,9 @@ const Dashboard = () => {
           </div>
         </Tabs>
       </div>
-    </div>
+        </div>
+      </div>
+    </ProtectedRoute>
   );
 };
 

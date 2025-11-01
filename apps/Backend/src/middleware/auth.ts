@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '@repo/config';
+import { prisma } from '@repo/db';
 
 interface AuthRequest extends Request {
   user?: {
@@ -11,7 +12,7 @@ interface AuthRequest extends Request {
   };
 }
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     console.log('Auth middleware - Request headers:', req.headers);
     const authHeader = req.header('Authorization');
@@ -32,10 +33,23 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
       lastName?: string;
     };
 
-    // Extract userId from the decoded JWT token
     const userId = decoded.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Invalid token: userId not found.' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { userID: userId },
+          { email: decoded.email }
+        ]
+      }
+    });
+
+    if (!user) {
+      console.log('Auth middleware - User not found in database:', { userId, email: decoded.email });
+      return res.status(401).json({ error: 'User not found in database. Please login again.' });
     }
 
     req.user = {
@@ -46,6 +60,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     };
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     res.status(401).json({ error: 'Invalid token.' });
   }
 };

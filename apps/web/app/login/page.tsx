@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { useAuth } from '@/context/AuthContext';
+import { Navbar } from '@/components/Navbar';
+import { GuestRoute } from '@/components/GuestRoute';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +22,6 @@ const Login: React.FC = () => {
         email: email
       });
       console.log('Login request submitted:', response.data);
-      // For magic-link flow, we do not receive token here; user must click email link
       setIsSubmitted(true);
     } catch (error) {
       console.error('Login failed:', error);
@@ -33,61 +32,53 @@ const Login: React.FC = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="max-w-md w-full">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
-            <p className="text-muted-foreground mb-8">
-              We've sent a trading account setup link to <strong>{email}</strong>. 
-              Click the link in the email to complete your registration and start trading.
-            </p>
-            <div className="space-y-4">
-              <button 
-                onClick={() => {
-                  setIsSubmitted(false);
-                  setEmail('');
-                }}
-                className="w-full px-6 py-3 border border-border rounded-lg font-medium hover:bg-accent transition-colors"
-              >
-                Use Different Email
-              </button>
-              <Link 
-                href="/"
-                className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90 transition-colors"
-              >
-                Back to Home
-              </Link>
+      <GuestRoute>
+        <div className="min-h-screen bg-background">
+          <Navbar showNavLinks={false} />
+          <div className="flex items-center justify-center min-h-screen px-4 pt-16">
+          <div className="max-w-md w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
+              <p className="text-muted-foreground mb-8">
+                We've sent a trading account setup link to <strong>{email}</strong>. 
+                Click the link in the email to complete your registration and start trading.
+              </p>
+              <div className="space-y-4">
+                <button 
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setEmail('');
+                  }}
+                  className="w-full px-6 py-3 border border-border rounded-lg font-medium hover:bg-accent transition-colors"
+                >
+                  Use Different Email
+                </button>
+                <Link 
+                  href="/"
+                  className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90 transition-colors"
+                >
+                  Back to Home
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </GuestRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold">
-              CryptoCFD
-            </Link>
-            <Link 
-              href="/" 
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
+    <GuestRoute>
+      <div className="min-h-screen bg-background">
+        <Navbar showNavLinks={false} />
 
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4">
+        <div className="flex items-center justify-center min-h-screen px-4 pt-16">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4">Start Trading Today</h1>
@@ -197,7 +188,8 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </GuestRoute>
   );
 };
 
