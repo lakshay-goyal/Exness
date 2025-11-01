@@ -112,24 +112,63 @@ class TimeScaleDB {
         ON candles_${name} (symbol, bucket DESC);
       `);
 
-      // Check if a refresh policy already exists for the continuous aggregate
-      const { rows } = await this.client.query(`
-        SELECT 1 FROM timescaledb_information.jobs
-        WHERE hypertable_name = 'candles_${name}'
-          AND proc_name = 'policy_refresh_continuous_aggregate';
-      `);
-
       // Add a refresh policy if one doesn't exist
-      if (rows.length === 0) {
-        await this.client.query(`
-          SELECT add_continuous_aggregate_policy('candles_${name}',
-            start_offset => INTERVAL '${start}',
-            end_offset   => INTERVAL '${interval}',
-            schedule_interval => INTERVAL '${interval}'
-          );
+      try {
+        const policyCheck = await this.client.query(`
+          SELECT COUNT(*) as count
+          FROM timescaledb_information.jobs j
+          WHERE j.proc_name = 'policy_refresh_continuous_aggregate'
+            AND j.config::text LIKE '%candles_${name}%';
         `);
-        console.log(`Added refresh policy for candles_${name}`);
+
+        if (policyCheck.rows[0]?.count === '0') {
+          // Policy doesn't exist, create it
+          await this.client.query(`
+            SELECT add_continuous_aggregate_policy('candles_${name}',
+              start_offset => INTERVAL '${start}',
+              end_offset   => INTERVAL '${interval}',
+              schedule_interval => INTERVAL '${interval}'
+            );
+          `);
+          console.log(`✅ Added refresh policy for candles_${name}`);
+        } else {
+          console.log(`ℹ️ Refresh policy for candles_${name} already exists`);
+        }
+      } catch (policyError: any) {
+        // If adding policy fails, log but don't throw (policy might already exist)
+        if (policyError?.message?.includes('already exists') || 
+            policyError?.code === 'P0001') {
+          console.log(`ℹ️ Refresh policy for candles_${name} already exists`);
+        } else {
+          console.warn(`⚠️ Could not add refresh policy for candles_${name}:`, policyError?.message || policyError);
+        }
       }
+    }
+
+    // After creating all aggregates, check if there's data and refresh them
+    const dataCheck = await this.client.query("SELECT COUNT(*) as count, MIN(time) as min_time, MAX(time) as max_time FROM trades;");
+    const tradeCount = parseInt(dataCheck.rows[0]?.count || '0', 10);
+    
+    if (tradeCount > 0) {
+      const minTime = dataCheck.rows[0]?.min_time;
+      const maxTime = dataCheck.rows[0]?.max_time;
+      console.log(`📊 Found ${tradeCount} trades in database (from ${minTime} to ${maxTime})`);
+      console.log(`🔄 Refreshing all continuous aggregates with existing data...`);
+      
+      // Refresh all aggregates with the available data range
+      for (const { name } of intervals) {
+        try {
+          await this.client.query(
+            `CALL refresh_continuous_aggregate('candles_${name}', $1::timestamptz, $2::timestamptz);`,
+            [minTime, maxTime]
+          );
+          console.log(`✅ Refreshed candles_${name}`);
+        } catch (refreshError: any) {
+          console.warn(`⚠️ Could not refresh candles_${name}:`, refreshError?.message || refreshError);
+        }
+      }
+    } else {
+      console.log(`ℹ️ No trades found in database. Continuous aggregates will populate as data is inserted.`);
     }
 
     console.log("✅ TimescaleDB setup completed!");
@@ -137,6 +176,54 @@ class TimeScaleDB {
     console.error("❌ Error setting up TimescaleDB:", error);
   }
 }
+
+  // Method to manually refresh all continuous aggregates
+  async refreshAllContinuousAggregates(timeRange?: { from: string; to: string }) {
+    try {
+      let from: string, to: string;
+      
+      if (timeRange) {
+        from = timeRange.from;
+        to = timeRange.to;
+      } else {
+        // Get the full time range from trades table
+        const timeRangeResult = await this.client.query(
+          "SELECT MIN(time) as min_time, MAX(time) as max_time FROM trades;"
+        );
+        
+        if (!timeRangeResult.rows[0]?.min_time || !timeRangeResult.rows[0]?.max_time) {
+          console.log("⚠️ No data in trades table to refresh aggregates");
+          return { refreshed: [], errors: [] };
+        }
+        
+        from = timeRangeResult.rows[0].min_time;
+        to = timeRangeResult.rows[0].max_time;
+      }
+      
+      const intervals = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1mo", "1y"];
+      const refreshed: string[] = [];
+      const errors: Array<{ aggregate: string; error: string }> = [];
+      
+      for (const name of intervals) {
+        try {
+          await this.client.query(
+            `CALL refresh_continuous_aggregate('candles_${name}', $1::timestamptz, $2::timestamptz);`,
+            [from, to]
+          );
+          refreshed.push(`candles_${name}`);
+          console.log(`✅ Refreshed candles_${name}`);
+        } catch (error: any) {
+          errors.push({ aggregate: `candles_${name}`, error: error?.message || String(error) });
+          console.warn(`⚠️ Failed to refresh candles_${name}:`, error?.message || error);
+        }
+      }
+      
+      return { refreshed, errors, timeRange: { from, to } };
+    } catch (error: any) {
+      console.error("❌ Error refreshing continuous aggregates:", error);
+      throw error;
+    }
+  }
 
   async disconnect() {
     await this.client.end();

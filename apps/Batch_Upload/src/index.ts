@@ -11,17 +11,26 @@ async function main() {
   const RedisClient = redisClient(config.REDIS_URL);
   await RedisClient.connect();
 
-  let BATCH_SIZE = 0; // current batch counter
-  const BATCH_LIMIT = 100; // reset after 100 inserts
+  let BATCH_SIZE = 0;
+  const BATCH_LIMIT = 100;
 
   while (true) {
     try {
       const msg = await RedisClient.popData(constant.redisQueue);
+      
       if (msg) {
         const trade = JSON.parse(msg);
-
-        // format Binance trade schema
-        const time = new Date(trade.data.T);
+        console.log("trade", trade);
+        
+        const timestamp = typeof trade.data.T === 'string' ? parseInt(trade.data.T, 10) : trade.data.T;
+        const time = new Date(timestamp);
+        
+        if (isNaN(time.getTime()) || time.getFullYear() < 2020 || time.getFullYear() > 2100) {
+          console.error(`⚠️ Invalid timestamp for trade: ${trade.data.T}, parsed as: ${time.toISOString()}`);
+          console.error(`Full trade data:`, JSON.stringify(trade.data));
+          continue;
+        }
+        
         const symbol = trade.data.s;
         const price = trade.data.p;
         const volume = trade.data.q;
@@ -33,15 +42,13 @@ async function main() {
           VALUES ($1, $2, $3, $4, $5, $6)
           ON CONFLICT DO NOTHING;`,
           [time, symbol, price, volume, trade_id, side]
-        );
+        )
 
         BATCH_SIZE++;
       } else {
-        // Sleep 100ms if no message in queue
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // Reset batch counter after 100 inserts
       if (BATCH_SIZE >= BATCH_LIMIT) {
         BATCH_SIZE = 0;
       }
