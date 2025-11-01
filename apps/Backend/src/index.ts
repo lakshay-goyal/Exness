@@ -39,7 +39,7 @@ app.locals.redisStreams = RedisStreams;
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/balance', balanceRouter)
 app.use('/api/v1/supportedAssets', assetRouter)
-app.use('/api/v1/candles', candleRouter)
+app.use('/api/v1/candles', candleRouter) 
 app.use('/api/v1/trade', tradeRouter)
 
 app.get('/', (req, res)=>{

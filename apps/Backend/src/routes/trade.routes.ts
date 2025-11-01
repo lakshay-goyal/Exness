@@ -43,16 +43,58 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
         0
       );
       console.log("Create Order Result from Redis Stream:", result);
+      
       if (!res.headersSent) {
-        res.json({
-          message: result?.message,
-        });
+        if (result && result.function === "createOrder") {
+          try {
+            // Parse the message (it's JSON stringified from Engine)
+            const orderResult = typeof result.message === 'string' 
+              ? JSON.parse(result.message) 
+              : result.message;
+            
+            // Check if it's an error response
+            if (orderResult.error || !orderResult.success) {
+              return res.status(400).json({
+                error: orderResult.error || "Failed to create order",
+                message: orderResult.error || "Failed to create order",
+              });
+            }
+            
+            // Success response
+            res.json({
+              message: orderResult.message || "Order created successfully",
+              orderId: orderResult.orderId,
+            });
+          } catch (parseError) {
+            console.error("Error parsing create order response:", parseError);
+            // If it's a simple string message (legacy format)
+            if (typeof result.message === 'string' && result.message) {
+              res.json({
+                message: result.message,
+              });
+            } else {
+              res.status(500).json({
+                error: "Failed to process create order response",
+                message: "Failed to create order",
+              });
+            }
+          }
+        } else {
+          console.warn("Unexpected result structure for create order:", result);
+          res.status(500).json({
+            error: "Unexpected response from Engine",
+            message: "Failed to create order",
+          });
+        }
       }
     } catch (e) {
       console.error("Error reading from secondary Redis stream for create order:", e);
-      return res.status(411).json({
-        message: "Create Order not placed",
-      });
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "Failed to read response from Engine",
+          message: "Failed to create order",
+        });
+      }
     }
   } catch (err) {
     console.error("Error in create order endpoint:", err);
@@ -83,19 +125,33 @@ tradeRouter.get("/open", authMiddleware as any, async (req: Request, res: Respon
       );
       console.log("Open Orders Result from Redis Stream:", result);
       if (!res.headersSent) {
-        res.json({
-          message: result?.message,
-        });
+        if (result && result.function === "getOpenOrder") {
+          // result.message is already a JSON string from getOpenOrderFunction
+          // Just pass it through to the frontend which will parse it
+          res.json({
+            message: result.message,
+          });
+        } else {
+          console.warn("Unexpected response structure for open orders:", result);
+          res.json({
+            message: JSON.stringify([]),
+          });
+        }
       }
     } catch (e) {
       console.error("Error reading from secondary Redis stream for open orders:", e);
-      return res.status(411).json({
-        message: "Trade not placed",
-      });
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "Failed to fetch open orders",
+          message: JSON.stringify([]),
+        });
+      }
     }
   } catch (err) {
     console.error("Error in get open orders endpoint:", err);
-    res.status(401).send("Token expired or invalid ❌");
+    if (!res.headersSent) {
+      res.status(401).send("Token expired or invalid ❌");
+    }
   }
 });
 
@@ -131,28 +187,62 @@ tradeRouter.post("/close", authMiddleware as any, async (req: Request, res: Resp
         0
       );
       console.log("Close Order Result from Redis Stream:", result);
-      if (result && result.function === "createCloseOrder") {
-        if (result.message?.orderId == orderId) {
-          if (!res.headersSent) {
-            res.json({ message: result.message });
+      
+      if (!res.headersSent) {
+        if (result && result.function === "createCloseOrder") {
+          // Parse the message (it's JSON stringified from Engine)
+          let orderData;
+          try {
+            orderData = typeof result.message === 'string' 
+              ? JSON.parse(result.message) 
+              : result.message;
+            
+            // Check if it's an error response
+            if (orderData.error) {
+              return res.status(400).json({ 
+                error: orderData.error,
+                message: orderData.error 
+              });
+            }
+            
+            // Verify orderId matches
+            if (orderData.orderId === orderId) {
+              res.json({ 
+                message: "Order closed successfully",
+                order: orderData 
+              });
+            } else {
+              console.warn("Warning: Order ID mismatch during close order.");
+              res.status(400).json({ error: "Order ID mismatch" });
+            }
+          } catch (parseError) {
+            console.error("Error parsing close order response:", parseError);
+            // If it's a simple error string
+            if (typeof result.message === 'string' && 
+                (result.message.includes("error") || result.message.includes("Error"))) {
+              return res.status(400).json({ error: result.message });
+            }
+            res.status(500).json({ error: "Failed to process close order response" });
           }
-        } else if (!res.headersSent) {
-          console.warn("Warning: Order ID mismatch during close order.");
-          res.json({ message: "Error closing order" });
+        } else {
+          console.warn("Warning: Unexpected result from Redis stream for close order.");
+          res.status(500).json({ error: "Failed to close order" });
         }
-      } else if (!res.headersSent) {
-        console.warn("Warning: Unexpected result from Redis stream for close order.");
-        res.json({ message: "Error closing order" });
       }
     } catch (e) {
       console.error("Error reading from secondary Redis stream for close order:", e);
-      return res.status(411).json({
-        message: "Trade not placed",
-      });
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "Failed to close order",
+          message: "Internal server error",
+        });
+      }
     }
   } catch (err) {
     console.error("Error in close order endpoint:", err);
-    res.status(401).send("Token expired or invalid ❌");
+    if (!res.headersSent) {
+      res.status(401).send("Token expired or invalid ❌");
+    }
   }
 });
 
@@ -180,23 +270,47 @@ tradeRouter.get("/close", authMiddleware as any, async (req: Request, res: Respo
       console.log("Close Orders Result from Redis Stream:", result);
       if (!res.headersSent) {
         if (result && result.function === "getCloseOrders") {
-          const closeOrders = JSON.parse(result.message);
+          // result.message is already a JSON string from dbStorageFunction
+          let closeOrders;
+          try {
+            closeOrders = typeof result.message === 'string' 
+              ? JSON.parse(result.message) 
+              : result.message;
+            
+            // Ensure it's an array
+            if (!Array.isArray(closeOrders)) {
+              console.warn("Close orders is not an array, converting to array:", closeOrders);
+              closeOrders = [];
+            }
+          } catch (parseError) {
+            console.error("Error parsing close orders message:", parseError);
+            closeOrders = [];
+          }
+          
           res.json({
             message: closeOrders,
           });
         } else {
-          res.status(500).json({ error: "Unexpected response from DBStorage" });
+          console.warn("Unexpected response structure:", result);
+          res.json({
+            message: [],
+          });
         }
       }
     } catch (e) {
       console.error("Error reading from secondary Redis stream for close orders:", e);
-      return res.status(500).json({
-        message: "Failed to fetch close orders",
-      });
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "Failed to fetch close orders",
+          message: [],
+        });
+      }
     }
   } catch (err) {
     console.error("Error in get close orders endpoint:", err);
-    res.status(401).send("Token expired or invalid ❌");
+    if (!res.headersSent) {
+      res.status(401).send("Token expired or invalid ❌");
+    }
   }
 });
 
