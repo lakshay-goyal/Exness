@@ -89,6 +89,10 @@ interface CloseOrder {
 
 const closeOrder: CloseOrder[] = [];
 
+const getBackendUrl = () => {
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+};
+
 type CryptoAsset = {
   symbol: string;
   name: string;
@@ -131,7 +135,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
       setError(null);
 
       const response = await axios.get(
-        `http://localhost:8000/api/v1/candles?symbol=${asset}&interval=${time}`
+        `${getBackendUrl()}/api/v1/candles?symbol=${asset}&interval=${time}`
       );
 
       const formattedData = response.data.data.map((candle: any) => ({
@@ -304,63 +308,13 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("open");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
   const [createOrderLoading, setCreateOrderLoading] = useState(false);
   const [closeOrderLoading, setCloseOrderLoading] = useState(false);
   const [openOrdersLoading, setOpenOrdersLoading] = useState(false);
   const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
 
   const router = useRouter();
-  const { token, isAuthenticated } = useAuth();
-
-  async function fetchBalance() {
-    if (!token || !isAuthenticated) {
-      console.log('User not authenticated, skipping balance fetch');
-      return;
-    }
-
-    try {
-      console.log('=== Starting fetchBalance ===');
-      setBalanceLoading(true);
-
-      console.log('Making request to http://localhost:8000/api/v1/balance');
-      
-      const response = await axios.get('http://localhost:8000/api/v1/balance', {
-        timeout: 10000
-      });
-      
-      console.log('Balance response received:', response.data);
-      console.log("Balance value:", response.data.message);
-      
-      if (response.data.status === 'success') {
-        setBalance(response.data.message);
-        console.log('Balance set in state:', response.data.message);
-      } else {
-        console.error('Failed to fetch balance:', response.data.message);
-      }
-    } catch (error: any) {
-      console.error('=== ERROR in fetchBalance ===');
-      console.error('Error type:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Full error:', error);
-      
-      if (error.response) {
-        console.error('Response error - Status:', error.response.status);
-        console.error('Response error - Data:', error.response.data);
-        console.error('Response error - Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('Request error - No response received');
-        console.error('Request error - Request:', error.request);
-      } else {
-        console.error('Other error:', error.message);
-      }
-    } finally {
-      setBalanceLoading(false);
-      console.log('=== fetchBalance completed ===');
-    }
-  }
+  const { token, isAuthenticated, balance, balanceLoading, fetchBalance } = useAuth();
 
   async function fetchOpenOrders() {
     if (!token || !isAuthenticated) {
@@ -370,7 +324,7 @@ const Dashboard = () => {
     
     setOpenOrdersLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/open/');
+      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`);
       const data = response.data;
       console.log("Raw Open Orders Data:", data);
       if (data.message) {
@@ -406,7 +360,7 @@ const Dashboard = () => {
     
     setClosedOrdersLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/trade/open/');
+      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`);
       const data = response.data;
       console.log("Raw Closed Orders Data:", data);
       if (data.message) {
@@ -439,7 +393,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (isAuthenticated && token) {
-      fetchBalance();
+      // fetchBalance is now automatically called by AuthContext when authenticated
       fetchOpenOrders();
       fetchCloseOrders();
     }
@@ -564,7 +518,7 @@ const Dashboard = () => {
     setCreateOrderLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/v1/trade/create",
+        `${getBackendUrl()}/api/v1/trade/create`,
         {
           symbol: selectedCrypto.symbol,
           type: type,
@@ -598,7 +552,7 @@ const Dashboard = () => {
     setCloseOrderLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/v1/trade/close",
+        `${getBackendUrl()}/api/v1/trade/close`,
         { orderId: orderId }
       );
       console.log("Close Order Response:", response.data);

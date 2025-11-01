@@ -1,6 +1,5 @@
 import { config } from "@repo/config";
 import { createUserFunction } from "./createUser.js";
-import { getBalanceFunction } from "./getBalance.js";
 import { createOrderFunction } from "./createOrder.js";
 import { getOpenOrderFunction } from "./getOpenOrder.js";
 import { createCloseOrderFunction } from "./createCloseOrder.js";
@@ -18,9 +17,6 @@ export async function tradeFunction(result: any) {
   if (result.function === "createUser") {
     console.log("Calling createUserFunction");
     await createUserFunction(result);
-  }
-  if (result.function === "getBalance") {
-    await getBalanceFunction(result);
   }
   if (result.function === "createOrder") {
     await createOrderFunction(result);

@@ -1,9 +1,8 @@
 import express, { type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { authMiddleware } from "../middleware/auth.js";
-import { config, constant } from "@repo/config";
-
-// Use shared Redis Streams client from app.locals (initialized in index.ts)
+import { config } from "@repo/config";
+import { prisma } from "@repo/db";
 
 const balanceRouter = express.Router();
 const jwtSecret = config.JWT_SECRET;
@@ -19,48 +18,41 @@ balanceRouter.get("/", authMiddleware as any, async (req: Request, res: Response
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    console.log("Balance UserID: ", userId)
-    const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
-
-    await RedisStreams.addToRedisStream(constant.redisStream, {
-      function: "getBalance",
-      userId,
-    });
+    console.log("Balance UserID: ", userId);
 
     try {
-      const payload = await RedisStreams.readNextFromRedisStream(
-        constant.secondaryRedisStream,
-        0
-      );
+      // Fetch balance directly from database
+      const user = await prisma.user.findUnique({
+        where: { userID: userId },
+      });
 
-      if (!payload) {
-        return res.status(504).json({ status: "timeout", message: "No data" });
+      if (!user) {
+        return res.status(404).json({
+          status: "error",
+          message: "User not found",
+        });
       }
 
-      if (payload.function === "getBalance") {
-        if (payload.message > 0) {
-          if (!res.headersSent) {
-            return res.json({
-              status: "success",
-              message: payload.message,
-            });
-          }
-        } else {
-          if (!res.headersSent) {
-            return res.json({
-              status: "exists",
-              message: "User already existed ❌",
-            });
-          }
-        }
-      }
-    } catch (e) {
-      return res.status(411).json({
-        message: "Trade not placed",
+      // Get balance from user object (balance field should be available after Prisma client regeneration)
+      const balance = (user as any).balance ?? 0;
+
+      return res.json({
+        status: "success",
+        message: balance,
+      });
+    } catch (e: any) {
+      console.error("Error fetching balance from database:", e);
+      return res.status(500).json({
+        status: "error",
+        message: "Failed to fetch balance from database",
       });
     }
-  } catch (err) {
-    res.status(401).send("Token expired or invalid ❌");
+  } catch (err: any) {
+    console.error("Error in balance route:", err);
+    if (err.message && err.message.includes("Token")) {
+      return res.status(401).json({ error: "Token expired or invalid ❌" });
+    }
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -17,6 +17,9 @@ interface AuthContextType {
   logout: () => void;
   verifyToken: () => Promise<boolean>;
   loading: boolean;
+  balance: number | null;
+  balanceLoading: boolean;
+  fetchBalance: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -66,6 +71,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const base64Url = tokenToCheck.split('.')[1];
           const base64 = base64Url?.replace(/-/g, '+').replace(/_/g, '/');
+          if (!base64) {
+            console.error('Invalid token format: missing payload');
+            return false;
+          }
           const jsonPayload = decodeURIComponent(
             atob(base64)
               .split('')
@@ -200,6 +209,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [verifyToken, router]);
 
+  const fetchBalance = useCallback(async () => {
+    if (!token || !isAuthenticated) {
+      console.log('User not authenticated, skipping balance fetch');
+      return;
+    }
+
+    try {
+      console.log('=== Starting fetchBalance ===');
+      setBalanceLoading(true);
+
+      const backendUrl = getBackendUrl();
+      console.log(`Making request to ${backendUrl}/api/v1/balance`);
+      
+      const response = await axios.get(`${backendUrl}/api/v1/balance`, {
+        timeout: 35000, // Increased timeout to 35 seconds to accommodate backend timeout
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('Balance response received:', response.data);
+      console.log("Balance value:", response.data.message);
+      
+      if (response.data.status === 'success') {
+        setBalance(response.data.message);
+        console.log('Balance set in state:', response.data.message);
+      } else {
+        console.error('Failed to fetch balance:', response.data.message);
+        setBalance(null);
+      }
+    } catch (error: any) {
+      console.error('=== ERROR in fetchBalance ===');
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Full error:', error);
+      
+      if (error.response) {
+        console.error('Response error - Status:', error.response.status);
+        console.error('Response error - Data:', error.response.data);
+        console.error('Response error - Headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Request error - No response received');
+        console.error('Request error - Request:', error.request);
+      } else {
+        console.error('Other error:', error.message);
+      }
+      setBalance(null);
+    } finally {
+      setBalanceLoading(false);
+      console.log('=== fetchBalance completed ===');
+    }
+  }, [token, isAuthenticated]);
+
   useEffect(() => {
     initializeAuth();
   }, []);
@@ -219,6 +282,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval);
   }, [token, isAuthenticated, verifyToken, logout]);
 
+  // Fetch balance when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      fetchBalance();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, token]); // fetchBalance is stable and depends on token/isAuthenticated
+
   return (
     <AuthContext.Provider
       value={{
@@ -229,6 +300,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         verifyToken,
         loading,
+        balance,
+        balanceLoading,
+        fetchBalance,
       }}
     >
       {children}

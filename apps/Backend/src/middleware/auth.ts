@@ -13,7 +13,7 @@ interface AuthRequest extends Request {
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+  try {  
     console.log('Auth middleware - Request headers:', req.headers);
     const authHeader = req.header('Authorization');
     console.log('Auth middleware - Authorization header:', authHeader);
