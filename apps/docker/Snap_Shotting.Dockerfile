@@ -5,18 +5,14 @@ WORKDIR /app
 COPY package.json bun.lock turbo.json ./
 
 COPY packages ./packages
-COPY apps/web ./apps/web
+COPY apps/Engine ./apps/Engine
 
 RUN bun install
 
 WORKDIR /app/packages/db
 RUN bun run db:generate
 
-WORKDIR /app/apps/web
-RUN bun run build
+WORKDIR /app/packages/snap-shotting
 
-EXPOSE 3001
-ENV PORT=3001
-
-CMD ["bun", "run", "next", "start", "-p", "3001"]
+CMD ["bun", "run", "index.ts"]
 

@@ -52,6 +52,25 @@ services:
     networks:
       - exness-network
 
+  mongodb:
+    image: mongo:7.0
+    container_name: exness-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: exness_snapshots
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - exness-network
+
   prisma-studio:
     build:
       context: .
@@ -60,7 +79,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -91,7 +109,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -125,7 +142,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -155,7 +171,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -175,6 +190,30 @@ services:
       - exness-network
     restart: unless-stopped
 
+  snap-shotting:
+    build:
+      context: .
+      dockerfile: apps/docker/Snap_Shotting.Dockerfile
+    container_name: exness-snap-shotting
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      TIMESCALE_DB_HOST: timescaledb
+      TIMESCALE_DB_PORT: 5432
+      DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
+      MONGODB_URL: mongodb://admin:admin123@mongodb:27017/exness_snapshots?authSource=admin
+      FRONTEND_URL: http://localhost:3001
+      BACKEND_URL: http://localhost:8000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    networks:
+      - exness-network
+    restart: unless-stopped
+
   price-poller:
     build:
       context: .
@@ -183,7 +222,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -205,7 +243,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -229,7 +266,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -253,7 +289,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -279,7 +314,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -307,7 +341,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Docker-specific networking
       REDIS_URL: redis://redis:6379
       TIMESCALE_DB_HOST: timescaledb
       TIMESCALE_DB_PORT: 5432
@@ -325,6 +358,7 @@ volumes:
   postgres_data:
   timescaledb_data:
   redis_data:
+  mongodb_data:
 
 networks:
   exness-network:
