@@ -317,15 +317,40 @@ const Dashboard = () => {
   const router = useRouter();
   const { token, isAuthenticated, balance, balanceLoading, fetchBalance } = useAuth();
 
+  // Request cancellation and deduplication
+  const openOrdersControllerRef = useRef<AbortController | null>(null);
+  const closeOrdersControllerRef = useRef<AbortController | null>(null);
+  const lastFetchTimeRef = useRef<{ open: number; close: number }>({ open: 0, close: 0 });
+
   async function fetchOpenOrders() {
     if (!token || !isAuthenticated) {
       console.log('User not authenticated, skipping open orders fetch');
       return;
     }
+
+    // Cancel previous request if still pending
+    if (openOrdersControllerRef.current) {
+      openOrdersControllerRef.current.abort();
+    }
+
+    // Debounce: Don't fetch if last fetch was less than 500ms ago
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current.open < 500) {
+      console.log('Skipping duplicate open orders fetch (debounced)');
+      return;
+    }
+    lastFetchTimeRef.current.open = now;
+
+    // Create new abort controller for this request
+    const controller = new AbortController();
+    openOrdersControllerRef.current = controller;
     
     setOpenOrdersLoading(true);
     try {
-      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`);
+      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`, {
+        signal: controller.signal,
+        timeout: 10000, // 10 second timeout
+      });
       const data = response.data;
       console.log("Raw Open Orders Data:", data);
       if (data.message) {
@@ -345,11 +370,17 @@ const Dashboard = () => {
         console.log("No open orders message found.", data);
         setOrders([]);
       }
-    } catch (error) {
-      console.error("Error fetching open orders:", error);
-      setOrders([]);
+    } catch (error: any) {
+      // Don't log error if request was cancelled
+      if (error.name !== 'CanceledError' && !error.message?.includes('canceled')) {
+        console.error("Error fetching open orders:", error);
+        setOrders([]);
+      }
     } finally {
       setOpenOrdersLoading(false);
+      if (openOrdersControllerRef.current === controller) {
+        openOrdersControllerRef.current = null;
+      }
     }
   }
 
@@ -358,6 +389,23 @@ const Dashboard = () => {
       console.log('User not authenticated, skipping closed orders fetch');
       return;
     }
+
+    // Cancel previous request if still pending
+    if (closeOrdersControllerRef.current) {
+      closeOrdersControllerRef.current.abort();
+    }
+
+    // Debounce: Don't fetch if last fetch was less than 500ms ago
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current.close < 500) {
+      console.log('Skipping duplicate close orders fetch (debounced)');
+      return;
+    }
+    lastFetchTimeRef.current.close = now;
+
+    // Create new abort controller for this request
+    const controller = new AbortController();
+    closeOrdersControllerRef.current = controller;
     
     setClosedOrdersLoading(true);
     try {
@@ -365,6 +413,8 @@ const Dashboard = () => {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
+        signal: controller.signal,
+        timeout: 10000, // 10 second timeout
       });
       const data = response.data;
       console.log("Raw Closed Orders Data:", data);
@@ -387,19 +437,39 @@ const Dashboard = () => {
         console.log("No closed orders message found.", data);
         setCloseOrdersData([]);
       }
-    } catch (error) {
-      console.error("Error fetching closed orders:", error);
-      setCloseOrdersData([]);
+    } catch (error: any) {
+      // Don't log error if request was cancelled
+      if (error.name !== 'CanceledError' && !error.message?.includes('canceled')) {
+        console.error("Error fetching closed orders:", error);
+        setCloseOrdersData([]);
+      }
     } finally {
       setClosedOrdersLoading(false);
+      if (closeOrdersControllerRef.current === controller) {
+        closeOrdersControllerRef.current = null;
+      }
     }
   }
 
   useEffect(() => {
     if (isAuthenticated && token) {
       // fetchBalance is now automatically called by AuthContext when authenticated
-      fetchOpenOrders();
-      fetchCloseOrders();
+      // Add small delay to prevent race conditions on rapid refreshes
+      const timer = setTimeout(() => {
+        fetchOpenOrders();
+        fetchCloseOrders();
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+        // Cancel pending requests on unmount
+        if (openOrdersControllerRef.current) {
+          openOrdersControllerRef.current.abort();
+        }
+        if (closeOrdersControllerRef.current) {
+          closeOrdersControllerRef.current.abort();
+        }
+      };
     }
   }, [isAuthenticated, token]);
 

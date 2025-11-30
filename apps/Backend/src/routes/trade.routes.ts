@@ -62,7 +62,15 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
     }
     
     console.log("Sending order payload to Engine:", JSON.stringify(orderPayload));
-    await RedisStreams.addToRedisStream(constant.redisStream, orderPayload);
+    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, orderPayload);
+    const requestId = streamResult?.requestId || orderPayload.requestId;
+    
+    if (!requestId) {
+      console.error("Failed to get requestId from stream result");
+      return res.status(500).json({ error: "Failed to generate request ID" });
+    }
+
+    console.log(`Waiting for response with requestId: ${requestId}`);
 
     // Create a timeout promise that rejects after 3 seconds
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -73,9 +81,12 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
 
     // Race between the Redis stream read and the timeout
     try {
+      // Use 5 second timeout to prevent stuck requests on rapid refreshes
+      // The timeoutPromise below will still enforce 3 second limit
       const readPromise = RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        0
+        5000, // 5 second timeout (will be raced with 3s timeout below)
+        { requestId: requestId } // Filter by correlation ID
       );
       
       const result = await Promise.race([readPromise, timeoutPromise]) as any;
@@ -171,15 +182,22 @@ tradeRouter.get("/open", authMiddleware as any, async (req: Request, res: Respon
     console.log("Get Open Orders Request: User ID - ", userId);
 
     const RedisStreams = req.app.locals.redisStreams as any;
-    await RedisStreams.addToRedisStream(constant.redisStream, {
+    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "getOpenOrder",
       userId,
     });
+    const requestId = streamResult?.requestId;
+
+    if (!requestId) {
+      return res.status(500).json({ error: "Failed to generate request ID" });
+    }
 
     try {
+      // Use 5 second timeout to prevent stuck requests on rapid refreshes
       const result = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        0
+        5000, // 5 second timeout
+        { requestId: requestId }
       );
       console.log("Open Orders Result from Redis Stream:", result);
       if (!res.headersSent) {
@@ -233,16 +251,23 @@ tradeRouter.post("/close", authMiddleware as any, async (req: Request, res: Resp
 
   try {
     const RedisStreams = req.app.locals.redisStreams as any;
-    await RedisStreams.addToRedisStream(constant.redisStream, {
+    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "createCloseOrder",
       orderId,
       userId,
     });
+    const requestId = streamResult?.requestId;
+
+    if (!requestId) {
+      return res.status(500).json({ error: "Failed to generate request ID" });
+    }
 
     try {
+      // Use 5 second timeout to prevent stuck requests on rapid refreshes
       const result = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        0
+        5000, // 5 second timeout
+        { requestId: requestId }
       );
       console.log("Close Order Result from Redis Stream:", result);
       
@@ -315,15 +340,22 @@ tradeRouter.get("/close", authMiddleware as any, async (req: Request, res: Respo
     console.log("Get Close Orders Request: User ID - ", userId);
 
     const RedisStreams = req.app.locals.redisStreams as any;
-    await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+    const streamResult = await RedisStreams.addToRedisStream(constant.dbStorageStream, {
       function: "getCloseOrders",
       userId,
     });
+    const requestId = streamResult?.requestId;
+
+    if (!requestId) {
+      return res.status(500).json({ error: "Failed to generate request ID" });
+    }
 
     try {
+      // Use 5 second timeout instead of infinite wait (0) to prevent stuck requests
       const result = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        0
+        5000, // 5 second timeout
+        { requestId: requestId }
       );
       console.log("Close Orders Result from Redis Stream:", result);
       if (!res.headersSent) {

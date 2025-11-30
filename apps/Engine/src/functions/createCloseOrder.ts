@@ -20,9 +20,12 @@ export async function createCloseOrderFunction(result: any) {
     
     if (orderIndex === -1) {
       console.log("Order not found:", result.orderId);
+      const requestId = result.requestId || result.correlationId;
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "createCloseOrder",
         message: JSON.stringify({ error: "Order not found", orderId: result.orderId }),
+        requestId: requestId,
+        correlationId: requestId
       });
       return;
     }
@@ -54,9 +57,12 @@ export async function createCloseOrderFunction(result: any) {
     if (!priceData) {
       console.error(`Price data not found for symbol: ${order?.symbol} (expected asset: ${priceAssetName})`);
       console.error(`Available price assets:`, prices.map(p => p.asset));
+      const requestId = result.requestId || result.correlationId;
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "createCloseOrder",
         message: JSON.stringify({ error: "Price data not found", orderId: result.orderId }),
+        requestId: requestId,
+        correlationId: requestId
       });
       return;
     }
@@ -114,16 +120,22 @@ export async function createCloseOrderFunction(result: any) {
     console.log("Sent order to DBStorage for database persistence");
 
     // Send response back to Backend (stringified for consistency with getOpenOrderFunction)
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
       function: "createCloseOrder",
       message: JSON.stringify(orderResult),
+      requestId: requestId,
+      correlationId: requestId
     });
     console.log("Sent closed order response to Backend");
   } else {
     console.log("User not found:", result.userId);
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
       function: "createCloseOrder",
       message: JSON.stringify({ error: "User not found", userId: result.userId }),
+      requestId: requestId,
+      correlationId: requestId
     });
   }
 }

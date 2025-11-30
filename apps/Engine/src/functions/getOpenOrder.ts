@@ -57,17 +57,29 @@ export async function getOpenOrderFunction(result: any) {
 
     console.log("Enhanced Open Orders Data:", enhancedOrders);
     
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(
       constant.secondaryRedisStream,
-      { function:"getOpenOrder", message: JSON.stringify(enhancedOrders) }
+      { 
+        function:"getOpenOrder", 
+        message: JSON.stringify(enhancedOrders),
+        requestId: requestId,
+        correlationId: requestId
+      }
     );
     console.log("Open orders sent to secondary stream");
     return;
   } else {
     console.log("User not found, returning empty array");
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(
       constant.secondaryRedisStream,
-      { function:"getOpenOrder", message: JSON.stringify([]) }
+      { 
+        function:"getOpenOrder", 
+        message: JSON.stringify([]),
+        requestId: requestId,
+        correlationId: requestId
+      }
     );
     return;
   }

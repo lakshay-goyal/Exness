@@ -19,7 +19,8 @@
   "packageManager": "bun@1.2.18",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "tests"
   ],
   "dependencies": {
     "@prisma/extension-accelerate": "^2.0.2",

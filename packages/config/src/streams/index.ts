@@ -1,7 +1,9 @@
 import { createClient, type RedisClientType } from "redis";
+import { v4 as uuidv4 } from "uuid";
 
 class RedisStreams {
   private client: RedisClientType;
+  private consumerGroupInitialized: Set<string> = new Set();
 
   constructor(private url: string) {
     this.client = createClient({ url: url });
@@ -17,17 +19,48 @@ class RedisStreams {
     }
   }
 
+  // Initialize consumer group for a stream
+  async ensureConsumerGroup(streamName: string, groupName: string) {
+    if (this.consumerGroupInitialized.has(`${streamName}:${groupName}`)) {
+      return;
+    }
+
+    try {
+      await this.client.xGroupCreate(
+        streamName,
+        groupName,
+        "0", // Start from beginning
+        { MKSTREAM: true } // Create stream if it doesn't exist
+      );
+      console.log(`Consumer group '${groupName}' created for stream '${streamName}'`);
+    } catch (error: any) {
+      // Group might already exist, which is fine
+      if (error?.message?.includes("BUSYGROUP")) {
+        console.log(`Consumer group '${groupName}' already exists for stream '${streamName}'`);
+      } else {
+        console.error(`Error creating consumer group:`, error);
+      }
+    }
+    
+    this.consumerGroupInitialized.add(`${streamName}:${groupName}`);
+  }
+
   async addToRedisStream(streamName: string, data: Record<string, any>) {
     try {
+      // Add correlation ID if not present (for request tracking)
+      if (!data.requestId && !data.correlationId) {
+        data.requestId = uuidv4();
+      }
+      
       const messageId = await this.client.xAdd(
         streamName,
         "*", // Let Redis assign an ID automatically
         { message: JSON.stringify(data) }
       );
       console.log(
-        `Data Added: ${messageId}, ${streamName}, ${JSON.stringify(data)}`
+        `Data Added: ${messageId}, ${streamName}, requestId: ${data.requestId || data.correlationId}`
       );
-      return messageId;
+      return { messageId, requestId: data.requestId || data.correlationId };
     } catch (e) {
       console.error("Error adding to Redis stream:", e);
       throw e;
@@ -79,42 +112,207 @@ class RedisStreams {
   // Promise-based: read exactly one next message then resolve
   async readNextFromRedisStream(
     streamName: string,
-    blockMs: number = 0 // 0 = block indefinitely for the next message
+    blockMs: number = 0, // 0 = block indefinitely for the next message
+    options?: {
+      requestId?: string; // Filter by correlation ID
+      consumerGroup?: string; // Use consumer group
+      consumerName?: string; // Consumer name for consumer group
+    }
   ): Promise<any | null> {
     try {
       if (!this.client.isOpen) {
         throw new Error("Redis client is not connected");
       }
 
-      const lastId = "$"; // only new entries after this call
-      const response = await this.client.xRead(
-        [{ key: streamName, id: lastId }],
-        { BLOCK: blockMs, COUNT: 1 }
-      );
+      // If using consumer group
+      if (options?.consumerGroup && options?.consumerName) {
+        await this.ensureConsumerGroup(streamName, options.consumerGroup);
+        
+        // First try to read pending messages (messages that were sent before consumer joined)
+        // "0" means read from the beginning of pending messages for this consumer
+        let response = await this.client.xReadGroup(
+          options.consumerGroup,
+          options.consumerName,
+          [{ key: streamName, id: "0" }], // "0" means read pending messages from beginning
+          { BLOCK: 0, COUNT: 1 }
+        ).catch(() => null);
 
-      if (!response || response.length === 0 || !response[0]) {
-        return null;
+        // If no pending messages, read new messages
+        // ">" means: deliver messages that were never delivered to any consumer in this group
+        if (!response || response.length === 0 || !response[0] || response[0].messages.length === 0) {
+          response = await this.client.xReadGroup(
+            options.consumerGroup,
+            options.consumerName,
+            [{ key: streamName, id: ">" }], // ">" means new messages for this consumer
+            { BLOCK: blockMs, COUNT: 1 }
+          );
+        }
+
+        if (!response || response.length === 0 || !response[0]) {
+          return null;
+        }
+
+        const messages = response[0].messages;
+        if (!messages || messages.length === 0) {
+          return null;
+        }
+
+        const msg = messages[0];
+        if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+          return null;
+        }
+        
+        const { id, message } = msg as { id: string; message: Record<string, any> };
+        const payload: Record<string, any> = {};
+        for (const key in message) {
+          payload[key] = message[key];
+        }
+
+        const jsonString = Object.values(payload).join("");
+        const result = JSON.parse(jsonString);
+        
+        // Acknowledge the message
+        try {
+          await this.client.xAck(streamName, options.consumerGroup, id);
+        } catch (ackError) {
+          console.error("Error acknowledging message:", ackError);
+        }
+        
+        // Filter by requestId if provided
+        if (options.requestId) {
+          const resultRequestId = result.requestId || result.correlationId;
+          if (resultRequestId !== options.requestId) {
+            // This message doesn't match, read next one
+            return this.readNextFromRedisStream(streamName, blockMs, options);
+          }
+        }
+        
+        return result;
       }
 
-      const messages = response[0].messages;
-      if (!messages || messages.length === 0) {
-        return null;
-      }
+      // Regular read (non-consumer group mode)
+      if (options?.requestId) {
+        // When filtering by requestId, we need to search through existing messages
+        // First, try to read new messages (in case response arrives after we start)
+        // Then search through existing messages from the beginning
+        
+        // Step 1: Try reading new messages first (non-blocking quick check)
+        try {
+          const newMsgResponse = await this.client.xRead(
+            [{ key: streamName, id: "$" }],
+            { BLOCK: 100, COUNT: 10 } // Quick check for new messages
+          );
+          
+          if (newMsgResponse && newMsgResponse.length > 0 && newMsgResponse[0]) {
+            for (const msg of newMsgResponse[0].messages) {
+              const payload: Record<string, any> = {};
+              for (const key in msg.message) {
+                payload[key] = msg.message[key];
+              }
+              const jsonString = Object.values(payload).join("");
+              const result = JSON.parse(jsonString);
+              const resultRequestId = result.requestId || result.correlationId;
+              if (resultRequestId === options.requestId) {
+                return result;
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore errors, continue to search existing messages
+        }
 
-      const msg = messages[0];
-      if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
-        return null;
-      }
-      const { id, message } = msg as { id: string; message: Record<string, any> };
-      const payload: Record<string, any> = {};
-      for (const key in message) {
-        payload[key] = message[key];
-      }
+        // Step 2: Search through existing messages from the beginning
+        let lastId = "0"; // Start from beginning
+        const maxAttempts = 200; // Search through up to 200 messages
+        let attempts = 0;
+        const seenIds = new Set<string>();
 
-      console.log("Received message:", id, JSON.stringify(payload));
-      const jsonString = Object.values(payload).join("");
-      const result = JSON.parse(jsonString);
-      return result;
+        while (attempts < maxAttempts) {
+          const response = await this.client.xRead(
+            [{ key: streamName, id: lastId }],
+            { BLOCK: blockMs > 0 ? Math.min(blockMs, 1000) : 0, COUNT: 10 } // Read up to 10 at a time for efficiency
+          );
+
+          if (!response || response.length === 0 || !response[0]) {
+            return null; // No more messages
+          }
+
+          const messages = response[0].messages;
+          if (!messages || messages.length === 0) {
+            return null; // No more messages
+          }
+
+          // Check all messages in this batch
+          for (const msg of messages) {
+            if (seenIds.has(msg.id)) {
+              continue; // Skip already seen messages
+            }
+            seenIds.add(msg.id);
+
+            if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+              continue;
+            }
+
+            const payload: Record<string, any> = {};
+            for (const key in msg.message) {
+              payload[key] = msg.message[key];
+            }
+
+            const jsonString = Object.values(payload).join("");
+            const result = JSON.parse(jsonString);
+            const resultRequestId = result.requestId || result.correlationId;
+
+            if (resultRequestId === options.requestId) {
+              return result; // Found the matching message!
+            }
+          }
+
+          // Update lastId to continue from the last message we saw
+          // Safety check: ensure messages array is not empty before accessing
+          if (messages.length === 0) {
+            return null; // No more messages to read
+          }
+          
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && typeof lastMessage === 'object' && 'id' in lastMessage) {
+            lastId = lastMessage.id as string;
+          } else {
+            return null; // Invalid message structure
+          }
+          attempts++;
+        }
+
+        return null; // Searched through messages but didn't find a match
+      } else {
+        // No requestId filtering - just read next new message
+        const response = await this.client.xRead(
+          [{ key: streamName, id: "$" }],
+          { BLOCK: blockMs, COUNT: 1 }
+        );
+
+        if (!response || response.length === 0 || !response[0]) {
+          return null;
+        }
+
+        const messages = response[0].messages;
+        if (!messages || messages.length === 0) {
+          return null;
+        }
+
+        const msg = messages[0];
+        if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+          return null;
+        }
+
+        const payload: Record<string, any> = {};
+        for (const key in msg.message) {
+          payload[key] = msg.message[key];
+        }
+
+        const jsonString = Object.values(payload).join("");
+        const result = JSON.parse(jsonString);
+        return result;
+      }
     } catch (e) {
       console.error("Error reading next message from Redis stream:", e);
       throw e;
@@ -123,7 +321,11 @@ class RedisStreams {
 
   async disconnect() {
     if (this.client.isOpen) {
-      this.client.disconnect();
+      try {
+        await this.client.quit(); // Use quit() instead of disconnect() for graceful shutdown
+      } catch (e) {
+        // Ignore errors during disconnect
+      }
       console.log("Redis stream disconnected");
     }
   }

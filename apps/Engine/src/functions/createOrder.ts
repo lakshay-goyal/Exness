@@ -426,6 +426,7 @@ export async function createOrderFunction(result: any) {
     console.log("Total open orders:", openOrders.length);
 
     // Send success response
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(
       constant.secondaryRedisStream,
       { 
@@ -435,12 +436,15 @@ export async function createOrderFunction(result: any) {
           orderId: orderId,
           userId: result.userId,
           message: "Order created successfully"
-        }) 
+        }),
+        requestId: requestId,
+        correlationId: requestId
       }
     );
     console.log("Success response sent to Backend");
   } catch (error: any) {
     console.error("Error in createOrderFunction:", error);
+    const requestId = result.requestId || result.correlationId;
     await RedisStreams.addToRedisStream(
       constant.secondaryRedisStream,
       { 
@@ -448,7 +452,9 @@ export async function createOrderFunction(result: any) {
         message: JSON.stringify({ 
           error: error?.message || "Failed to create order",
           success: false 
-        }) 
+        }),
+        requestId: requestId,
+        correlationId: requestId
       }
     );
   }

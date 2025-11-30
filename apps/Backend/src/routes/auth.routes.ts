@@ -66,16 +66,23 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
 
       const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
-      await RedisStreams.addToRedisStream(constant.redisStream, {
+      const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
         function: "createUser",
         userId,
         userEmail,
       });
+      const requestId = streamResult?.requestId;
+
+      if (!requestId) {
+        return res.status(500).json({ error: "Failed to generate request ID" });
+      }
 
       try {
+        // Use 5 second timeout to prevent stuck requests on rapid refreshes
         const result = await RedisStreams.readNextFromRedisStream(
           constant.secondaryRedisStream,
-          0
+          5000, // 5 second timeout
+          { requestId: requestId }
         );
         if (result && result.function === "createUser") {
           if (result.message === userId || result.message === "user Already Exist") {
@@ -134,16 +141,22 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
       
       const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
-      await RedisStreams.addToRedisStream(constant.redisStream, {
+      const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
         function: "createUser",
         userId,
         userEmail,
       });
+      const requestId = streamResult?.requestId;
+
+      if (!requestId) {
+        return res.status(500).json({ error: "Failed to generate request ID" });
+      }
 
       try {
         const result = await RedisStreams.readNextFromRedisStream(
           constant.secondaryRedisStream,
-          5000
+          5000,
+          { requestId: requestId }
         );
         
         if (result && result.function === "createUser") {
@@ -210,16 +223,22 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
 
     const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
-    await RedisStreams.addToRedisStream(constant.redisStream, {
+    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "createUser",
       userId,
       userEmail,
     });
+    const requestId = streamResult?.requestId;
+
+    if (!requestId) {
+      return res.status(500).json({ error: "Failed to generate request ID" });
+    }
 
     try {
       const result = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
-        5000
+        5000,
+        { requestId: requestId }
       );
       
       if (result && result.function === "createUser") {
