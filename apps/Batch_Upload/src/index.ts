@@ -22,7 +22,14 @@ async function main() {
         const trade = JSON.parse(msg);
         console.log("trade", trade);
         
-        const timestamp = typeof trade.data.T === 'string' ? parseInt(trade.data.T, 10) : trade.data.T;
+        let timestamp = typeof trade.data.T === 'string' ? parseInt(trade.data.T, 10) : trade.data.T;
+        
+        // Convert microseconds to milliseconds if timestamp is in microseconds (greater than year 2100 in milliseconds)
+        // Threshold: milliseconds for year 2100 = 4102444800000
+        if (timestamp > 4102444800000) {
+          timestamp = Math.floor(timestamp / 1000);
+        }
+        
         const time = new Date(timestamp);
         
         if (isNaN(time.getTime()) || time.getFullYear() < 2020 || time.getFullYear() > 2100) {

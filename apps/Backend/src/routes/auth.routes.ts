@@ -12,19 +12,41 @@ const jwtSecret = config.JWT_SECRET;
 
 authRouter.post("/login", async (req: Request, res: Response) => {
   const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  if (!jwtSecret) {
+    console.error("JWT_SECRET is not configured");
+    return res.status(500).json({ error: "Server configuration error" });
+  }
+
   const userId = uuidv4();
-  if (!email) return res.send("Email is required");
 
   try {
     const token = jwt.sign({ userId: userId, email: email }, jwtSecret);
-    if (process.env.NODE_ENV == "production") {
-      await nodemailerSender(email, token);
+    
+    // Try to send email in production, but don't fail the request if it fails
+    if (process.env.NODE_ENV === "production") {
+      try {
+        await nodemailerSender(email, token);
+        console.log(`Verification email sent to ${email}`);
+      } catch (emailError: any) {
+        console.error("Failed to send verification email:", emailError?.message || emailError);
+        // Log the token in case email fails, so user can still verify
+        console.log(`⚠️ Email sending failed. Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
+      }
     } else {
-      console.log(`${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
+      // In development, just log the verification link
+      console.log(`🔗 Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
     }
-    res.json({ message: "Verification link send", email});
-  } catch (error) {
-    res.status(401).send(error);
+    
+    res.json({ message: "Verification link send", email });
+  } catch (error: any) {
+    console.error("Login error:", error);
+    const errorMessage = error?.message || "Failed to process login request";
+    res.status(500).json({ error: errorMessage });
   }
 });
 

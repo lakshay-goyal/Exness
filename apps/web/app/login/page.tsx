@@ -16,6 +16,7 @@ const Login: React.FC = () => {
     if (!email) return;
 
     setIsLoading(true);
+    console.log(process.env.NEXT_PUBLIC_BACKEND_URL);
     
     try {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/login`, {
