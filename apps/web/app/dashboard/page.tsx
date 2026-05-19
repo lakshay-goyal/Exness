@@ -1,9 +1,10 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,26 +14,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createChart, ColorType } from "lightweight-charts";
 import type { UTCTimestamp } from "lightweight-charts";
 import axios from "axios";
-import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/Navbar';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/Navbar";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth } from "@/context/AuthContext";
 import {
-  TrendingUp,
-  TrendingDown,
-  Search,
-  Star,
-  Settings,
-  Plus,
+  Activity,
+  Menu,
   Minus,
   MoreHorizontal,
-  Menu,
+  Plus,
+  Settings,
+  TrendingDown,
+  TrendingUp,
   X,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 
-// Mock orders data
 interface OpenOrder {
   id: string;
   symbol: string;
@@ -44,16 +41,14 @@ interface OpenOrder {
   status: string;
 }
 
-// Backend interfaces
 interface BackendOpenOrder {
   orderId: string;
   symbol: string;
   type: "buy" | "sell";
   quantity: number;
   openPrice: number;
-  currentPrice: number; // Assuming backend sends current price for open orders
+  currentPrice: number;
   status: "open";
-  // Add other fields as they become clear from backend response
 }
 
 interface BackendClosedOrder {
@@ -65,33 +60,21 @@ interface BackendClosedOrder {
   closePrice: number;
   openTime: string;
   closeTime: string;
-  profitLoss: number;
-  status: "closed";
-  // Add other fields as they become clear from backend response
+  profitLoss?: number;
 }
 
-const openOrders: OpenOrder[] = [];
-
-// Mock orders data
 interface CloseOrder {
   id: string;
   symbol: string;
   type: string;
   volume: number;
   openPrice: number;
-  closePrice:number;
-  openTime:string;
+  closePrice: number;
+  openTime: string;
   closeTime: string;
   pnl: number;
   status: string;
-  
 }
-
-const closeOrder: CloseOrder[] = [];
-
-const getBackendUrl = () => {
-  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-};
 
 type CryptoAsset = {
   symbol: string;
@@ -105,12 +88,73 @@ type CryptoAsset = {
   lastUpdated?: number;
 };
 
-const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BTCUSDT", heightPx = 500 }) => {
+type CandleResponse = {
+  data: Array<{
+    open: string;
+    high: string;
+    low: string;
+    close: string;
+    time: string;
+  }>;
+};
+
+type OpenOrdersResponse = {
+  message?: string;
+};
+
+type ClosedOrdersResponse = {
+  message?: BackendClosedOrder[];
+};
+
+interface TradingViewChartProps {
+  selectedAsset?: string;
+}
+
+const getBackendUrl = () => {
+  return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+};
+
+const formatCurrency = (value?: number | null, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "--";
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+};
+
+const formatNumber = (value?: number | null, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "--";
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+};
+
+const isCanceledRequest = (error: unknown) => {
+  return (
+    axios.isCancel(error) ||
+    (error instanceof Error &&
+      (error.name === "CanceledError" || error.message.includes("canceled")))
+  );
+};
+
+const EmptyState = ({ label }: { label: string }) => (
+  <div className="flex h-full min-h-24 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
+    {label}
+  </div>
+);
+
+const TradingViewChart: React.FC<TradingViewChartProps> = ({
+  selectedAsset = "BTCUSDT",
+}) => {
   const chartRef = useRef<HTMLDivElement | null>(null);
-  const [asset, setAsset] = React.useState(selectedAsset);
-  const [time, setTime] = React.useState("1m");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [asset, setAsset] = useState(selectedAsset);
+  const [time, setTime] = useState("1m");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const timeIntervals = [
     { value: "1m", label: "1m" },
@@ -122,34 +166,30 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
     { value: "1d", label: "1D" },
   ];
 
-  // Update asset when selectedAsset prop changes
-  React.useEffect(() => {
-    if (selectedAsset) {
-      setAsset(selectedAsset);
-    }
+  useEffect(() => {
+    if (selectedAsset) setAsset(selectedAsset);
   }, [selectedAsset]);
 
-  async function fetchCandles(asset: string, time: string) {
+  async function fetchCandles(assetName: string, interval: string) {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await axios.get(
-        `${getBackendUrl()}/api/v1/candles?symbol=${asset}&interval=${time}`
+      const response = await axios.get<CandleResponse>(
+        `${getBackendUrl()}/api/v1/candles?symbol=${assetName}&interval=${interval}`,
+        { timeout: 10000 }
       );
 
-      const formattedData = response.data.data.map((candle: any) => ({
-        open: parseFloat(candle.open),
-        high: parseFloat(candle.high),
-        low: parseFloat(candle.low),
-        close: parseFloat(candle.close),
+      return response.data.data.map((candle) => ({
+        open: Number.parseFloat(candle.open),
+        high: Number.parseFloat(candle.high),
+        low: Number.parseFloat(candle.low),
+        close: Number.parseFloat(candle.close),
         time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp,
       }));
-
-      return formattedData;
-    } catch (error) {
-      console.error("Error fetching candles:", error);
-      setError("Failed to fetch chart data");
+    } catch (chartError) {
+      console.error("Error fetching candles:", chartError);
+      setError("Chart data is unavailable");
       return null;
     } finally {
       setIsLoading(false);
@@ -159,42 +199,43 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
   useEffect(() => {
     if (!chartRef.current) return;
 
-    const chart = createChart(chartRef.current, {
+    const host = chartRef.current;
+    const hostRect = host.getBoundingClientRect();
+    const chart = createChart(host, {
       layout: {
-        textColor: "#1f2937", // Dark grey for text
-        background: { type: ColorType.Solid, color: "#ffffff" }, // White background
+        textColor: "#cbd5e1",
+        background: { type: ColorType.Solid, color: "#0f172a" },
       },
-      width: chartRef.current.clientWidth,
-      height: heightPx,
+      width: Math.max(Math.floor(hostRect.width), 320),
+      height: Math.max(Math.floor(hostRect.height), 260),
       grid: {
-        vertLines: { color: "#e5e7eb" }, // Lighter grid lines
-        horzLines: { color: "#e5e7eb" } // Lighter grid lines
+        vertLines: { color: "rgba(148, 163, 184, 0.16)" },
+        horzLines: { color: "rgba(148, 163, 184, 0.16)" },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: "#e5e7eb" // Lighter border
+        borderColor: "rgba(148, 163, 184, 0.24)",
       },
       rightPriceScale: {
-        borderColor: "#e5e7eb", // Lighter border
-        textColor: "#1f2937" // Dark grey for price scale text
+        borderColor: "rgba(148, 163, 184, 0.24)",
       },
       crosshair: {
         mode: 1,
         vertLine: {
-          color: "#3b82f6",
+          color: "#60a5fa",
           width: 1,
           style: 3,
         },
         horzLine: {
-          color: "#3b82f6",
+          color: "#60a5fa",
           width: 1,
           style: 3,
         },
       },
     });
 
-    const candlestick = (chart as any).addCandlestickSeries({
+    const candlestick = chart.addCandlestickSeries({
       upColor: "#10b981",
       downColor: "#ef4444",
       borderVisible: false,
@@ -204,42 +245,51 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
 
     const loadData = async () => {
       const candles = await fetchCandles(asset, time);
+
       if (candles) {
         candlestick.setData(candles);
         chart.timeScale().fitContent();
       }
     };
 
-    loadData();
-
-    const handleResize = () => {
-      if (chartRef.current) {
-        chart.applyOptions({ width: chartRef.current.clientWidth });
-      }
+    const resizeChart = () => {
+      const rect = host.getBoundingClientRect();
+      chart.applyOptions({
+        width: Math.max(Math.floor(rect.width), 320),
+        height: Math.max(Math.floor(rect.height), 220),
+      });
     };
 
-    window.addEventListener('resize', handleResize);
+    loadData();
+    resizeChart();
+
+    const observer = new ResizeObserver(resizeChart);
+    observer.observe(host);
 
     return () => {
+      observer.disconnect();
       chart.remove();
-      window.removeEventListener('resize', handleResize);
     };
-  }, [asset, time, heightPx]);
+  }, [asset, time]);
 
   return (
-    <div className="flex-1 bg-gray-800 shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gray-900 px-6 py-4 border-b border-gray-700">
-
-        {/* Time Interval Selector */}
-        <div className="flex items-center space-x-1">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-slate-950 shadow-sm">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2">
+        <div className="min-w-0">
+          <p className="truncate text-xs uppercase tracking-wide text-slate-400">
+            Live candlestick chart
+          </p>
+          <p className="truncate font-mono text-sm font-semibold text-white">{asset}</p>
+        </div>
+        <div className="flex max-w-full shrink-0 items-center gap-1 overflow-x-auto">
           {timeIntervals.map((interval) => (
             <button
               key={interval.value}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${time === interval.value
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-gray-700"
-                }`}
+              className={`h-7 rounded-md px-2 text-xs transition-colors ${
+                time === interval.value
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
               onClick={() => setTime(interval.value)}
             >
               {interval.label}
@@ -248,58 +298,41 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ selectedAsset = "BT
         </div>
       </div>
 
-      {/* Chart Container */}
-      <div className="relative" style={{ height: heightPx }}>
+      <div className="relative min-h-0 flex-1">
         {isLoading && (
-          <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center z-10">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-white">Loading chart...</span>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/60">
+            <div className="flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm text-white shadow-sm">
+              <div className="size-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+              Loading chart
             </div>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center z-10">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/80 p-4">
+            <div className="max-w-xs text-center">
+              <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full bg-red-500/15 text-red-300">
+                <Activity className="size-5" />
               </div>
-              <p className="text-red-400 text-sm">{error}</p>
-              <button
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </button>
+              <p className="text-sm font-medium text-red-200">{error}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Check the candle service or pick another interval.
+              </p>
             </div>
           </div>
         )}
 
-        <div ref={chartRef} className="w-full h-full" />
-      </div>
-
-      {/* Footer */}
-      <div className="bg-gray-900 px-6 py-3 border-t border-gray-700">
+        <div ref={chartRef} className="absolute inset-0" />
       </div>
     </div>
   );
 };
 
-interface TradingViewChartProps {
-  selectedAsset?: string;
-  heightPx?: number;
-}
-
 const Dashboard = () => {
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoAsset | null>(null);
   const [realTimeCryptoData, setRealTimeCryptoData] = useState<
     Record<string, CryptoAsset>
-  >({
-  });
-  const [priceData, setPriceData] = useState<any[]>([]);
+  >({});
   const [orderVolume, setOrderVolume] = useState("0.01");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
@@ -315,64 +348,99 @@ const Dashboard = () => {
   const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
 
   const router = useRouter();
-  const { token, isAuthenticated, balance, balanceLoading, fetchBalance } = useAuth();
+  const { token, isAuthenticated, balance } = useAuth();
 
-  // Request cancellation and deduplication
   const openOrdersControllerRef = useRef<AbortController | null>(null);
   const closeOrdersControllerRef = useRef<AbortController | null>(null);
-  const lastFetchTimeRef = useRef<{ open: number; close: number }>({ open: 0, close: 0 });
+  const selectedSymbolRef = useRef<string | null>(null);
+  const lastFetchTimeRef = useRef<{ open: number; close: number }>({
+    open: 0,
+    close: 0,
+  });
 
-  async function fetchOpenOrders() {
-    if (!token || !isAuthenticated) {
-      console.log('User not authenticated, skipping open orders fetch');
-      return;
+  const cryptoAssets = useMemo(
+    () =>
+      Object.values(realTimeCryptoData).sort((a, b) =>
+        a.symbol.localeCompare(b.symbol)
+      ),
+    [realTimeCryptoData]
+  );
+  const openActiveOrders = useMemo(
+    () => orders.filter((order) => order.status === "open"),
+    [orders]
+  );
+  const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
+  const marginRequired = selectedCrypto
+    ? (selectedCrypto.price * orderVolumeNumber) / 100
+    : 0;
+  const freeMargin = balance !== null ? balance - marginRequired : null;
+  const spread = selectedCrypto
+    ? Math.max(selectedCrypto.ask - selectedCrypto.bid, 0)
+    : null;
+  const priceIsPositive = (selectedCrypto?.change ?? 0) >= 0;
+  const marketCount = cryptoAssets.length;
+
+  useEffect(() => {
+    selectedSymbolRef.current = selectedCrypto?.symbol ?? null;
+  }, [selectedCrypto?.symbol]);
+
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+      setRightPanelOpen(false);
     }
+  }, []);
 
-    // Cancel previous request if still pending
+  const fetchOpenOrders = useCallback(async () => {
+    if (!token || !isAuthenticated) return;
+
     if (openOrdersControllerRef.current) {
       openOrdersControllerRef.current.abort();
     }
 
-    // Debounce: Don't fetch if last fetch was less than 500ms ago
     const now = Date.now();
-    if (now - lastFetchTimeRef.current.open < 500) {
-      console.log('Skipping duplicate open orders fetch (debounced)');
-      return;
-    }
+    if (now - lastFetchTimeRef.current.open < 500) return;
     lastFetchTimeRef.current.open = now;
 
-    // Create new abort controller for this request
     const controller = new AbortController();
     openOrdersControllerRef.current = controller;
-    
+
     setOpenOrdersLoading(true);
     try {
-      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/open/`, {
-        signal: controller.signal,
-        timeout: 10000, // 10 second timeout
-      });
+      const response = await axios.get<OpenOrdersResponse>(
+        `${getBackendUrl()}/api/v1/trade/open/`,
+        {
+          signal: controller.signal,
+          timeout: 10000,
+        }
+      );
       const data = response.data;
-      console.log("Raw Open Orders Data:", data);
+
       if (data.message) {
-        const orders = JSON.parse(data.message) as BackendOpenOrder[];
-        console.log("Parsed Open Orders:", orders);
-        setOrders(orders.map((orderData: BackendOpenOrder) => ({
-          id: orderData.orderId,
-          symbol: orderData.symbol.toUpperCase(),
-          type: orderData.type === "buy" ? "Buy" : "Sell",
-          volume: orderData.quantity,
-          openPrice: orderData.openPrice,
-          currentPrice: orderData.currentPrice, 
-          pnl: 0, // Initial P/L is 0. Will need to be calculated based on current price if backend doesn't send it.
-          status: orderData.status
-        })));
+        const parsedOrders = JSON.parse(data.message) as BackendOpenOrder[];
+
+        setOrders(
+          parsedOrders.map((orderData) => ({
+            id: orderData.orderId,
+            symbol: orderData.symbol.toUpperCase(),
+            type: orderData.type === "buy" ? "Buy" : "Sell",
+            volume: orderData.quantity,
+            openPrice: orderData.openPrice,
+            currentPrice: orderData.currentPrice,
+            pnl:
+              orderData.type === "buy"
+                ? (orderData.currentPrice - orderData.openPrice) *
+                  orderData.quantity
+                : (orderData.openPrice - orderData.currentPrice) *
+                  orderData.quantity,
+            status: orderData.status,
+          }))
+        );
       } else {
-        console.log("No open orders message found.", data);
         setOrders([]);
       }
-    } catch (error: any) {
-      // Don't log error if request was cancelled
-      if (error.name !== 'CanceledError' && !error.message?.includes('canceled')) {
+    } catch (error: unknown) {
+      if (!isCanceledRequest(error)) {
         console.error("Error fetching open orders:", error);
         setOrders([]);
       }
@@ -382,64 +450,56 @@ const Dashboard = () => {
         openOrdersControllerRef.current = null;
       }
     }
-  }
+  }, [isAuthenticated, token]);
 
-  async function fetchCloseOrders() {
-    if (!token || !isAuthenticated) {
-      console.log('User not authenticated, skipping closed orders fetch');
-      return;
-    }
+  const fetchCloseOrders = useCallback(async () => {
+    if (!token || !isAuthenticated) return;
 
-    // Cancel previous request if still pending
     if (closeOrdersControllerRef.current) {
       closeOrdersControllerRef.current.abort();
     }
 
-    // Debounce: Don't fetch if last fetch was less than 500ms ago
     const now = Date.now();
-    if (now - lastFetchTimeRef.current.close < 500) {
-      console.log('Skipping duplicate close orders fetch (debounced)');
-      return;
-    }
+    if (now - lastFetchTimeRef.current.close < 500) return;
     lastFetchTimeRef.current.close = now;
 
-    // Create new abort controller for this request
     const controller = new AbortController();
     closeOrdersControllerRef.current = controller;
-    
+
     setClosedOrdersLoading(true);
     try {
-      const response = await axios.get(`${getBackendUrl()}/api/v1/trade/close`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        signal: controller.signal,
-        timeout: 10000, // 10 second timeout
-      });
+      const response = await axios.get<ClosedOrdersResponse>(
+        `${getBackendUrl()}/api/v1/trade/close`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+          timeout: 10000,
+        }
+      );
       const data = response.data;
-      console.log("Raw Closed Orders Data:", data);
+
       if (data.message && Array.isArray(data.message)) {
-        const closedOrders = data.message as any[];
-        console.log("Parsed Closed Orders:", closedOrders);
-        setCloseOrdersData(closedOrders.map((orderData: any) => ({
-          id: orderData.orderId,
-          symbol: orderData.symbol.toUpperCase(),
-          type: orderData.type === "buy" ? "Buy" : "Sell", 
-          volume: orderData.quantity,
-          openPrice: orderData.openPrice,
-          closePrice: orderData.closePrice,
-          openTime: orderData.openTime,
-          closeTime: orderData.closeTime,
-          pnl: orderData.profitLoss || 0,
-          status: "closed"
-        })));
+        setCloseOrdersData(
+          data.message.map((orderData) => ({
+            id: orderData.orderId,
+            symbol: orderData.symbol.toUpperCase(),
+            type: orderData.type === "buy" ? "Buy" : "Sell",
+            volume: orderData.quantity,
+            openPrice: orderData.openPrice,
+            closePrice: orderData.closePrice,
+            openTime: orderData.openTime,
+            closeTime: orderData.closeTime,
+            pnl: orderData.profitLoss || 0,
+            status: "closed",
+          }))
+        );
       } else {
-        console.log("No closed orders message found.", data);
         setCloseOrdersData([]);
       }
-    } catch (error: any) {
-      // Don't log error if request was cancelled
-      if (error.name !== 'CanceledError' && !error.message?.includes('canceled')) {
+    } catch (error: unknown) {
+      if (!isCanceledRequest(error)) {
         console.error("Error fetching closed orders:", error);
         setCloseOrdersData([]);
       }
@@ -449,46 +509,35 @@ const Dashboard = () => {
         closeOrdersControllerRef.current = null;
       }
     }
-  }
+  }, [isAuthenticated, token]);
 
   useEffect(() => {
-    if (isAuthenticated && token) {
-      // fetchBalance is now automatically called by AuthContext when authenticated
-      // Add small delay to prevent race conditions on rapid refreshes
-      const timer = setTimeout(() => {
-        fetchOpenOrders();
-        fetchCloseOrders();
-      }, 100);
-      
-      return () => {
-        clearTimeout(timer);
-        // Cancel pending requests on unmount
-        if (openOrdersControllerRef.current) {
-          openOrdersControllerRef.current.abort();
-        }
-        if (closeOrdersControllerRef.current) {
-          closeOrdersControllerRef.current.abort();
-        }
-      };
-    }
-  }, [isAuthenticated, token]);
+    if (!isAuthenticated || !token) return;
+
+    const timer = setTimeout(() => {
+      fetchOpenOrders();
+      fetchCloseOrders();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      openOrdersControllerRef.current?.abort();
+      closeOrdersControllerRef.current?.abort();
+    };
+  }, [fetchCloseOrders, fetchOpenOrders, isAuthenticated, token]);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:7070/");
 
-    ws.onopen = () => {
-      console.log("WebSocket connection opened");
-    };
-
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      try {
+        const data = JSON.parse(event.data);
 
-      if (data.asset && data.bid && data.ask) {
+        if (!data.asset || !data.bid || !data.ask) return;
+
         setRealTimeCryptoData((prevData) => {
           const symbol = data.asset;
           const prevAsset = prevData[symbol];
-
-          // Convert from micro-units to regular units
           const bidPrice = Number(data.bid) / 100000000;
           const askPrice = Number(data.ask) / 100000000;
           const newPrice = (bidPrice + askPrice) / 2;
@@ -498,113 +547,74 @@ const Dashboard = () => {
             const changePercent =
               prevAsset.price === 0 ? 0 : (change / prevAsset.price) * 100;
 
-            const updatedAsset = {
+            const updatedAsset: CryptoAsset = {
               ...prevAsset,
               price: newPrice,
               bid: bidPrice,
               ask: askPrice,
-              change: change,
-              changePercent: changePercent,
-              signal: change > 0 ? "buy" : "sell",
+              change,
+              changePercent,
+              signal: change >= 0 ? "buy" : "sell",
               lastUpdated: Date.now(),
             };
 
-            // Update priceData for the selected crypto
-            if (selectedCrypto?.symbol === symbol) {
-              setPriceData((prevPriceData) => [
-                ...prevPriceData.slice(-99), // Keep last 99 data points
-                {
-                  time: new Date().toLocaleTimeString(),
-                  price: newPrice,
-                  volume: Math.random() * 1000 + 500,
-                },
-              ]);
-              // Update selected crypto with new data
-              setSelectedCrypto((prev) =>
-                prev && prev.symbol === symbol
-                  ? {
-                    ...prev,
-                    price: updatedAsset.price,
-                    bid: updatedAsset.bid,
-                    ask: updatedAsset.ask,
-                    change: updatedAsset.change,
-                    changePercent: updatedAsset.changePercent,
-                    signal: updatedAsset.signal as "buy" | "sell",
-                  }
-                  : prev
-              );
-            }
-            const newState = { ...prevData, [symbol]: updatedAsset };
-            return newState;
-          } else {
-            // Create new asset if it doesn't exist
-            const newAsset = {
-              symbol: symbol,
-              name: symbol.replace('USDT', ''),
+            if (selectedSymbolRef.current === symbol) setSelectedCrypto(updatedAsset);
+
+            return { ...prevData, [symbol]: updatedAsset };
+          }
+
+          return {
+            ...prevData,
+            [symbol]: {
+              symbol,
+              name: symbol.replace("USDT", ""),
               price: newPrice,
               bid: bidPrice,
               ask: askPrice,
               change: 0,
               changePercent: 0,
-              signal: "buy" as const,
+              signal: "buy",
               lastUpdated: Date.now(),
-            };
-
-            const newState = { ...prevData, [symbol]: newAsset };
-            return newState;
-          }
+            },
+          };
         });
+      } catch (socketError) {
+        console.error("Unable to parse WebSocket tick:", socketError);
       }
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
     };
 
     return () => {
       ws.close();
     };
-  }, [selectedCrypto]); // Reconnect WebSocket if selectedCrypto changes
+  }, []);
 
-  // Set initial selected crypto once realTimeCryptoData is populated
   useEffect(() => {
-    if (
-      !selectedCrypto &&
-      Object.keys(realTimeCryptoData).length > 0 &&
-      realTimeCryptoData.BTCUSDT
-    ) {
-      setSelectedCrypto(realTimeCryptoData.BTCUSDT);
-    }
-  }, [realTimeCryptoData, selectedCrypto]);
+    if (selectedCrypto || cryptoAssets.length === 0) return;
+
+    const nextAsset = realTimeCryptoData.BTCUSDT ?? cryptoAssets[0];
+    if (nextAsset) setSelectedCrypto(nextAsset);
+  }, [cryptoAssets, realTimeCryptoData, selectedCrypto]);
 
   const handleOrder = async (type: "buy" | "sell") => {
-    if (!selectedCrypto) {
-      console.error("No crypto asset selected.");
-      return;
-    }
+    if (!selectedCrypto) return;
 
     if (!token || !isAuthenticated) {
-      console.error("No authentication token found.");
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     setCreateOrderLoading(true);
     try {
-      const response = await axios.post(
-        `${getBackendUrl()}/api/v1/trade/create`,
-        {
-          symbol: selectedCrypto.symbol,
-          type: type,
-          quantity: parseFloat(orderVolume),
-          leverage: 100,
-          slippage: slippage ? parseFloat(slippage) : undefined,
-          takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
-          stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
-        }
-      );
+      const response = await axios.post(`${getBackendUrl()}/api/v1/trade/create`, {
+        symbol: selectedCrypto.symbol,
+        type,
+        quantity: orderVolumeNumber,
+        leverage: 100,
+        slippage: slippage ? Number.parseFloat(slippage) : undefined,
+        takeProfit: takeProfit ? Number.parseFloat(takeProfit) : undefined,
+        stopLoss: stopLoss ? Number.parseFloat(stopLoss) : undefined,
+      });
 
-      console.log("Create Order Response:", response.data);
       if (response.data.message) {
         await fetchOpenOrders();
         alert("Order created successfully!");
@@ -621,22 +631,20 @@ const Dashboard = () => {
 
   const handleCloseOrder = async (orderId: string) => {
     if (!token || !isAuthenticated) {
-      console.error("No authentication token found for closing order.");
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     setCloseOrderLoading(true);
     try {
-      const response = await axios.post(
-        `${getBackendUrl()}/api/v1/trade/close`,
-        { orderId: orderId }
-      );
-      console.log("Close Order Response:", response.data);
+      const response = await axios.post(`${getBackendUrl()}/api/v1/trade/close`, {
+        orderId,
+      });
+
       if (response.data.message) {
         alert("Order closed successfully!");
-        await fetchOpenOrders(); // Refresh open orders
-        await fetchCloseOrders(); // Refresh closed orders
+        await fetchOpenOrders();
+        await fetchCloseOrders();
       } else {
         alert("Failed to close order.");
       }
@@ -650,579 +658,586 @@ const Dashboard = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground font-bricolage flex flex-col">
+      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
         <Navbar showNavLinks={false} />
-        <div className="flex flex-col flex-1 overflow-hidden mt-16">
-      <header className="h-14 border-b border-border flex items-center px-4 bg-card/50 backdrop-blur-sm z-40">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <h1 className="text-xl font-bold">CryptoTrade CFD</h1>
-          <Badge variant="secondary" className="hidden sm:inline-flex">
-            Demo
-          </Badge>
-          <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              Balance:{" "}
-              <span className="text-foreground font-medium">
-                {balanceLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : balance !== null ? (
-                  `$${balance.toLocaleString()}`
-                ) : (
-                  <span className="text-red-500">Error</span>
-                )}
-              </span>
-            </span>
-          </div>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" className="hidden sm:flex">
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button variant="default" size="sm">
-            Deposit
-          </Button>
-        </div>
-      </header>
 
-        <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Instruments */}
-        <div
-          className={`${sidebarOpen ? "w-80" : "w-0"} lg:w-80 transition-all duration-300 overflow-hidden border-r border-border bg-card/30`}
-        >
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-sm">INSTRUMENTS</h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search" className="pl-10 h-9" />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  <span className="text-sm font-medium">Favorites</span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Last render: {new Date().toLocaleTimeString()}
-                  </div>
-                  {Object.values(realTimeCryptoData).map((crypto) => (
-                    <Card
-                      key={`${crypto.symbol}-${crypto.lastUpdated || 'initial'}`}
-                      className={`p-3 cursor-pointer transition-all hover:shadow-md ${selectedCrypto?.symbol === crypto.symbol
-                        ? "bg-primary/10 border-primary/30"
-                        : "hover:bg-accent/50"
-                        }`}
-                      onClick={() => setSelectedCrypto(crypto)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                          <span className="font-medium text-sm">
-                            {crypto.symbol}
-                          </span>
-                        </div>
-                        <Badge
-                          variant={
-                            crypto.signal === "buy" ? "default" : "destructive"
-                          }
-                          className="text-xs px-2 py-0"
-                        >
-                          {crypto.signal === "buy" ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground">
-                            Bid/Ask
-                          </span>
-                          <span className="text-xs font-mono">
-                            {crypto.bid?.toFixed(5)}/{crypto.ask?.toFixed(5)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-xs text-muted-foreground">
-                            Price
-                          </span>
-                          <span className="text-xs font-mono">
-                            ${crypto.price?.toFixed(2)}
-                          </span>
-                          {crypto.lastUpdated && (
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(crypto.lastUpdated).toLocaleTimeString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Center - Chart Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Chart Header */}
-          <div className="h-14 border-b border-border flex items-center px-4 bg-card/30">
-            <div className="flex items-center gap-4 min-w-0">
-              <span className="font-semibold truncate">
-                {selectedCrypto?.name}
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-mono">
-                  $
-                  {selectedCrypto?.price !== undefined
-                    ? selectedCrypto.price.toFixed(2)
-                    : "--"}
-                </span>
-                <div
-                  className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${selectedCrypto?.change !== undefined
-                    ? selectedCrypto.change > 0
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-red-500/20 text-red-400"
-                    : "bg-muted text-muted-foreground"
-                    }`}
-                >
-                  {selectedCrypto?.change !== undefined ? (
-                    selectedCrypto.change > 0 ? (
-                      <TrendingUp className="h-4 w-4" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4" />
-                    )
-                  ) : null}
-                  {selectedCrypto?.change !== undefined
-                    ? `${selectedCrypto.change > 0 ? "+" : ""}${selectedCrypto.change.toFixed(2)}`
-                    : "--"}{" "}
-                  (
-                  {selectedCrypto?.changePercent !== undefined
-                    ? `${selectedCrypto.changePercent.toFixed(2)}%`
-                    : "--"}
-                  )
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chart Content */}
-          <div className="flex-1 p-4 min-h-0">
-            <Card className="h-full">
-              <CardContent className="p-4 h-full">
-                <TradingViewChart selectedAsset={selectedCrypto?.symbol} heightPx={500} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Right Sidebar - Order Panel */}
-        <div
-          className={`${rightPanelOpen ? "w-80" : "w-0"} lg:w-80 transition-all duration-300 overflow-hidden border-l border-border bg-card/30`}
-        >
-          <div className="h-full flex flex-col">
-            {/* Order Form Header */}
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-sm">TRADING PANEL</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="lg:hidden"
-                  onClick={() => setRightPanelOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Buy/Sell Buttons */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <Button
-                  onClick={() => handleOrder("sell")}
-                  variant="destructive"
-                  className="h-14 flex flex-col"
-                  disabled={createOrderLoading}
-                >
-                  <div className="text-lg font-bold">Sell {createOrderLoading && <span className="animate-pulse">...</span>}</div>
-                  <div className="text-xs opacity-90">
-                    {selectedCrypto?.bid?.toFixed(5)}
-                  </div>
-                </Button>
-                <Button
-                  onClick={() => handleOrder("buy")}
-                  className="h-14 flex flex-col bg-green-600 hover:bg-green-700"
-                  disabled={createOrderLoading}
-                >
-                  <div className="text-lg font-bold">Buy {createOrderLoading && <span className="animate-pulse">...</span>}</div>
-                  <div className="text-xs opacity-90">
-                    {selectedCrypto?.ask?.toFixed(5)}
-                  </div>
-                </Button>
-              </div>
-            </div>
-
-            {/* Order Parameters */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Volume
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOrderVolume(
-                          Math.max(
-                            0.01,
-                            parseFloat(orderVolume) - 0.01
-                          ).toFixed(2)
-                        )
-                      }
-                      disabled={createOrderLoading}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <Input
-                      value={orderVolume}
-                      onChange={(e) => setOrderVolume(e.target.value)}
-                      className="text-center text-sm h-8"
-                      disabled={createOrderLoading}
-                    />
-                    <span className="text-xs text-muted-foreground min-w-fit">
-                      Lots
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOrderVolume(
-                          (parseFloat(orderVolume) + 0.01).toFixed(2)
-                        )
-                      }
-                      disabled={createOrderLoading}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Take Profit
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Not set"
-                      value={takeProfit}
-                      onChange={(e) => setTakeProfit(e.target.value)}
-                      className="text-sm h-8"
-                      disabled={createOrderLoading}
-                    />
-                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Stop Loss
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Not set"
-                      value={stopLoss}
-                      onChange={(e) => setStopLoss(e.target.value)}
-                      className="text-sm h-8"
-                      disabled={createOrderLoading}
-                    />
-                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={createOrderLoading}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Slippage (%)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="0.5"
-                      value={slippage}
-                      onChange={(e) => setSlippage(e.target.value)}
-                      className="text-sm h-8"
-                      disabled={createOrderLoading}
-                      type="number"
-                      step="0.1"
-                      min="0"
-                    />
-                    <span className="text-xs text-muted-foreground min-w-fit">
-                      %
-                    </span>
-                  </div>
-                </div>
-
-                {/* Account Info */}
-                <Card className="p-3 bg-accent/30">
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Margin Required:
-                      </span>
-                      <span className="font-mono">$1,112.21</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Free Margin:
-                      </span>
-                      <span className="font-mono text-green-500">
-                        $8,895.44
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Margin Level:
-                      </span>
-                      <span className="font-mono">801.2%</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Panel - Orders (Collapsible) */}
-      <div className="h-48 border-t border-border bg-card/30">
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="h-full flex flex-col"
-        >
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border min-h-[3rem]">
-            <TabsList className="h-8">
-              <TabsTrigger value="open" className="text-xs">
-                Open ({openOrdersLoading ? <span className="animate-pulse">...</span> : orders.filter((o) => o.status === "open").length})
-              </TabsTrigger>
-              <TabsTrigger value="closed" className="text-xs">
-                Closed ({closedOrdersLoading ? <span className="animate-pulse">...</span> : closeOrdersData.length})
-              </TabsTrigger>
-            </TabsList>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="text-xs h-7">
-                Close all
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-hidden">
-            <TabsContent value="open" className="h-full m-0 p-4">
-              <div className="h-full overflow-y-auto">
-                <div className="min-w-full">
-                  <div className="grid grid-cols-7 gap-4 text-xs font-medium text-muted-foreground pb-2 border-b border-border">
-                    <div>Symbol</div>
-                    <div>Type</div>
-                    <div>Volume</div>
-                    <div>Open Price</div>
-                    <div>Current</div>
-                    <div>P/L</div>
-                    <div>Action</div>
-                  </div>
-                  <div className="space-y-2 mt-2">
-                    {openOrdersLoading ? (
-                      <div className="text-center py-4 text-muted-foreground">Loading open orders...</div>
-                    ) : orders
-                      .filter((o) => o.status === "open")
-                      .map((order) => (
-                        <div
-                          key={order.id}
-                          className="grid grid-cols-7 gap-4 text-sm py-2 hover:bg-accent/30 rounded-md px-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                            <span className="font-medium">{order.symbol}</span>
+        <div className="mt-16 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ResizablePanelGroup direction="vertical" className="h-full">
+              <ResizablePanel defaultSize={72} minSize={48}>
+                <ResizablePanelGroup direction="horizontal" className="h-full">
+                  {sidebarOpen && (
+                    <>
+                      <ResizablePanel
+                        defaultSize={21}
+                        minSize={14}
+                        maxSize={34}
+                        className="min-w-0"
+                      >
+                        <aside className="flex h-full min-w-0 flex-col border-r bg-card/35">
+                          <div className="shrink-0 border-b p-3">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <h2 className="truncate text-sm font-semibold uppercase tracking-wide">
+                                  Instruments
+                                </h2>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {marketCount} streaming markets
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                onClick={() => setSidebarOpen(false)}
+                                aria-label="Hide instruments"
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 rounded-full ${order.type === "Buy"
-                                ? "bg-green-500"
-                                : "bg-red-500"
-                                }`}
-                            ></div>
-                            {order.type}
-                          </div>
-                          <div className="font-mono">
-                            {order.volume.toFixed(2)}
-                          </div>
-                          <div className="font-mono">
-                            {order.openPrice.toLocaleString()}
-                          </div>
-                          <div className="font-mono">
-                            {order.currentPrice.toLocaleString()}
-                          </div>
-                          <div
-                            className={`font-mono ${order.pnl > 0 ? "text-green-500" : "text-red-500"}`}
-                          >
-                            {order.pnl > 0 ? "+" : ""}
-                            {order.pnl.toFixed(2)}
-                          </div>
-                          <div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleCloseOrder(order.id)}
-                              disabled={closeOrderLoading}
-                            >
-                              {closeOrderLoading ? (
-                                <span className="animate-pulse">...</span>
+
+                          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                            <div className="space-y-2">
+                              {cryptoAssets.length === 0 ? (
+                                <EmptyState label="Waiting for live prices" />
                               ) : (
-                                <X className="h-3 w-3" />
+                                cryptoAssets.map((crypto) => (
+                                  <button
+                                    key={crypto.symbol}
+                                    className={`w-full rounded-lg border p-3 text-left transition hover:bg-accent/50 ${
+                                      selectedCrypto?.symbol === crypto.symbol
+                                        ? "border-primary/50 bg-primary/10"
+                                        : "bg-background"
+                                    }`}
+                                    onClick={() => {
+                                      setSelectedCrypto(crypto);
+                                    }}
+                                  >
+                                    <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span
+                                          className={`size-2 rounded-full ${
+                                            crypto.signal === "buy"
+                                              ? "bg-emerald-500"
+                                              : "bg-red-500"
+                                          }`}
+                                        />
+                                        <span className="truncate text-sm font-semibold">
+                                          {crypto.symbol}
+                                        </span>
+                                      </div>
+                                      <Badge
+                                        variant={
+                                          crypto.signal === "buy"
+                                            ? "default"
+                                            : "destructive"
+                                        }
+                                        className="shrink-0 px-2 py-0 text-xs"
+                                      >
+                                        {crypto.signal === "buy" ? (
+                                          <TrendingUp className="size-3" />
+                                        ) : (
+                                          <TrendingDown className="size-3" />
+                                        )}
+                                      </Badge>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div className="min-w-0">
+                                        <p className="text-muted-foreground">Bid / Ask</p>
+                                        <p className="truncate font-mono">
+                                          {formatNumber(crypto.bid, 5)} /{" "}
+                                          {formatNumber(crypto.ask, 5)}
+                                        </p>
+                                      </div>
+                                      <div className="min-w-0 text-right">
+                                        <p className="text-muted-foreground">Price</p>
+                                        <p className="truncate font-mono">
+                                          {formatCurrency(crypto.price)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))
                               )}
-                            </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
+                        </aside>
+                      </ResizablePanel>
+                      <ResizableHandle withHandle />
+                    </>
+                  )}
 
-            <TabsContent value="pending" className="h-full m-0 p-4">
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                No pending orders
-              </div>
-            </TabsContent>
-
-            <TabsContent value="closed" className="h-full m-0 p-4">
-              <div className="h-full overflow-y-auto">
-                <div className="min-w-full">
-                  <div className="grid grid-cols-9 gap-4 text-xs font-medium text-muted-foreground pb-2 border-b border-border">
-                    <div>Symbol</div>
-                    <div>Type</div>
-                    <div>Volume</div>
-                    <div>Open Price</div>
-                    <div>Close Price</div>
-                    <div>Open Time</div>
-                    <div>Close Time</div>
-                    <div>P/L</div>
-                    <div>Status</div>
-                  </div>
-                  <div className="space-y-2 mt-2">
-                    {closedOrdersLoading ? (
-                      <div className="text-center py-4 text-muted-foreground">Loading closed orders...</div>
-                    ) : closeOrdersData.length > 0 ? (
-                      closeOrdersData.map((order) => (
-                        <div
-                          key={order.id}
-                          className="grid grid-cols-9 gap-4 text-sm py-2 hover:bg-accent/30 rounded-md px-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                            <span className="font-medium">{order.symbol}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 rounded-full ${
-                                order.type === "Buy"
-                                  ? "bg-green-500"
-                                  : "bg-red-500"
-                              }`}
-                            ></div>
-                            {order.type}
-                          </div>
-                          <div className="font-mono">
-                            {order.volume.toFixed(2)}
-                          </div>
-                          <div className="font-mono">
-                            {order.openPrice.toLocaleString()}
-                          </div>
-                          <div className="font-mono">
-                            {order.closePrice.toLocaleString()}
-                          </div>
-                          <div className="font-mono text-xs">
-                            {new Date(order.openTime).toLocaleString()}
-                          </div>
-                          <div className="font-mono text-xs">
-                            {new Date(order.closeTime).toLocaleString()}
-                          </div>
-                          <div
-                            className={`font-mono ${
-                              order.pnl > 0 ? "text-green-500" : "text-red-500"
-                            }`}
-                          >
-                            {order.pnl > 0 ? "+" : ""}
-                            {order.pnl.toFixed(2)}
-                          </div>
-                          <div>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {order.status}
+                  <ResizablePanel defaultSize={58} minSize={34} className="min-w-0">
+                    <main className="flex h-full min-w-0 flex-col overflow-hidden bg-muted/20">
+                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card/60 px-3 py-3">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center gap-2">
+                            {!sidebarOpen && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Show instruments"
+                              >
+                                <Menu className="size-4" />
+                              </Button>
+                            )}
+                            <span className="truncate text-sm font-semibold">
+                              {selectedCrypto?.name || "No market selected"}
+                            </span>
+                            <Badge variant="outline" className="shrink-0 font-mono">
+                              {selectedCrypto?.symbol || "--"}
                             </Badge>
                           </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-2xl font-semibold leading-none">
+                              {formatCurrency(selectedCrypto?.price)}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm ${
+                                priceIsPositive
+                                  ? "bg-emerald-500/10 text-emerald-600"
+                                  : "bg-red-500/10 text-red-600"
+                              }`}
+                            >
+                              {priceIsPositive ? (
+                                <TrendingUp className="size-4" />
+                              ) : (
+                                <TrendingDown className="size-4" />
+                              )}
+                              {selectedCrypto
+                                ? `${selectedCrypto.change >= 0 ? "+" : ""}${formatNumber(
+                                    selectedCrypto.change
+                                  )} (${formatNumber(selectedCrypto.changePercent)}%)`
+                                : "--"}
+                            </span>
+                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                              Bid {formatNumber(selectedCrypto?.bid, 5)}
+                            </span>
+                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                              Ask {formatNumber(selectedCrypto?.ask, 5)}
+                            </span>
+                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                              Spread {formatNumber(spread, 5)}
+                            </span>
+                          </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No closed orders
+                        {!rightPanelOpen && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0"
+                            onClick={() => setRightPanelOpen(true)}
+                            aria-label="Show trading panel"
+                          >
+                            <Settings className="size-4" />
+                          </Button>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
+
+                      <div className="min-h-0 flex-1 p-3">
+                        <Card className="h-full min-h-0 rounded-lg py-0 shadow-none">
+                          <CardContent className="h-full min-h-0 p-2">
+                            <TradingViewChart selectedAsset={selectedCrypto?.symbol} />
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </main>
+                  </ResizablePanel>
+
+                  {rightPanelOpen && (
+                    <>
+                      <ResizableHandle withHandle />
+                      <ResizablePanel
+                        defaultSize={21}
+                        minSize={16}
+                        maxSize={34}
+                        className="min-w-0"
+                      >
+                        <aside className="flex h-full min-w-0 flex-col border-l bg-card/35">
+                          <div className="shrink-0 border-b p-3">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <h2 className="truncate text-sm font-semibold uppercase tracking-wide">
+                                  Trading Panel
+                                </h2>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {selectedCrypto?.symbol || "Select a market"}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                onClick={() => setRightPanelOpen(false)}
+                                aria-label="Hide trading panel"
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                onClick={() => handleOrder("sell")}
+                                variant="destructive"
+                                className="h-14 flex-col"
+                                disabled={createOrderLoading || !selectedCrypto}
+                              >
+                                <span className="text-base font-semibold">
+                                  Sell {createOrderLoading && "..."}
+                                </span>
+                                <span className="font-mono text-xs opacity-90">
+                                  {formatNumber(selectedCrypto?.bid, 5)}
+                                </span>
+                              </Button>
+                              <Button
+                                onClick={() => handleOrder("buy")}
+                                className="h-14 flex-col bg-emerald-600 hover:bg-emerald-700"
+                                disabled={createOrderLoading || !selectedCrypto}
+                              >
+                                <span className="text-base font-semibold">
+                                  Buy {createOrderLoading && "..."}
+                                </span>
+                                <span className="font-mono text-xs opacity-90">
+                                  {formatNumber(selectedCrypto?.ask, 5)}
+                                </span>
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                            <div className="space-y-4">
+                              <div>
+                                <label className="mb-2 block text-xs text-muted-foreground">
+                                  Volume
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="size-8 shrink-0"
+                                    onClick={() =>
+                                      setOrderVolume(
+                                        Math.max(0.01, orderVolumeNumber - 0.01).toFixed(
+                                          2
+                                        )
+                                      )
+                                    }
+                                    disabled={createOrderLoading}
+                                  >
+                                    <Minus className="size-3" />
+                                  </Button>
+                                  <Input
+                                    value={orderVolume}
+                                    onChange={(event) =>
+                                      setOrderVolume(event.target.value)
+                                    }
+                                    className="h-8 min-w-0 text-center text-sm"
+                                    disabled={createOrderLoading}
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="size-8 shrink-0"
+                                    onClick={() =>
+                                      setOrderVolume((orderVolumeNumber + 0.01).toFixed(2))
+                                    }
+                                    disabled={createOrderLoading}
+                                  >
+                                    <Plus className="size-3" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs text-muted-foreground">
+                                  Take Profit
+                                </label>
+                                <Input
+                                  placeholder="Not set"
+                                  value={takeProfit}
+                                  onChange={(event) => setTakeProfit(event.target.value)}
+                                  className="h-8 text-sm"
+                                  disabled={createOrderLoading}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs text-muted-foreground">
+                                  Stop Loss
+                                </label>
+                                <Input
+                                  placeholder="Not set"
+                                  value={stopLoss}
+                                  onChange={(event) => setStopLoss(event.target.value)}
+                                  className="h-8 text-sm"
+                                  disabled={createOrderLoading}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs text-muted-foreground">
+                                  Slippage (%)
+                                </label>
+                                <Input
+                                  placeholder="0.5"
+                                  value={slippage}
+                                  onChange={(event) => setSlippage(event.target.value)}
+                                  className="h-8 text-sm"
+                                  disabled={createOrderLoading}
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                />
+                              </div>
+
+                              <Card className="rounded-lg bg-accent/30 py-0 shadow-none">
+                                <CardContent className="space-y-2 p-3 text-xs">
+                                  <div className="flex justify-between gap-3">
+                                    <span className="text-muted-foreground">
+                                      Margin Required
+                                    </span>
+                                    <span className="font-mono">
+                                      {formatCurrency(marginRequired)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-3">
+                                    <span className="text-muted-foreground">
+                                      Free Margin
+                                    </span>
+                                    <span
+                                      className={`font-mono ${
+                                        (freeMargin ?? 0) >= 0
+                                          ? "text-emerald-600"
+                                          : "text-red-600"
+                                      }`}
+                                    >
+                                      {formatCurrency(freeMargin)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-3">
+                                    <span className="text-muted-foreground">
+                                      Leverage
+                                    </span>
+                                    <span className="font-mono">100x</span>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </div>
+                        </aside>
+                      </ResizablePanel>
+                    </>
+                  )}
+                </ResizablePanelGroup>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              <ResizablePanel defaultSize={28} minSize={16} maxSize={46}>
+                <section className="flex h-full min-h-0 flex-col border-t bg-card/35">
+                  <Tabs
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="flex h-full min-h-0 flex-col"
+                  >
+                    <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
+                      <TabsList className="h-8">
+                        <TabsTrigger value="open" className="text-xs">
+                          Open ({openOrdersLoading ? "..." : openActiveOrders.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="closed" className="text-xs">
+                          Closed ({closedOrdersLoading ? "..." : closeOrdersData.length})
+                        </TabsTrigger>
+                      </TabsList>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 text-xs">
+                          Close all
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          aria-label="Order options"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <TabsContent value="open" className="m-0 h-full p-3">
+                        <div className="h-full overflow-auto rounded-md border bg-background">
+                          <div className="min-w-[760px]">
+                            <div className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.6fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                              <div>Symbol</div>
+                              <div>Type</div>
+                              <div>Volume</div>
+                              <div>Open Price</div>
+                              <div>Current</div>
+                              <div>P/L</div>
+                              <div>Action</div>
+                            </div>
+                            {openOrdersLoading ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                Loading open orders
+                              </div>
+                            ) : openActiveOrders.length > 0 ? (
+                              openActiveOrders.map((order) => (
+                                <div
+                                  key={order.id}
+                                  className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                >
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="size-2 rounded-full bg-amber-500" />
+                                    <span className="truncate font-medium">
+                                      {order.symbol}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`size-2 rounded-full ${
+                                        order.type === "Buy"
+                                          ? "bg-emerald-500"
+                                          : "bg-red-500"
+                                      }`}
+                                    />
+                                    {order.type}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.volume)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.openPrice)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.currentPrice)}
+                                  </div>
+                                  <div
+                                    className={`font-mono ${
+                                      order.pnl >= 0
+                                        ? "text-emerald-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {order.pnl >= 0 ? "+" : ""}
+                                    {formatNumber(order.pnl)}
+                                  </div>
+                                  <div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-7 text-muted-foreground hover:text-destructive"
+                                      onClick={() => handleCloseOrder(order.id)}
+                                      disabled={closeOrderLoading}
+                                      aria-label={`Close ${order.symbol} order`}
+                                    >
+                                      {closeOrderLoading ? (
+                                        <span className="text-xs">...</span>
+                                      ) : (
+                                        <X className="size-3" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                No open orders
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="closed" className="m-0 h-full p-3">
+                        <div className="h-full overflow-auto rounded-md border bg-background">
+                          <div className="min-w-[980px]">
+                            <div className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_1.4fr_1.4fr_0.8fr_0.8fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                              <div>Symbol</div>
+                              <div>Type</div>
+                              <div>Volume</div>
+                              <div>Open Price</div>
+                              <div>Close Price</div>
+                              <div>Open Time</div>
+                              <div>Close Time</div>
+                              <div>P/L</div>
+                              <div>Status</div>
+                            </div>
+                            {closedOrdersLoading ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                Loading closed orders
+                              </div>
+                            ) : closeOrdersData.length > 0 ? (
+                              closeOrdersData.map((order) => (
+                                <div
+                                  key={order.id}
+                                  className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_1.4fr_1.4fr_0.8fr_0.8fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                >
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="size-2 rounded-full bg-amber-500" />
+                                    <span className="truncate font-medium">
+                                      {order.symbol}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`size-2 rounded-full ${
+                                        order.type === "Buy"
+                                          ? "bg-emerald-500"
+                                          : "bg-red-500"
+                                      }`}
+                                    />
+                                    {order.type}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.volume)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.openPrice)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatNumber(order.closePrice)}
+                                  </div>
+                                  <div className="truncate font-mono text-xs">
+                                    {new Date(order.openTime).toLocaleString()}
+                                  </div>
+                                  <div className="truncate font-mono text-xs">
+                                    {new Date(order.closeTime).toLocaleString()}
+                                  </div>
+                                  <div
+                                    className={`font-mono ${
+                                      order.pnl >= 0
+                                        ? "text-emerald-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {order.pnl >= 0 ? "+" : ""}
+                                    {formatNumber(order.pnl)}
+                                  </div>
+                                  <div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {order.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                No closed orders
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </div>
+                  </Tabs>
+                </section>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </div>
-        </Tabs>
-      </div>
         </div>
       </div>
     </ProtectedRoute>
