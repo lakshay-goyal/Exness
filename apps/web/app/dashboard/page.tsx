@@ -12,7 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { createChart, ColorType } from "lightweight-charts";
-import type { UTCTimestamp } from "lightweight-charts";
+import type {
+  CandlestickData,
+  IPriceLine,
+  ISeriesApi,
+  UTCTimestamp,
+} from "lightweight-charts";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -108,7 +113,19 @@ type ClosedOrdersResponse = {
 
 interface TradingViewChartProps {
   selectedAsset?: string;
+  livePrice?: number;
+  liveUpdatedAt?: number;
 }
+
+const intervalSeconds: Record<string, number> = {
+  "1m": 60,
+  "5m": 5 * 60,
+  "15m": 15 * 60,
+  "30m": 30 * 60,
+  "1h": 60 * 60,
+  "4h": 4 * 60 * 60,
+  "1d": 24 * 60 * 60,
+};
 
 const getBackendUrl = () => {
   return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -149,9 +166,16 @@ const EmptyState = ({ label }: { label: string }) => (
 
 const TradingViewChart: React.FC<TradingViewChartProps> = ({
   selectedAsset = "BTCUSDT",
+  livePrice,
+  liveUpdatedAt,
 }) => {
   const chartRef = useRef<HTMLDivElement | null>(null);
-  const [asset, setAsset] = useState(selectedAsset);
+  const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const lastCandleRef = useRef<CandlestickData | null>(null);
+  const currentPriceLineRef = useRef<IPriceLine | null>(null);
+  const livePriceRef = useRef<number | undefined>(livePrice);
+  const liveUpdatedAtRef = useRef<number | undefined>(liveUpdatedAt);
+  const asset = selectedAsset || "BTCUSDT";
   const [time, setTime] = useState("1m");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +191,66 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
   ];
 
   useEffect(() => {
-    if (selectedAsset) setAsset(selectedAsset);
-  }, [selectedAsset]);
+    livePriceRef.current = livePrice;
+    liveUpdatedAtRef.current = liveUpdatedAt;
+  }, [livePrice, liveUpdatedAt]);
+
+  const applyLiveTickToChart = useCallback(
+    (price?: number, updatedAt?: number) => {
+      const series = candlestickSeriesRef.current;
+      if (!series || price === undefined || Number.isNaN(price)) return;
+
+      const priceLineColor = "#38bdf8";
+      if (currentPriceLineRef.current) {
+        currentPriceLineRef.current.applyOptions({
+          price,
+          title: formatNumber(price, 2),
+        });
+      } else {
+        currentPriceLineRef.current = series.createPriceLine({
+          price,
+          color: priceLineColor,
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: formatNumber(price, 2),
+        });
+      }
+
+      const interval = intervalSeconds[time] ?? 60;
+      const liveTime = (Math.floor(
+        ((updatedAt ?? Date.now()) / 1000) / interval
+      ) * interval) as UTCTimestamp;
+      const lastCandle = lastCandleRef.current;
+
+      const nextCandle: CandlestickData = lastCandle
+        ? liveTime > (lastCandle.time as UTCTimestamp)
+          ? {
+              time: liveTime,
+              open: lastCandle.close,
+              high: Math.max(lastCandle.close, price),
+              low: Math.min(lastCandle.close, price),
+              close: price,
+            }
+          : {
+              ...lastCandle,
+              high: Math.max(lastCandle.high, price),
+              low: Math.min(lastCandle.low, price),
+              close: price,
+            }
+        : {
+            time: liveTime,
+            open: price,
+            high: price,
+            low: price,
+            close: price,
+          };
+
+      series.update(nextCandle);
+      lastCandleRef.current = nextCandle;
+    },
+    [time]
+  );
 
   async function fetchCandles(assetName: string, interval: string) {
     try {
@@ -242,12 +324,19 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       wickUpColor: "#10b981",
       wickDownColor: "#ef4444",
     });
+    candlestickSeriesRef.current = candlestick;
+    lastCandleRef.current = null;
+    currentPriceLineRef.current = null;
+    let isDisposed = false;
 
     const loadData = async () => {
       const candles = await fetchCandles(asset, time);
+      if (isDisposed) return;
 
       if (candles) {
         candlestick.setData(candles);
+        lastCandleRef.current = candles.at(-1) ?? null;
+        applyLiveTickToChart(livePriceRef.current, liveUpdatedAtRef.current);
         chart.timeScale().fitContent();
       }
     };
@@ -267,10 +356,18 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     observer.observe(host);
 
     return () => {
+      isDisposed = true;
       observer.disconnect();
+      candlestickSeriesRef.current = null;
+      lastCandleRef.current = null;
+      currentPriceLineRef.current = null;
       chart.remove();
     };
-  }, [asset, time]);
+  }, [applyLiveTickToChart, asset, time]);
+
+  useEffect(() => {
+    applyLiveTickToChart(livePrice, liveUpdatedAt);
+  }, [applyLiveTickToChart, livePrice, liveUpdatedAt]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-slate-950 shadow-sm">
@@ -840,7 +937,11 @@ const Dashboard = () => {
                       <div className="min-h-0 flex-1 p-3">
                         <Card className="h-full min-h-0 rounded-lg py-0 shadow-none">
                           <CardContent className="h-full min-h-0 p-2">
-                            <TradingViewChart selectedAsset={selectedCrypto?.symbol} />
+                            <TradingViewChart
+                              selectedAsset={selectedCrypto?.symbol}
+                              livePrice={selectedCrypto?.price}
+                              liveUpdatedAt={selectedCrypto?.lastUpdated}
+                            />
                           </CardContent>
                         </Card>
                       </div>
