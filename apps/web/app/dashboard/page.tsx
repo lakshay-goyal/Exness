@@ -114,6 +114,8 @@ type ClosedOrdersResponse = {
 interface TradingViewChartProps {
   selectedAsset?: string;
   livePrice?: number;
+  liveBid?: number;
+  liveAsk?: number;
   liveUpdatedAt?: number;
 }
 
@@ -167,13 +169,19 @@ const EmptyState = ({ label }: { label: string }) => (
 const TradingViewChart: React.FC<TradingViewChartProps> = ({
   selectedAsset = "BTCUSDT",
   livePrice,
+  liveBid,
+  liveAsk,
   liveUpdatedAt,
 }) => {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const lastCandleRef = useRef<CandlestickData | null>(null);
   const currentPriceLineRef = useRef<IPriceLine | null>(null);
+  const bidPriceLineRef = useRef<IPriceLine | null>(null);
+  const askPriceLineRef = useRef<IPriceLine | null>(null);
   const livePriceRef = useRef<number | undefined>(livePrice);
+  const liveBidRef = useRef<number | undefined>(liveBid);
+  const liveAskRef = useRef<number | undefined>(liveAsk);
   const liveUpdatedAtRef = useRef<number | undefined>(liveUpdatedAt);
   const asset = selectedAsset || "BTCUSDT";
   const [time, setTime] = useState("1m");
@@ -192,30 +200,45 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
   useEffect(() => {
     livePriceRef.current = livePrice;
+    liveBidRef.current = liveBid;
+    liveAskRef.current = liveAsk;
     liveUpdatedAtRef.current = liveUpdatedAt;
-  }, [livePrice, liveUpdatedAt]);
+  }, [liveAsk, liveBid, livePrice, liveUpdatedAt]);
 
   const applyLiveTickToChart = useCallback(
-    (price?: number, updatedAt?: number) => {
+    (price?: number, updatedAt?: number, bid?: number, ask?: number) => {
       const series = candlestickSeriesRef.current;
       if (!series || price === undefined || Number.isNaN(price)) return;
 
-      const priceLineColor = "#38bdf8";
-      if (currentPriceLineRef.current) {
-        currentPriceLineRef.current.applyOptions({
-          price,
-          title: formatNumber(price, 2),
-        });
-      } else {
-        currentPriceLineRef.current = series.createPriceLine({
-          price,
-          color: priceLineColor,
-          lineWidth: 1,
-          lineStyle: 2,
+      const updatePriceLine = (
+        lineRef: React.MutableRefObject<IPriceLine | null>,
+        linePrice: number | undefined,
+        title: string,
+        color: string,
+        lineStyle: 0 | 1 | 2 | 3 | 4 = 2
+      ) => {
+        if (linePrice === undefined || Number.isNaN(linePrice)) return;
+
+        const priceLineOptions = {
+          price: linePrice,
+          color,
+          lineWidth: 1 as const,
+          lineStyle,
           axisLabelVisible: true,
-          title: formatNumber(price, 2),
-        });
-      }
+          title: `${title} ${formatNumber(linePrice, 5)}`,
+        };
+
+        if (lineRef.current) {
+          lineRef.current.applyOptions(priceLineOptions);
+          return;
+        }
+
+        lineRef.current = series.createPriceLine(priceLineOptions);
+      };
+
+      updatePriceLine(currentPriceLineRef, price, "Price", "#38bdf8");
+      updatePriceLine(bidPriceLineRef, bid, "Bid", "#22c55e", 1);
+      updatePriceLine(askPriceLineRef, ask, "Ask", "#ef4444", 1);
 
       const interval = intervalSeconds[time] ?? 60;
       const liveTime = (Math.floor(
@@ -327,6 +350,8 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     candlestickSeriesRef.current = candlestick;
     lastCandleRef.current = null;
     currentPriceLineRef.current = null;
+    bidPriceLineRef.current = null;
+    askPriceLineRef.current = null;
     let isDisposed = false;
 
     const loadData = async () => {
@@ -336,7 +361,12 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       if (candles) {
         candlestick.setData(candles);
         lastCandleRef.current = candles.at(-1) ?? null;
-        applyLiveTickToChart(livePriceRef.current, liveUpdatedAtRef.current);
+        applyLiveTickToChart(
+          livePriceRef.current,
+          liveUpdatedAtRef.current,
+          liveBidRef.current,
+          liveAskRef.current
+        );
         chart.timeScale().fitContent();
       }
     };
@@ -361,13 +391,15 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       candlestickSeriesRef.current = null;
       lastCandleRef.current = null;
       currentPriceLineRef.current = null;
+      bidPriceLineRef.current = null;
+      askPriceLineRef.current = null;
       chart.remove();
     };
   }, [applyLiveTickToChart, asset, time]);
 
   useEffect(() => {
-    applyLiveTickToChart(livePrice, liveUpdatedAt);
-  }, [applyLiveTickToChart, livePrice, liveUpdatedAt]);
+    applyLiveTickToChart(livePrice, liveUpdatedAt, liveBid, liveAsk);
+  }, [applyLiveTickToChart, liveAsk, liveBid, livePrice, liveUpdatedAt]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-slate-950 shadow-sm">
@@ -940,6 +972,8 @@ const Dashboard = () => {
                             <TradingViewChart
                               selectedAsset={selectedCrypto?.symbol}
                               livePrice={selectedCrypto?.price}
+                              liveBid={selectedCrypto?.bid}
+                              liveAsk={selectedCrypto?.ask}
                               liveUpdatedAt={selectedCrypto?.lastUpdated}
                             />
                           </CardContent>
