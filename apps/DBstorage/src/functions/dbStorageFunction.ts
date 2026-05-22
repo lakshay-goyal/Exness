@@ -1,6 +1,8 @@
 import { redisStreams, config, constant } from "@repo/config";
 import { prisma } from "@repo/db";
 
+const INITIAL_USER_BALANCE = 500000;
+
 // Lazy initialization of Redis streams for sending responses
 let RedisStreamsInstance: ReturnType<typeof redisStreams> | null = null;
 
@@ -98,6 +100,7 @@ export async function dbStorageFunction(result: any) {
     console.log("getCloseOrders called with:", result);
     // Extract userId from result - it could be at top level or in message
     const userId = result?.userId || result?.message;
+    const requestId = result.requestId || result.correlationId;
     
     if (!userId) {
       console.error("getCloseOrders: Missing userId");
@@ -106,6 +109,8 @@ export async function dbStorageFunction(result: any) {
         await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
           function: "getCloseOrders",
           message: JSON.stringify([]),
+          requestId,
+          correlationId: requestId,
         });
       } catch (error) {
         console.error("Error sending error response:", error);
@@ -146,6 +151,8 @@ export async function dbStorageFunction(result: any) {
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "getCloseOrders",
         message: JSON.stringify(formattedCloseOrders),
+        requestId,
+        correlationId: requestId,
       });
     } catch (error) {
       console.error("Error fetching closeOrders:", error);
@@ -153,6 +160,8 @@ export async function dbStorageFunction(result: any) {
       await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
         function: "getCloseOrders",
         message: JSON.stringify([]),
+        requestId,
+        correlationId: requestId,
       });
     }
   }
@@ -195,7 +204,7 @@ export async function dbStorageFunction(result: any) {
           } else {
             // Create new user
             await prisma.user.create({
-              data: { userID: userId, email: userEmail }
+              data: { userID: userId, email: userEmail, balance: INITIAL_USER_BALANCE }
             });
             console.log("Created new user", { userId, userEmail });
           }
@@ -225,4 +234,3 @@ export async function dbStorageFunction(result: any) {
     }
   }
 }
-

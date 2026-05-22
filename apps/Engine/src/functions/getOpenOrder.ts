@@ -43,9 +43,8 @@ export async function getOpenOrderFunction(result: any) {
       let currentPrice = order.openPrice; // Default to openPrice if price data not available
       
       if (priceData) {
-        // For buy orders, show ask price (what it would cost to buy more)
-        // For sell orders, show bid price (what it would cost to sell)
-        currentPrice = order.type === "buy" ? priceData.askValue : priceData.bidValue;
+        // Use the exit-side price so open P/L matches the eventual close price.
+        currentPrice = order.type === "buy" ? priceData.bidValue : priceData.askValue;
       }
       
       return {

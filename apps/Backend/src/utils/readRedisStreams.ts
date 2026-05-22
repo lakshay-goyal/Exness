@@ -5,7 +5,7 @@ class ReadRedisStreams {
 
   constructor(private url: string) {
     this.client = createClient({ url: url });
-    this.client.on("error", (err) =>
+    this.client.on("error", (err: unknown) =>
       console.error(`Error creating client: ${err}`)
     );
   }

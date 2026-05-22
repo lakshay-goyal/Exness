@@ -383,14 +383,45 @@ export async function createOrderFunction(result: any) {
 
     // Deduct margin from user balance and update database
     try {
-      const newBalance = updatedDbUser.balance - actualMarginRequired;
-      console.log(`Deducting margin: ${actualMarginRequired} from balance: ${updatedDbUser.balance}, new balance: ${newBalance}`);
-      
-      await prisma.user.update({
-        where: { userID: result.userId },
-        data: { balance: newBalance }
+      console.log(`Deducting margin: ${actualMarginRequired} from balance: ${updatedDbUser.balance}`);
+
+      const balanceUpdate = await prisma.user.updateMany({
+        where: {
+          userID: result.userId,
+          balance: { gte: actualMarginRequired },
+        },
+        data: {
+          balance: { decrement: actualMarginRequired },
+        },
       });
-      
+
+      if (balanceUpdate.count !== 1) {
+        const failedOrderIndex = openOrders.findIndex(o => o.orderId === orderId);
+        if (failedOrderIndex !== -1) {
+          openOrders.splice(failedOrderIndex, 1);
+        }
+        const requestId = result.requestId || result.correlationId;
+        await RedisStreams.addToRedisStream(
+          constant.secondaryRedisStream,
+          {
+            function: "createOrder",
+            message: JSON.stringify({
+              error: "Insufficient balance while reserving margin",
+              success: false
+            }),
+            requestId: requestId,
+            correlationId: requestId
+          }
+        );
+        return;
+      }
+
+      const refreshedUser = await prisma.user.findUnique({
+        where: { userID: result.userId },
+        select: { balance: true },
+      });
+      const newBalance = refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
+
       console.log(`Balance updated successfully in database. New balance: ${newBalance}`);
       
       // Also update in-memory user balance

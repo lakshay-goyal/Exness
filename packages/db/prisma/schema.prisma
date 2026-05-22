@@ -18,7 +18,7 @@ model User {
   id      Int     @id       @default(autoincrement())
   userID  String  @unique
   email   String  @unique
-  balance Float   @default(0)
+  balance Float   @default(500000)
   Orders Orders[]
 }
 

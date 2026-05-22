@@ -152,6 +152,26 @@ const formatNumber = (value?: number | null, digits = 2) => {
   });
 };
 
+const normalizeMarketPrice = (value?: number | null) => {
+  if (value === null || value === undefined) return null;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+
+  return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
+};
+
+const marketPriceDigits = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return 2;
+  if (Math.abs(value) < 1) return 5;
+  if (Math.abs(value) < 100) return 3;
+  return 2;
+};
+
+const formatMarketPrice = (value?: number | null) => {
+  const normalizedValue = normalizeMarketPrice(value);
+  return formatNumber(normalizedValue, marketPriceDigits(normalizedValue));
+};
+
 const isCanceledRequest = (error: unknown) => {
   return (
     axios.isCancel(error) ||
@@ -225,7 +245,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
           lineWidth: 1 as const,
           lineStyle,
           axisLabelVisible: true,
-          title: `${title} ${formatNumber(linePrice, 5)}`,
+          title: `${title} ${formatMarketPrice(linePrice)}`,
         };
 
         if (lineRef.current) {
@@ -477,7 +497,7 @@ const Dashboard = () => {
   const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
 
   const router = useRouter();
-  const { token, isAuthenticated, balance } = useAuth();
+  const { token, isAuthenticated, balance, fetchBalance } = useAuth();
 
   const openOrdersControllerRef = useRef<AbortController | null>(null);
   const closeOrdersControllerRef = useRef<AbortController | null>(null);
@@ -549,21 +569,24 @@ const Dashboard = () => {
         const parsedOrders = JSON.parse(data.message) as BackendOpenOrder[];
 
         setOrders(
-          parsedOrders.map((orderData) => ({
-            id: orderData.orderId,
-            symbol: orderData.symbol.toUpperCase(),
-            type: orderData.type === "buy" ? "Buy" : "Sell",
-            volume: orderData.quantity,
-            openPrice: orderData.openPrice,
-            currentPrice: orderData.currentPrice,
-            pnl:
-              orderData.type === "buy"
-                ? (orderData.currentPrice - orderData.openPrice) *
-                  orderData.quantity
-                : (orderData.openPrice - orderData.currentPrice) *
-                  orderData.quantity,
-            status: orderData.status,
-          }))
+          parsedOrders.map((orderData) => {
+            const openPrice = normalizeMarketPrice(orderData.openPrice) ?? 0;
+            const currentPrice = normalizeMarketPrice(orderData.currentPrice) ?? openPrice;
+
+            return {
+              id: orderData.orderId,
+              symbol: orderData.symbol.toUpperCase(),
+              type: orderData.type === "buy" ? "Buy" : "Sell",
+              volume: orderData.quantity,
+              openPrice,
+              currentPrice,
+              pnl:
+                orderData.type === "buy"
+                  ? (currentPrice - openPrice) * orderData.quantity
+                  : (openPrice - currentPrice) * orderData.quantity,
+              status: orderData.status,
+            };
+          })
         );
       } else {
         setOrders([]);
@@ -616,8 +639,8 @@ const Dashboard = () => {
             symbol: orderData.symbol.toUpperCase(),
             type: orderData.type === "buy" ? "Buy" : "Sell",
             volume: orderData.quantity,
-            openPrice: orderData.openPrice,
-            closePrice: orderData.closePrice,
+            openPrice: normalizeMarketPrice(orderData.openPrice) ?? 0,
+            closePrice: normalizeMarketPrice(orderData.closePrice) ?? 0,
             openTime: orderData.openTime,
             closeTime: orderData.closeTime,
             pnl: orderData.profitLoss || 0,
@@ -667,8 +690,10 @@ const Dashboard = () => {
         setRealTimeCryptoData((prevData) => {
           const symbol = data.asset;
           const prevAsset = prevData[symbol];
-          const bidPrice = Number(data.bid) / 100000000;
-          const askPrice = Number(data.ask) / 100000000;
+          const bidPrice = normalizeMarketPrice(data.bid);
+          const askPrice = normalizeMarketPrice(data.ask);
+          if (bidPrice === null || askPrice === null) return prevData;
+
           const newPrice = (bidPrice + askPrice) / 2;
 
           if (prevAsset) {
@@ -746,6 +771,7 @@ const Dashboard = () => {
 
       if (response.data.message) {
         await fetchOpenOrders();
+        await fetchBalance();
         alert("Order created successfully!");
       } else {
         alert("Failed to create order.");
@@ -774,6 +800,7 @@ const Dashboard = () => {
         alert("Order closed successfully!");
         await fetchOpenOrders();
         await fetchCloseOrders();
+        await fetchBalance();
       } else {
         alert("Failed to close order.");
       }
@@ -875,8 +902,8 @@ const Dashboard = () => {
                                       <div className="min-w-0">
                                         <p className="text-muted-foreground">Bid / Ask</p>
                                         <p className="truncate font-mono">
-                                          {formatNumber(crypto.bid, 5)} /{" "}
-                                          {formatNumber(crypto.ask, 5)}
+                                          {formatMarketPrice(crypto.bid)} /{" "}
+                                          {formatMarketPrice(crypto.ask)}
                                         </p>
                                       </div>
                                       <div className="min-w-0 text-right">
@@ -943,13 +970,13 @@ const Dashboard = () => {
                                 : "--"}
                             </span>
                             <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
-                              Bid {formatNumber(selectedCrypto?.bid, 5)}
+                              Bid {formatMarketPrice(selectedCrypto?.bid)}
                             </span>
                             <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
-                              Ask {formatNumber(selectedCrypto?.ask, 5)}
+                              Ask {formatMarketPrice(selectedCrypto?.ask)}
                             </span>
                             <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
-                              Spread {formatNumber(spread, 5)}
+                              Spread {formatMarketPrice(spread)}
                             </span>
                           </div>
                         </div>
@@ -1024,7 +1051,7 @@ const Dashboard = () => {
                                   Sell {createOrderLoading && "..."}
                                 </span>
                                 <span className="font-mono text-xs opacity-90">
-                                  {formatNumber(selectedCrypto?.bid, 5)}
+                                  {formatMarketPrice(selectedCrypto?.bid)}
                                 </span>
                               </Button>
                               <Button
@@ -1036,7 +1063,7 @@ const Dashboard = () => {
                                   Buy {createOrderLoading && "..."}
                                 </span>
                                 <span className="font-mono text-xs opacity-90">
-                                  {formatNumber(selectedCrypto?.ask, 5)}
+                                  {formatMarketPrice(selectedCrypto?.ask)}
                                 </span>
                               </Button>
                             </div>
@@ -1245,10 +1272,10 @@ const Dashboard = () => {
                                     {formatNumber(order.volume)}
                                   </div>
                                   <div className="font-mono">
-                                    {formatNumber(order.openPrice)}
+                                    {formatMarketPrice(order.openPrice)}
                                   </div>
                                   <div className="font-mono">
-                                    {formatNumber(order.currentPrice)}
+                                    {formatMarketPrice(order.currentPrice)}
                                   </div>
                                   <div
                                     className={`font-mono ${
@@ -1258,7 +1285,7 @@ const Dashboard = () => {
                                     }`}
                                   >
                                     {order.pnl >= 0 ? "+" : ""}
-                                    {formatNumber(order.pnl)}
+                                    {formatCurrency(order.pnl)}
                                   </div>
                                   <div>
                                     <Button
@@ -1331,10 +1358,10 @@ const Dashboard = () => {
                                     {formatNumber(order.volume)}
                                   </div>
                                   <div className="font-mono">
-                                    {formatNumber(order.openPrice)}
+                                    {formatMarketPrice(order.openPrice)}
                                   </div>
                                   <div className="font-mono">
-                                    {formatNumber(order.closePrice)}
+                                    {formatMarketPrice(order.closePrice)}
                                   </div>
                                   <div className="truncate font-mono text-xs">
                                     {new Date(order.openTime).toLocaleString()}
@@ -1350,7 +1377,7 @@ const Dashboard = () => {
                                     }`}
                                   >
                                     {order.pnl >= 0 ? "+" : ""}
-                                    {formatNumber(order.pnl)}
+                                    {formatCurrency(order.pnl)}
                                   </div>
                                   <div>
                                     <Badge variant="secondary" className="text-xs">

@@ -1,6 +1,8 @@
 import { users } from "../data/users.js";
 import { redisStreams, config, constant } from "@repo/config";
 
+const INITIAL_USER_BALANCE = 500000;
+
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
@@ -16,7 +18,7 @@ export async function createUserFunction(result: any) {
     const newUser = {
       userId: result.userId,
       userEmail: result.userEmail,
-      balance: 5000000,
+      balance: INITIAL_USER_BALANCE,
     };
     
     users.push(newUser);

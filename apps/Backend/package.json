@@ -10,7 +10,8 @@
     "@repo/config": "workspace:*",
     "@repo/utils":"workspace:*",
     "@repo/db":"workspace:*",
-    "@repo/timescaledb":"workspace:*"
+    "@repo/timescaledb":"workspace:*",
+    "redis": "^5.8.2"
   },
   "devDependencies": {
     "@types/bun": "latest"

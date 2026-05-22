@@ -3,6 +3,7 @@ import { v4 as uuid } from "uuid";
 import { users } from "../data/users.js";
 import { openOrders } from "../data/orders.js";
 import { prices } from "../data/price.js";
+import { prisma } from "@repo/db";
 
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
@@ -32,6 +33,18 @@ export async function createCloseOrderFunction(result: any) {
 
     const order = openOrders[orderIndex];
     console.log("Found order to close:", order);
+
+    if (order?.userId !== result.userId) {
+      console.log("Order does not belong to user:", result.orderId, result.userId);
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+        function: "createCloseOrder",
+        message: JSON.stringify({ error: "Order not found", orderId: result.orderId }),
+        requestId: requestId,
+        correlationId: requestId
+      });
+      return;
+    }
 
     // Helper function to get price asset name from symbol
     const getPriceAssetName = (symbol: string): string => {
@@ -79,7 +92,40 @@ export async function createCloseOrderFunction(result: any) {
     if (order?.type === "buy") {
       profitLoss = (closePrice - order?.openPrice) * order?.quantity;
     } else {
-      profitLoss = (order?.openPrice || 0 - closePrice) * (order?.quantity || 0);
+      profitLoss = ((order?.openPrice || 0) - closePrice) * (order?.quantity || 0);
+    }
+
+    const reservedMargin = ((order?.quantity || 0) * (order?.openPrice || 0)) / (order?.leverage || 1);
+    const balanceAdjustment = reservedMargin + profitLoss;
+
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { userID: result.userId },
+        data: { balance: { increment: balanceAdjustment } },
+        select: { balance: true },
+      });
+
+      const inMemoryUser = users.find((user: any) => user.userId === result.userId);
+      if (inMemoryUser) {
+        inMemoryUser.balance = updatedUser.balance;
+      }
+
+      console.log("Released margin and applied P/L:", {
+        reservedMargin,
+        profitLoss,
+        balanceAdjustment,
+        newBalance: updatedUser.balance,
+      });
+    } catch (balanceUpdateError) {
+      console.error("Failed to update user balance while closing order:", balanceUpdateError);
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+        function: "createCloseOrder",
+        message: JSON.stringify({ error: "Failed to update balance", orderId: result.orderId }),
+        requestId: requestId,
+        correlationId: requestId
+      });
+      return;
     }
 
     // Remove order from in-memory openOrders array
