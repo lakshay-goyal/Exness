@@ -8,6 +8,7 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.exness.mobile",
       "icon": "./assets/expo.icon"
     },
     "android": {
