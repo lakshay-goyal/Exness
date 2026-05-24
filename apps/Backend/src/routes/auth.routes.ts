@@ -4,15 +4,72 @@ import { nodemailerSender } from "@repo/utils";
 import { v4 as uuidv4 } from "uuid";
 import { config, constant } from "@repo/config";
 import { prisma } from "@repo/db";
+import {
+  createLegacyJwt,
+  getMobileAuthUser,
+  hashMobilePin,
+  isValidPin,
+} from "../lib/mobile-auth.js";
 
 const authRouter = express.Router();
 
 // Use shared Redis Streams client from app.locals (initialized in index.ts)
 const jwtSecret = config.JWT_SECRET;
 
+authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
+  const mobileUser = await getMobileAuthUser(req);
+
+  if (!mobileUser) {
+    return res.status(401).json({ error: "No active auth session" });
+  }
+
+  const token = createLegacyJwt({
+    id: mobileUser.authUser.id,
+    email: mobileUser.authUser.email,
+  });
+
+  return res.json({
+    token,
+    user: {
+      id: mobileUser.authUser.id,
+      email: mobileUser.authUser.email,
+      name: mobileUser.authUser.name,
+      image: mobileUser.authUser.image,
+      hasMobilePin: Boolean(mobileUser.authUser.mobilePinHash),
+    },
+  });
+});
+
+authRouter.post("/mobile/pin", async (req: Request, res: Response) => {
+  const mobileUser = await getMobileAuthUser(req);
+
+  if (!mobileUser) {
+    return res.status(401).json({ error: "No active auth session" });
+  }
+
+  const { pin } = req.body;
+
+  if (!isValidPin(pin)) {
+    return res.status(400).json({ error: "PIN must be 4 to 6 digits" });
+  }
+
+  await prisma.authUser.update({
+    where: { id: mobileUser.authUser.id },
+    data: {
+      mobilePinHash: hashMobilePin(pin),
+      mobilePinSetAt: new Date(),
+    },
+  });
+
+  return res.json({
+    success: true,
+    hasMobilePin: true,
+  });
+});
+
 authRouter.post("/login", async (req: Request, res: Response) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: "Email is required" });
   }
@@ -26,22 +83,29 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 
   try {
     const token = jwt.sign({ userId: userId, email: email }, jwtSecret);
-    
+
     // Try to send email in production, but don't fail the request if it fails
     if (process.env.NODE_ENV === "production") {
       try {
         await nodemailerSender(email, token);
         console.log(`Verification email sent to ${email}`);
       } catch (emailError: any) {
-        console.error("Failed to send verification email:", emailError?.message || emailError);
+        console.error(
+          "Failed to send verification email:",
+          emailError?.message || emailError,
+        );
         // Log the token in case email fails, so user can still verify
-        console.log(`⚠️ Email sending failed. Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
+        console.log(
+          `⚠️ Email sending failed. Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`,
+        );
       }
     } else {
       // In development, just log the verification link
-      console.log(`🔗 Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`);
+      console.log(
+        `🔗 Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`,
+      );
     }
-    
+
     res.json({ message: "Verification link send", email });
   } catch (error: any) {
     console.error("Login error:", error);
@@ -53,7 +117,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 authRouter.get("/verify", async (req: Request, res: Response) => {
   const token = req.query;
   console.log(token, "token from query");
-  
+
   const realToken = typeof token.token === "string" ? token.token : "";
 
   try {
@@ -66,11 +130,14 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
 
       const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
-      const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
-        function: "createUser",
-        userId,
-        userEmail,
-      });
+      const streamResult = await RedisStreams.addToRedisStream(
+        constant.redisStream,
+        {
+          function: "createUser",
+          userId,
+          userEmail,
+        },
+      );
       const requestId = streamResult?.requestId;
 
       if (!requestId) {
@@ -82,13 +149,18 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
         const result = await RedisStreams.readNextFromRedisStream(
           constant.secondaryRedisStream,
           5000, // 5 second timeout
-          { requestId: requestId }
+          { requestId: requestId },
         );
         if (result && result.function === "createUser") {
-          if (result.message === userId || result.message === "user Already Exist") {
-            return res.redirect(`${config.FRONTEND_URL}/dashboard?token=${realToken}`);
+          if (
+            result.message === userId ||
+            result.message === "user Already Exist"
+          ) {
+            return res.redirect(
+              `${config.FRONTEND_URL}/dashboard?token=${realToken}`,
+            );
           } else {
-            return res.send("User already existed")
+            return res.send("User already existed");
           }
         }
       } catch (e) {
@@ -96,7 +168,6 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
           message: "Trade not placed",
         });
       }
-
     }
 
     return res.status(401).send("Invalid token ❌");
@@ -107,45 +178,48 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
 
 authRouter.post("/verify-user", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.header('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
     if (!token) {
-      return res.status(401).json({ error: 'No token provided.' });
+      return res.status(401).json({ error: "No token provided." });
     }
 
     const verify = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
-    
+
     if (!verify) {
-      return res.status(401).json({ error: 'Invalid token.' });
+      return res.status(401).json({ error: "Invalid token." });
     }
 
     const userEmail = verify.email;
     const userId = verify.userId;
-    
+
     if (!userId || !userEmail) {
-      return res.status(400).json({ error: 'Invalid token payload.' });
+      return res.status(400).json({ error: "Invalid token payload." });
     }
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { userID: userId },
-          { email: userEmail }
-        ]
-      }
+        OR: [{ userID: userId }, { email: userEmail }],
+      },
     });
 
     if (!user) {
-      console.log("User not found in database, creating user:", { userId, userEmail });
-      
-      const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
-
-      const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
-        function: "createUser",
+      console.log("User not found in database, creating user:", {
         userId,
         userEmail,
       });
+
+      const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
+
+      const streamResult = await RedisStreams.addToRedisStream(
+        constant.redisStream,
+        {
+          function: "createUser",
+          userId,
+          userEmail,
+        },
+      );
       const requestId = streamResult?.requestId;
 
       if (!requestId) {
@@ -156,78 +230,78 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
         const result = await RedisStreams.readNextFromRedisStream(
           constant.secondaryRedisStream,
           5000,
-          { requestId: requestId }
+          { requestId: requestId },
         );
-        
+
         if (result && result.function === "createUser") {
           const userAfterCreation = await prisma.user.findFirst({
             where: {
-              OR: [
-                { userID: userId },
-                { email: userEmail }
-              ]
-            }
+              OR: [{ userID: userId }, { email: userEmail }],
+            },
           });
-          
+
           if (userAfterCreation) {
             return res.json({
               success: true,
               exists: true,
-              message: "User verified and exists in database"
+              message: "User verified and exists in database",
             });
           }
         }
       } catch (e) {
         console.error("Error creating user:", e);
       }
-      
-      return res.status(404).json({ 
-        error: 'User not found in database and creation is in progress.',
-        exists: false
+
+      return res.status(404).json({
+        error: "User not found in database and creation is in progress.",
+        exists: false,
       });
     }
 
     return res.json({
       success: true,
       exists: true,
-      message: "User verified and exists in database"
+      message: "User verified and exists in database",
     });
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token.' });
+    return res.status(401).json({ error: "Invalid or expired token." });
   }
 });
 
 authRouter.post("/ensure-user", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.header('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
     if (!token) {
-      return res.status(401).json({ error: 'No token provided.' });
+      return res.status(401).json({ error: "No token provided." });
     }
 
     const verify = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
-    
+
     if (!verify) {
-      return res.status(401).json({ error: 'Invalid token.' });
+      return res.status(401).json({ error: "Invalid token." });
     }
 
     const userEmail = verify.email;
     const userId = verify.userId;
-    
+
     if (!userId || !userEmail) {
-      return res.status(400).json({ error: 'Invalid token payload.' });
+      return res.status(400).json({ error: "Invalid token payload." });
     }
 
     console.log("Ensuring user exists:", { userId, userEmail });
 
     const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
-    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
-      function: "createUser",
-      userId,
-      userEmail,
-    });
+    const streamResult = await RedisStreams.addToRedisStream(
+      constant.redisStream,
+      {
+        function: "createUser",
+        userId,
+        userEmail,
+      },
+    );
     const requestId = streamResult?.requestId;
 
     if (!requestId) {
@@ -238,30 +312,31 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
       const result = await RedisStreams.readNextFromRedisStream(
         constant.secondaryRedisStream,
         5000,
-        { requestId: requestId }
+        { requestId: requestId },
       );
-      
+
       if (result && result.function === "createUser") {
         return res.json({
           success: true,
-          message: result.message === userId || result.message === "user Already Exist" 
-            ? "User ensured in Engine and DBStorage"
-            : "User creation initiated"
+          message:
+            result.message === userId || result.message === "user Already Exist"
+              ? "User ensured in Engine and DBStorage"
+              : "User creation initiated",
         });
       }
-      
+
       return res.json({
         success: true,
-        message: "User creation initiated"
+        message: "User creation initiated",
       });
     } catch (e) {
       console.error("Error ensuring user:", e);
       return res.status(500).json({
-        error: "Failed to ensure user, but request was sent to Engine"
+        error: "Failed to ensure user, but request was sent to Engine",
       });
     }
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token.' });
+    return res.status(401).json({ error: "Invalid or expired token." });
   }
 });
 

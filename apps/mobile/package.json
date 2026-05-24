@@ -10,9 +10,11 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.6.11",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
     "@react-navigation/native": "^7.1.33",
+    "better-auth": "^1.6.11",
     "expo": "~55.0.26",
     "expo-constants": "~55.0.16",
     "expo-dev-client": "~55.0.35",
@@ -21,7 +23,10 @@
     "expo-glass-effect": "~55.0.11",
     "expo-image": "~55.0.11",
     "expo-linking": "~55.0.15",
+    "expo-local-authentication": "~55.0.14",
+    "expo-network": "~55.0.14",
     "expo-router": "~55.0.16",
+    "expo-secure-store": "~55.0.14",
     "expo-splash-screen": "~55.0.21",
     "expo-status-bar": "~55.0.6",
     "expo-symbols": "~55.0.9",

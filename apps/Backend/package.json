@@ -7,10 +7,13 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.6.11",
+    "@better-auth/prisma-adapter": "^1.6.11",
     "@repo/config": "workspace:*",
     "@repo/utils":"workspace:*",
     "@repo/db":"workspace:*",
     "@repo/timescaledb":"workspace:*",
+    "better-auth": "^1.6.11",
     "redis": "^5.8.2"
   },
   "devDependencies": {

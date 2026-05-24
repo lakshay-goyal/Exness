@@ -31,6 +31,9 @@ const envSchema = z.object({
   USER_PASSWORD: z.string(),
   WEBSOCKET_PORT: z.string().transform(Number),
   BACKEND_URL: z.string(),
+  BETTER_AUTH_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 const env = envSchema.parse(process.env);
@@ -53,6 +56,9 @@ export const config = {
   USER_PASSWORD: env.USER_PASSWORD,
   WEBSOCKET_PORT: env.WEBSOCKET_PORT,
   BACKEND_URL: env.BACKEND_URL,
+  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
+  GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
 };
 
 export default config;
