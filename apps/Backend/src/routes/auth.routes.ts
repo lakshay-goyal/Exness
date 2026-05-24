@@ -6,9 +6,11 @@ import { config, constant } from "@repo/config";
 import { prisma } from "@repo/db";
 import {
   createLegacyJwt,
+  createMobileRefreshToken,
   getMobileAuthUser,
   hashMobilePin,
   isValidPin,
+  verifyMobileRefreshToken,
 } from "../lib/mobile-auth.js";
 
 const authRouter = express.Router();
@@ -27,9 +29,17 @@ authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
     id: mobileUser.authUser.id,
     email: mobileUser.authUser.email,
   });
+  const refreshToken = createMobileRefreshToken({
+    id: mobileUser.authUser.id,
+    email: mobileUser.authUser.email,
+  });
 
   return res.json({
     token,
+    accessToken: token,
+    refreshToken,
+    accessTokenExpiresIn: 60 * 60 * 24 * 7,
+    refreshTokenExpiresIn: 60 * 60 * 24 * 30,
     user: {
       id: mobileUser.authUser.id,
       email: mobileUser.authUser.email,
@@ -39,6 +49,57 @@ authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
     },
   });
 });
+
+authRouter.post(
+  "/mobile/refresh-token",
+  async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+
+    if (typeof refreshToken !== "string" || !refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    try {
+      const refreshUser = verifyMobileRefreshToken(refreshToken);
+
+      if (!refreshUser) {
+        return res.status(401).json({ error: "Invalid refresh token" });
+      }
+
+      const authUser = await prisma.authUser.findUnique({
+        where: { id: refreshUser.id },
+      });
+
+      if (!authUser || authUser.email !== refreshUser.email) {
+        return res.status(401).json({ error: "Invalid refresh token" });
+      }
+
+      const accessToken = createLegacyJwt({
+        id: authUser.id,
+        email: authUser.email,
+      });
+
+      return res.json({
+        token: accessToken,
+        accessToken,
+        refreshToken,
+        accessTokenExpiresIn: 60 * 60 * 24 * 7,
+        refreshTokenExpiresIn: 60 * 60 * 24 * 30,
+        user: {
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.name,
+          image: authUser.image,
+          hasMobilePin: Boolean(authUser.mobilePinHash),
+        },
+      });
+    } catch {
+      return res
+        .status(401)
+        .json({ error: "Invalid or expired refresh token" });
+    }
+  },
+);
 
 authRouter.post("/mobile/pin", async (req: Request, res: Response) => {
   const mobileUser = await getMobileAuthUser(req);
@@ -191,6 +252,10 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid token." });
     }
 
+    if (verify.type === "refresh") {
+      return res.status(401).json({ error: "Invalid token type." });
+    }
+
     const userEmail = verify.email;
     const userId = verify.userId;
 
@@ -281,6 +346,10 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
 
     if (!verify) {
       return res.status(401).json({ error: "Invalid token." });
+    }
+
+    if (verify.type === "refresh") {
+      return res.status(401).json({ error: "Invalid token type." });
     }
 
     const userEmail = verify.email;

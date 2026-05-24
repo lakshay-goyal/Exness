@@ -3,13 +3,16 @@ import { Modal, Pressable, Text, View } from "react-native";
 
 import { getAuthErrorMessage, logAuthEvent } from "@/lib/auth-logger";
 import { signInWithGoogleInBrowser } from "@/lib/google-auth-flow";
-import { syncMobileSession } from "@/lib/mobile-auth-api";
+import {
+  MobileSessionResponse,
+  syncMobileSession,
+} from "@/lib/mobile-auth-api";
 
 type GoogleAuthSheetProps = {
   mode: "login" | "create";
   visible: boolean;
   onClose: () => void;
-  onAuthenticated: (hasMobilePin: boolean) => void;
+  onAuthenticated: (user: MobileSessionResponse["user"]) => void;
 };
 
 export function GoogleAuthSheet({
@@ -39,7 +42,7 @@ export function GoogleAuthSheet({
         hasMobilePin: session.user.hasMobilePin,
       });
       onClose();
-      onAuthenticated(session.user.hasMobilePin);
+      onAuthenticated(session.user);
     } catch (err) {
       const message = getAuthErrorMessage(err, "Google authentication failed.");
       logAuthEvent(
@@ -84,7 +87,7 @@ export function GoogleAuthSheet({
           </Text>
           <Text className="mx-auto mt-2 max-w-[310px] text-center text-[15px] leading-6 text-[#9A9A9A]">
             Continue in Google's secure sign-in sheet. After login, we will take
-            you to create a PIN for this device.
+            you straight to your home screen.
           </Text>
 
           {error ? (

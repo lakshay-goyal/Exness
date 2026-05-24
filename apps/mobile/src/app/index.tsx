@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,8 +13,13 @@ import { TradingSetupIllustration } from "@/components/TradingSetupIllustration"
 import { TradingValueIcon } from "@/components/TradingValueIcon";
 import { WalletLoadingScreen } from "@/components/WalletLoadingScreen";
 import { logAuthEvent } from "@/lib/auth-logger";
+import {
+  MobileSessionResponse,
+  restoreMobileSession,
+} from "@/lib/mobile-auth-api";
 
 type AppScreen =
+  | "booting"
   | "onboarding"
   | "setup"
   | "pin"
@@ -23,18 +28,65 @@ type AppScreen =
   | "hello";
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>("onboarding");
+  const [screen, setScreen] = useState<AppScreen>("booting");
   const [isAuthSheetVisible, setIsAuthSheetVisible] = useState(false);
   const [googleAuthMode, setGoogleAuthMode] = useState<"login" | "create">(
     "login",
   );
   const [isGoogleAuthSheetVisible, setIsGoogleAuthSheetVisible] =
     useState(false);
+  const [authenticatedUser, setAuthenticatedUser] = useState<
+    MobileSessionResponse["user"] | null
+  >(null);
   const { height } = useWindowDimensions();
   const completeOnboarding = useCallback(() => {
     logAuthEvent("onboarding_completed");
     setScreen("hello");
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    restoreMobileSession()
+      .then((session) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (session) {
+          setAuthenticatedUser(session.user);
+          setScreen("hello");
+          return;
+        }
+
+        setScreen("onboarding");
+      })
+      .catch((err) => {
+        logAuthEvent(
+          "session_restore_failed",
+          {
+            error: err instanceof Error ? err.message : String(err),
+          },
+          "warn",
+        );
+
+        if (isMounted) {
+          setScreen("onboarding");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (screen === "booting") {
+    return (
+      <View className="flex-1 bg-[#1B1B1B]">
+        <StatusBar style="light" />
+      </View>
+    );
+  }
 
   if (screen === "pin") {
     return (
@@ -45,6 +97,9 @@ export default function App() {
         }}
         onComplete={() => {
           logAuthEvent("pin_flow_completed");
+          setAuthenticatedUser((user) =>
+            user ? { ...user, hasMobilePin: true } : user,
+          );
           setScreen("walletLoading");
         }}
       />
@@ -67,7 +122,7 @@ export default function App() {
   }
 
   if (screen === "hello") {
-    return <HelloWorldScreen />;
+    return <HelloWorldScreen user={authenticatedUser} />;
   }
 
   if (screen === "setup") {
@@ -183,12 +238,13 @@ export default function App() {
             logAuthEvent("google_sheet_closed", { mode: googleAuthMode });
             setIsGoogleAuthSheetVisible(false);
           }}
-          onAuthenticated={(hasMobilePin) => {
+          onAuthenticated={(user) => {
+            setAuthenticatedUser(user);
             logAuthEvent("auth_flow_authenticated", {
-              hasMobilePin,
-              nextScreen: hasMobilePin ? "hello" : "pin",
+              hasMobilePin: user.hasMobilePin,
+              nextScreen: "hello",
             });
-            setScreen(hasMobilePin ? "hello" : "pin");
+            setScreen("hello");
           }}
         />
       </View>

@@ -4,6 +4,7 @@ import { logAuthEvent } from "./auth-logger";
 
 type SecureStoreModule = {
   getItem?: (key: string) => string | null;
+  getItemAsync?: (key: string) => Promise<string | null>;
   setItem?: (key: string, value: string) => void;
   setItemAsync?: (key: string, value: string) => Promise<void>;
 };
@@ -26,7 +27,12 @@ function getSecureStore() {
       logAuthEvent(
         "secure_store_unavailable",
         {
-          storageFallback: "web_or_memory",
+          storageFallback:
+            typeof window === "undefined" ? "memory_only" : "web_or_memory",
+          rebuildRequired:
+            typeof window === "undefined"
+              ? "expo_secure_store_native_module_missing"
+              : undefined,
         },
         "warn",
       );
@@ -123,4 +129,26 @@ export async function setStoredAuthItem(key: string, value: string) {
   }
 
   authStorage.setItem(key, value);
+}
+
+export async function getStoredAuthItem(key: string) {
+  const store = getSecureStore();
+
+  if (store?.getItemAsync) {
+    try {
+      return await store.getItemAsync(key);
+    } catch {
+      logAuthEvent(
+        "secure_store_get_async_failed",
+        {
+          key,
+          storageFallback: "sync_or_memory",
+        },
+        "warn",
+      );
+      // Fall back to sync storage below.
+    }
+  }
+
+  return authStorage.getItem(key);
 }

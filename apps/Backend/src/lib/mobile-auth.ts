@@ -38,9 +38,44 @@ export function createLegacyJwt(user: { id: string; email: string }) {
     {
       userId: user.id,
       email: user.email,
+      type: "access",
     },
     config.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    },
   );
+}
+
+export function createMobileRefreshToken(user: { id: string; email: string }) {
+  return jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      type: "refresh",
+    },
+    config.JWT_SECRET,
+    {
+      expiresIn: "30d",
+    },
+  );
+}
+
+export function verifyMobileRefreshToken(token: string) {
+  const payload = jwt.verify(token, config.JWT_SECRET) as jwt.JwtPayload;
+
+  if (
+    payload.type !== "refresh" ||
+    typeof payload.userId !== "string" ||
+    typeof payload.email !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: payload.userId,
+    email: payload.email,
+  };
 }
 
 export function hashMobilePin(pin: string) {
