@@ -127,6 +127,7 @@ export async function createOrderFunction(result: any) {
     const quantity = parseFloat(result.quantity);
     if (isNaN(quantity) || quantity <= 0) {
       console.error(`Invalid quantity: ${result.quantity}`);
+      const requestId = result.requestId || result.correlationId;
       await RedisStreams.addToRedisStream(
         constant.secondaryRedisStream,
         { 
@@ -134,14 +135,34 @@ export async function createOrderFunction(result: any) {
           message: JSON.stringify({ 
             error: `Invalid quantity: ${result.quantity}`,
             success: false 
-          }) 
+          }),
+          requestId,
+          correlationId: requestId
         }
       );
       return;
     }
 
     // Calculate margin required: (quantity * price) / leverage
-    const leverage = parseInt(result.leverage) || 1;
+    const leverage = Number(result.leverage);
+    if (!Number.isInteger(leverage) || leverage <= 0) {
+      console.error(`Invalid leverage: ${result.leverage}`);
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(
+        constant.secondaryRedisStream,
+        {
+          function: "createOrder",
+          message: JSON.stringify({
+            error: "Leverage must be a positive whole number",
+            success: false
+          }),
+          requestId,
+          correlationId: requestId
+        }
+      );
+      return;
+    }
+
     const marginRequired = (quantity * expectedPrice) / leverage;
     console.log(`Margin calculation: quantity=${quantity}, price=${expectedPrice}, leverage=${leverage}, marginRequired=${marginRequired}`);
 
@@ -208,6 +229,10 @@ export async function createOrderFunction(result: any) {
       result.stopLoss !== undefined && result.stopLoss !== null && result.stopLoss !== ""
         ? (typeof result.stopLoss === "number" ? result.stopLoss : parseFloat(String(result.stopLoss)))
         : undefined;
+    const parsedSlippage =
+      result.slippage !== undefined && result.slippage !== null && result.slippage !== ""
+        ? (typeof result.slippage === "number" ? result.slippage : parseFloat(String(result.slippage)))
+        : undefined;
 
     if (
       (parsedTakeProfit !== undefined && (!Number.isFinite(parsedTakeProfit) || parsedTakeProfit <= 0)) ||
@@ -229,6 +254,26 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
+    if (
+      parsedSlippage !== undefined &&
+      (!Number.isFinite(parsedSlippage) || parsedSlippage < 0)
+    ) {
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(
+        constant.secondaryRedisStream,
+        {
+          function: "createOrder",
+          message: JSON.stringify({
+            error: "Slippage must be zero or a positive number",
+            success: false
+          }),
+          requestId,
+          correlationId: requestId
+        }
+      );
+      return;
+    }
+
     // Create the order with expected price
     const orderId = uuid();
     const newOrder = {
@@ -237,14 +282,12 @@ export async function createOrderFunction(result: any) {
       symbol: normalizedSymbol as "btc" | "sol" | "eth",
       type: orderType as "buy" | "sell",
       quantity: quantity,
-      leverage: parseInt(result.leverage) || 1,
+      leverage,
       openPrice: expectedPrice,
       openTime: new Date(),
       takeProfit: parsedTakeProfit,
       stopLoss: parsedStopLoss,
-      stippage: result.slippage !== undefined && result.slippage !== null && result.slippage !== ""
-        ? (typeof result.slippage === 'number' ? result.slippage : parseFloat(String(result.slippage)))
-        : undefined,
+      stippage: parsedSlippage,
     };
 
     openOrders.push(newOrder);
@@ -326,43 +369,40 @@ export async function createOrderFunction(result: any) {
     }
 
     // Check slippage if slippage value is provided
-    if (result.slippage !== undefined && result.slippage !== null && result.slippage !== "") {
-      const slippageTolerance = typeof result.slippage === 'number' 
-        ? result.slippage 
-        : parseFloat(String(result.slippage));
-      
-      if (!isNaN(slippageTolerance) && slippageTolerance >= 0) {
-        // Calculate price difference percentage
-        const priceDifference = Math.abs(currentExecutionPrice - expectedPrice);
-        const priceDifferencePercent = (priceDifference / expectedPrice) * 100;
+    if (parsedSlippage !== undefined) {
+      // Calculate price difference percentage
+      const priceDifference = Math.abs(currentExecutionPrice - expectedPrice);
+      const priceDifferencePercent = (priceDifference / expectedPrice) * 100;
 
-        console.log(`Slippage check: Expected=${expectedPrice}, Current=${currentExecutionPrice}, Difference=${priceDifferencePercent.toFixed(4)}%, Tolerance=${slippageTolerance}%`);
+      console.log(`Slippage check: Expected=${expectedPrice}, Current=${currentExecutionPrice}, Difference=${priceDifferencePercent.toFixed(4)}%, Tolerance=${parsedSlippage}%`);
 
-        // If slippage exceeds tolerance, cancel the order
-        if (priceDifferencePercent > slippageTolerance) {
-          console.warn(`Slippage exceeded! ${priceDifferencePercent.toFixed(4)}% > ${slippageTolerance}%. Cancelling order.`);
-          
-          // Remove the order from openOrders
-          const orderIndex = openOrders.findIndex(o => o.orderId === orderId);
-          if (orderIndex !== -1) {
-            openOrders.splice(orderIndex, 1);
-            console.log("Order removed due to slippage:", orderId);
-          }
-
-          // Send error response
-          await RedisStreams.addToRedisStream(
-            constant.secondaryRedisStream,
-            { 
-              function: "createOrder", 
-              message: JSON.stringify({ 
-                error: `Order cancelled due to slippage. Expected price: ${expectedPrice}, Current price: ${currentExecutionPrice}, Slippage: ${priceDifferencePercent.toFixed(4)}% (Tolerance: ${slippageTolerance}%)`,
-                success: false 
-              }) 
-            }
-          );
-          console.log("Slippage error response sent to Backend");
-          return;
+      // If slippage exceeds tolerance, cancel the order
+      if (priceDifferencePercent > parsedSlippage) {
+        console.warn(`Slippage exceeded! ${priceDifferencePercent.toFixed(4)}% > ${parsedSlippage}%. Cancelling order.`);
+        
+        // Remove the order from openOrders
+        const orderIndex = openOrders.findIndex(o => o.orderId === orderId);
+        if (orderIndex !== -1) {
+          openOrders.splice(orderIndex, 1);
+          console.log("Order removed due to slippage:", orderId);
         }
+
+        // Send error response
+        const requestId = result.requestId || result.correlationId;
+        await RedisStreams.addToRedisStream(
+          constant.secondaryRedisStream,
+          { 
+            function: "createOrder", 
+            message: JSON.stringify({ 
+              error: `Order cancelled due to slippage. Expected price: ${expectedPrice}, Current price: ${currentExecutionPrice}, Slippage: ${priceDifferencePercent.toFixed(4)}% (Tolerance: ${parsedSlippage}%)`,
+              success: false 
+            }),
+            requestId,
+            correlationId: requestId
+          }
+        );
+        console.log("Slippage error response sent to Backend");
+        return;
       }
     }
 

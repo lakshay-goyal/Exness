@@ -18,6 +18,50 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
     });
   }
 
+  const quantityValue = Number(quantity);
+  if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+    return res.status(400).json({
+      error: "Quantity must be greater than 0",
+    });
+  }
+
+  const leverageValue = Number(leverage);
+  if (!Number.isInteger(leverageValue) || leverageValue <= 0) {
+    return res.status(400).json({
+      error: "Leverage must be a positive whole number",
+    });
+  }
+
+  let slippageValue: number | undefined;
+  if (slippage !== undefined && slippage !== null && slippage !== "") {
+    slippageValue = Number(slippage);
+    if (!Number.isFinite(slippageValue) || slippageValue < 0) {
+      return res.status(400).json({
+        error: "Slippage must be zero or a positive number",
+      });
+    }
+  }
+
+  let takeProfitValue: number | undefined;
+  if (takeProfit !== undefined && takeProfit !== null && takeProfit !== "") {
+    takeProfitValue = Number(takeProfit);
+    if (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0) {
+      return res.status(400).json({
+        error: "Take profit must be greater than 0",
+      });
+    }
+  }
+
+  let stopLossValue: number | undefined;
+  if (stopLoss !== undefined && stopLoss !== null && stopLoss !== "") {
+    stopLossValue = Number(stopLoss);
+    if (!Number.isFinite(stopLossValue) || stopLossValue <= 0) {
+      return res.status(400).json({
+        error: "Stop loss must be greater than 0",
+      });
+    }
+  }
+
   const authReq = req as Request & { user?: { id: string } };
   const userId = authReq.user?.id;
   if (!userId) {
@@ -35,30 +79,21 @@ tradeRouter.post("/create", authMiddleware as any, async (req: Request, res: Res
       userId,
       symbol,
       type,
-      quantity,
-      leverage,
+      quantity: quantityValue,
+      leverage: leverageValue,
     };
     
     // Only add optional fields if they are provided
-    if (slippage !== undefined && slippage !== null && slippage !== "") {
-      const slippageValue = parseFloat(slippage as string);
-      if (!isNaN(slippageValue)) {
-        orderPayload.slippage = slippageValue;
-      }
+    if (slippageValue !== undefined) {
+      orderPayload.slippage = slippageValue;
     }
     
-    if (takeProfit !== undefined && takeProfit !== null && takeProfit !== "") {
-      const takeProfitValue = parseFloat(takeProfit as string);
-      if (!isNaN(takeProfitValue)) {
-        orderPayload.takeProfit = takeProfitValue;
-      }
+    if (takeProfitValue !== undefined) {
+      orderPayload.takeProfit = takeProfitValue;
     }
     
-    if (stopLoss !== undefined && stopLoss !== null && stopLoss !== "") {
-      const stopLossValue = parseFloat(stopLoss as string);
-      if (!isNaN(stopLossValue)) {
-        orderPayload.stopLoss = stopLossValue;
-      }
+    if (stopLossValue !== undefined) {
+      orderPayload.stopLoss = stopLossValue;
     }
     
     console.log("Sending order payload to Engine:", JSON.stringify(orderPayload));

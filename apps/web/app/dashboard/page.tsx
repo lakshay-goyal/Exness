@@ -547,6 +547,7 @@ const Dashboard = () => {
     Record<string, CryptoAsset>
   >({});
   const [orderVolume, setOrderVolume] = useState("0.01");
+  const [leverage, setLeverage] = useState("100");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
   const [slippage, setSlippage] = useState("0.5");
@@ -602,9 +603,13 @@ const Dashboard = () => {
     [liveOrders]
   );
   const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
+  const leverageNumber = Number.parseInt(leverage, 10);
+  const leverageIsValid =
+    Number.isInteger(leverageNumber) && leverageNumber > 0;
   const marginRequired = selectedCrypto
-    ? (selectedCrypto.price * orderVolumeNumber) / 100
-    : 0;
+    ? (selectedCrypto.price * orderVolumeNumber) /
+      (leverageIsValid ? leverageNumber : 1)
+    : null;
   const reservedMargin = useMemo(
     () => openActiveOrders.reduce((total, order) => total + getOrderMargin(order), 0),
     [openActiveOrders]
@@ -623,7 +628,9 @@ const Dashboard = () => {
       ? (accountEquity / reservedMargin) * 100
       : null;
   const estimatedFreeMargin =
-    accountFreeMargin !== null ? accountFreeMargin - marginRequired : null;
+    accountFreeMargin !== null && marginRequired !== null
+      ? accountFreeMargin - marginRequired
+      : null;
   const spread = selectedCrypto
     ? Math.max(selectedCrypto.ask - selectedCrypto.bid, 0)
     : null;
@@ -895,9 +902,23 @@ const Dashboard = () => {
     const entryPrice = type === "buy" ? selectedCrypto.ask : selectedCrypto.bid;
     const takeProfitValue = takeProfit ? Number.parseFloat(takeProfit) : undefined;
     const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
+    const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
 
     if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
       alert("Volume must be greater than 0.");
+      return;
+    }
+
+    if (!leverageIsValid) {
+      alert("Leverage must be a positive whole number.");
+      return;
+    }
+
+    if (
+      slippageValue !== undefined &&
+      (!Number.isFinite(slippageValue) || slippageValue < 0)
+    ) {
+      alert("Slippage must be zero or a positive number.");
       return;
     }
 
@@ -939,8 +960,8 @@ const Dashboard = () => {
         symbol: selectedCrypto.symbol,
         type,
         quantity: orderVolumeNumber,
-        leverage: 100,
-        slippage: slippage ? Number.parseFloat(slippage) : undefined,
+        leverage: leverageNumber,
+        slippage: slippageValue,
         takeProfit: takeProfitValue,
         stopLoss: stopLossValue,
       });
@@ -954,7 +975,10 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error creating order:", error);
-      alert("Error creating order. Please try again.");
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || error.response?.data?.error
+        : null;
+      alert(message || "Error creating order. Please try again.");
     } finally {
       setCreateOrderLoading(false);
     }
@@ -1291,6 +1315,47 @@ const Dashboard = () => {
 
                               <div>
                                 <label className="mb-2 block text-xs text-muted-foreground">
+                                  Leverage
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="size-8 shrink-0"
+                                    onClick={() =>
+                                      setLeverage(
+                                        String(Math.max(1, (leverageNumber || 1) - 1))
+                                      )
+                                    }
+                                    disabled={createOrderLoading}
+                                  >
+                                    <Minus className="size-3" />
+                                  </Button>
+                                  <Input
+                                    value={leverage}
+                                    onChange={(event) => setLeverage(event.target.value)}
+                                    className="h-8 min-w-0 text-center text-sm"
+                                    disabled={createOrderLoading}
+                                    type="number"
+                                    step="1"
+                                    min="1"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="size-8 shrink-0"
+                                    onClick={() =>
+                                      setLeverage(String((leverageNumber || 1) + 1))
+                                    }
+                                    disabled={createOrderLoading}
+                                  >
+                                    <Plus className="size-3" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs text-muted-foreground">
                                   Take Profit
                                 </label>
                                 <Input
@@ -1365,7 +1430,9 @@ const Dashboard = () => {
                                     <span className="text-muted-foreground">
                                       Leverage
                                     </span>
-                                    <span className="font-mono">100x</span>
+                                    <span className="font-mono">
+                                      {leverageIsValid ? `${leverageNumber}x` : "--"}
+                                    </span>
                                   </div>
                                 </CardContent>
                               </Card>
