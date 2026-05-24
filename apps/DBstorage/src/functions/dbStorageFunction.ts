@@ -80,6 +80,7 @@ export async function dbStorageFunction(result: any) {
           openTime: openTime,
           closeTime: closeTime,
           profitLoss: parseFloat(orderData.profitLoss) || 0,
+          closeReason: orderData.closeReason || "manual",
         },
       });
       
@@ -145,6 +146,9 @@ export async function dbStorageFunction(result: any) {
         openTime: order.openTime?.toISOString() || order.openTime,
         closeTime: order.closeTime?.toISOString() || order.closeTime,
         profitLoss: order.profitLoss || 0,
+        takeProfit: order.takeProfit ?? null,
+        stopLoss: order.stopLoss ?? null,
+        closeReason: order.closeReason || "manual",
         status: "closed"
       }));
       

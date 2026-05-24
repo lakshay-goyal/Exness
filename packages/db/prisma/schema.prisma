@@ -49,6 +49,7 @@ model Orders {
   openTime    DateTime
   closeTime   DateTime
   profitLoss  Float
+  closeReason String?
 
   @@index([userId])
 }

@@ -200,6 +200,35 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
+    const parsedTakeProfit =
+      result.takeProfit !== undefined && result.takeProfit !== null && result.takeProfit !== ""
+        ? (typeof result.takeProfit === "number" ? result.takeProfit : parseFloat(String(result.takeProfit)))
+        : undefined;
+    const parsedStopLoss =
+      result.stopLoss !== undefined && result.stopLoss !== null && result.stopLoss !== ""
+        ? (typeof result.stopLoss === "number" ? result.stopLoss : parseFloat(String(result.stopLoss)))
+        : undefined;
+
+    if (
+      (parsedTakeProfit !== undefined && (!Number.isFinite(parsedTakeProfit) || parsedTakeProfit <= 0)) ||
+      (parsedStopLoss !== undefined && (!Number.isFinite(parsedStopLoss) || parsedStopLoss <= 0))
+    ) {
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(
+        constant.secondaryRedisStream,
+        {
+          function: "createOrder",
+          message: JSON.stringify({
+            error: "Take profit and stop loss must be positive numbers",
+            success: false
+          }),
+          requestId,
+          correlationId: requestId
+        }
+      );
+      return;
+    }
+
     // Create the order with expected price
     const orderId = uuid();
     const newOrder = {
@@ -211,12 +240,8 @@ export async function createOrderFunction(result: any) {
       leverage: parseInt(result.leverage) || 1,
       openPrice: expectedPrice,
       openTime: new Date(),
-      takeProfit: result.takeProfit !== undefined && result.takeProfit !== null && result.takeProfit !== "" 
-        ? (typeof result.takeProfit === 'number' ? result.takeProfit : parseFloat(String(result.takeProfit)))
-        : undefined,
-      stopLoss: result.stopLoss !== undefined && result.stopLoss !== null && result.stopLoss !== ""
-        ? (typeof result.stopLoss === 'number' ? result.stopLoss : parseFloat(String(result.stopLoss)))
-        : undefined,
+      takeProfit: parsedTakeProfit,
+      stopLoss: parsedStopLoss,
       stippage: result.slippage !== undefined && result.slippage !== null && result.slippage !== ""
         ? (typeof result.slippage === 'number' ? result.slippage : parseFloat(String(result.slippage)))
         : undefined,
@@ -260,6 +285,44 @@ export async function createOrderFunction(result: any) {
       currentExecutionPrice = currentPriceData.askValue;
     } else {
       currentExecutionPrice = currentPriceData.bidValue;
+    }
+
+    const invalidTakeProfit =
+      parsedTakeProfit !== undefined &&
+      (orderType === "buy"
+        ? parsedTakeProfit <= currentExecutionPrice
+        : parsedTakeProfit >= currentExecutionPrice);
+    const invalidStopLoss =
+      parsedStopLoss !== undefined &&
+      (orderType === "buy"
+        ? parsedStopLoss >= currentExecutionPrice
+        : parsedStopLoss <= currentExecutionPrice);
+
+    if (invalidTakeProfit || invalidStopLoss) {
+      const orderIndex = openOrders.findIndex(o => o.orderId === orderId);
+      if (orderIndex !== -1) {
+        openOrders.splice(orderIndex, 1);
+      }
+
+      const expectedDirection =
+        orderType === "buy"
+          ? "For buy orders, take profit must be above the open price and stop loss must be below it."
+          : "For sell orders, take profit must be below the open price and stop loss must be above it.";
+
+      const requestId = result.requestId || result.correlationId;
+      await RedisStreams.addToRedisStream(
+        constant.secondaryRedisStream,
+        {
+          function: "createOrder",
+          message: JSON.stringify({
+            error: `${expectedDirection} Current execution price: $${currentExecutionPrice.toFixed(2)}`,
+            success: false
+          }),
+          requestId,
+          correlationId: requestId
+        }
+      );
+      return;
     }
 
     // Check slippage if slippage value is provided

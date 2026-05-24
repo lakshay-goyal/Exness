@@ -42,6 +42,8 @@ interface OpenOrder {
   volume: number;
   openPrice: number;
   currentPrice: number;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
   pnl: number;
   status: string;
 }
@@ -53,6 +55,8 @@ interface BackendOpenOrder {
   quantity: number;
   openPrice: number;
   currentPrice: number;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
   status: "open";
 }
 
@@ -66,6 +70,9 @@ interface BackendClosedOrder {
   openTime: string;
   closeTime: string;
   profitLoss?: number;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
+  closeReason?: string | null;
 }
 
 interface CloseOrder {
@@ -77,7 +84,10 @@ interface CloseOrder {
   closePrice: number;
   openTime: string;
   closeTime: string;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
   pnl: number;
+  closeReason?: string | null;
   status: string;
 }
 
@@ -580,6 +590,8 @@ const Dashboard = () => {
               volume: orderData.quantity,
               openPrice,
               currentPrice,
+              takeProfit: normalizeMarketPrice(orderData.takeProfit),
+              stopLoss: normalizeMarketPrice(orderData.stopLoss),
               pnl:
                 orderData.type === "buy"
                   ? (currentPrice - openPrice) * orderData.quantity
@@ -643,7 +655,10 @@ const Dashboard = () => {
             closePrice: normalizeMarketPrice(orderData.closePrice) ?? 0,
             openTime: orderData.openTime,
             closeTime: orderData.closeTime,
+            takeProfit: normalizeMarketPrice(orderData.takeProfit),
+            stopLoss: normalizeMarketPrice(orderData.stopLoss),
             pnl: orderData.profitLoss || 0,
+            closeReason: orderData.closeReason || "manual",
             status: "closed",
           }))
         );
@@ -666,17 +681,24 @@ const Dashboard = () => {
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
-    const timer = setTimeout(() => {
+    const refreshOrders = () => {
       fetchOpenOrders();
       fetchCloseOrders();
-    }, 100);
+    };
+
+    const timer = setTimeout(refreshOrders, 100);
+    const interval = setInterval(() => {
+      refreshOrders();
+      fetchBalance();
+    }, 3000);
 
     return () => {
       clearTimeout(timer);
+      clearInterval(interval);
       openOrdersControllerRef.current?.abort();
       closeOrdersControllerRef.current?.abort();
     };
-  }, [fetchCloseOrders, fetchOpenOrders, isAuthenticated, token]);
+  }, [fetchBalance, fetchCloseOrders, fetchOpenOrders, isAuthenticated, token]);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:7070/");
@@ -757,6 +779,47 @@ const Dashboard = () => {
       return;
     }
 
+    const entryPrice = type === "buy" ? selectedCrypto.ask : selectedCrypto.bid;
+    const takeProfitValue = takeProfit ? Number.parseFloat(takeProfit) : undefined;
+    const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
+
+    if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
+      alert("Volume must be greater than 0.");
+      return;
+    }
+
+    if (
+      (takeProfitValue !== undefined && (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0)) ||
+      (stopLossValue !== undefined && (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
+    ) {
+      alert("Take profit and stop loss must be positive numbers.");
+      return;
+    }
+
+    if (
+      takeProfitValue !== undefined &&
+      (type === "buy" ? takeProfitValue <= entryPrice : takeProfitValue >= entryPrice)
+    ) {
+      alert(
+        type === "buy"
+          ? "For buy orders, take profit must be above the buy price."
+          : "For sell orders, take profit must be below the sell price."
+      );
+      return;
+    }
+
+    if (
+      stopLossValue !== undefined &&
+      (type === "buy" ? stopLossValue >= entryPrice : stopLossValue <= entryPrice)
+    ) {
+      alert(
+        type === "buy"
+          ? "For buy orders, stop loss must be below the buy price."
+          : "For sell orders, stop loss must be above the sell price."
+      );
+      return;
+    }
+
     setCreateOrderLoading(true);
     try {
       const response = await axios.post(`${getBackendUrl()}/api/v1/trade/create`, {
@@ -765,8 +828,8 @@ const Dashboard = () => {
         quantity: orderVolumeNumber,
         leverage: 100,
         slippage: slippage ? Number.parseFloat(slippage) : undefined,
-        takeProfit: takeProfit ? Number.parseFloat(takeProfit) : undefined,
-        stopLoss: stopLoss ? Number.parseFloat(stopLoss) : undefined,
+        takeProfit: takeProfitValue,
+        stopLoss: stopLossValue,
       });
 
       if (response.data.message) {
@@ -1123,6 +1186,9 @@ const Dashboard = () => {
                                   onChange={(event) => setTakeProfit(event.target.value)}
                                   className="h-8 text-sm"
                                   disabled={createOrderLoading}
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
                                 />
                               </div>
 
@@ -1136,6 +1202,9 @@ const Dashboard = () => {
                                   onChange={(event) => setStopLoss(event.target.value)}
                                   className="h-8 text-sm"
                                   disabled={createOrderLoading}
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
                                 />
                               </div>
 
@@ -1232,13 +1301,15 @@ const Dashboard = () => {
                     <div className="min-h-0 flex-1 overflow-hidden">
                       <TabsContent value="open" className="m-0 h-full p-3">
                         <div className="h-full overflow-auto rounded-md border bg-background">
-                          <div className="min-w-[760px]">
-                            <div className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.6fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                          <div className="min-w-[980px]">
+                            <div className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
                               <div>Symbol</div>
                               <div>Type</div>
                               <div>Volume</div>
                               <div>Open Price</div>
                               <div>Current</div>
+                              <div>Take Profit</div>
+                              <div>Stop Loss</div>
                               <div>P/L</div>
                               <div>Action</div>
                             </div>
@@ -1250,7 +1321,7 @@ const Dashboard = () => {
                               openActiveOrders.map((order) => (
                                 <div
                                   key={order.id}
-                                  className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                  className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
                                 >
                                   <div className="flex min-w-0 items-center gap-2">
                                     <span className="size-2 rounded-full bg-amber-500" />
@@ -1276,6 +1347,12 @@ const Dashboard = () => {
                                   </div>
                                   <div className="font-mono">
                                     {formatMarketPrice(order.currentPrice)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatMarketPrice(order.takeProfit)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatMarketPrice(order.stopLoss)}
                                   </div>
                                   <div
                                     className={`font-mono ${
@@ -1316,17 +1393,19 @@ const Dashboard = () => {
 
                       <TabsContent value="closed" className="m-0 h-full p-3">
                         <div className="h-full overflow-auto rounded-md border bg-background">
-                          <div className="min-w-[980px]">
-                            <div className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_1.4fr_1.4fr_0.8fr_0.8fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                          <div className="min-w-[1240px]">
+                            <div className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
                               <div>Symbol</div>
                               <div>Type</div>
                               <div>Volume</div>
                               <div>Open Price</div>
                               <div>Close Price</div>
+                              <div>Take Profit</div>
+                              <div>Stop Loss</div>
                               <div>Open Time</div>
                               <div>Close Time</div>
                               <div>P/L</div>
-                              <div>Status</div>
+                              <div>Closed By</div>
                             </div>
                             {closedOrdersLoading ? (
                               <div className="p-6 text-center text-sm text-muted-foreground">
@@ -1336,7 +1415,7 @@ const Dashboard = () => {
                               closeOrdersData.map((order) => (
                                 <div
                                   key={order.id}
-                                  className="grid grid-cols-[1fr_0.7fr_0.7fr_1fr_1fr_1.4fr_1.4fr_0.8fr_0.8fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                  className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
                                 >
                                   <div className="flex min-w-0 items-center gap-2">
                                     <span className="size-2 rounded-full bg-amber-500" />
@@ -1363,6 +1442,12 @@ const Dashboard = () => {
                                   <div className="font-mono">
                                     {formatMarketPrice(order.closePrice)}
                                   </div>
+                                  <div className="font-mono">
+                                    {formatMarketPrice(order.takeProfit)}
+                                  </div>
+                                  <div className="font-mono">
+                                    {formatMarketPrice(order.stopLoss)}
+                                  </div>
                                   <div className="truncate font-mono text-xs">
                                     {new Date(order.openTime).toLocaleString()}
                                   </div>
@@ -1381,7 +1466,7 @@ const Dashboard = () => {
                                   </div>
                                   <div>
                                     <Badge variant="secondary" className="text-xs">
-                                      {order.status}
+                                      {order.closeReason?.replace("_", " ") || order.status}
                                     </Badge>
                                   </div>
                                 </div>

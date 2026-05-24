@@ -25,7 +25,7 @@ export async function tradeFunction(result: any) {
     await getOpenOrderFunction(result);
   }
   if (result.function === "pricePoller") {
-    pricePollerFunction(result);
+    await pricePollerFunction(result);
   }
 
 }
