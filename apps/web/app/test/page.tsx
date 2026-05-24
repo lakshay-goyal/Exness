@@ -1,20 +1,32 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { Separator } from "@repo/ui/components/separator";
 
-export default function LandingPage() {
+export default function LandingPage(): ReactElement {
   return (
     <main className="flex min-h-screen flex-col">
       {/* Navbar */}
       <header className="flex items-center justify-between px-8 py-4 border-b bg-background/70 backdrop-blur-md sticky top-0 z-50">
         <h1 className="text-2xl font-bold">BetterAuth</h1>
         <nav className="flex items-center gap-6 text-sm font-medium">
-          <a href="#features" className="hover:text-primary transition-colors">Features</a>
-          <a href="#pricing" className="hover:text-primary transition-colors">Pricing</a>
-          <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
+          <a href="#features" className="hover:text-primary transition-colors">
+            Features
+          </a>
+          <a href="#pricing" className="hover:text-primary transition-colors">
+            Pricing
+          </a>
+          <a href="#contact" className="hover:text-primary transition-colors">
+            Contact
+          </a>
         </nav>
         <Button>No user added yet</Button>
       </header>
@@ -25,18 +37,24 @@ export default function LandingPage() {
           Simplify Authentication for Your Apps
         </h2>
         <p className="max-w-2xl text-muted-foreground mb-8">
-          BetterAuth makes login simple, secure, and scalable. Integrate passwordless and OAuth effortlessly.
+          BetterAuth makes login simple, secure, and scalable. Integrate
+          passwordless and OAuth effortlessly.
         </p>
         <div className="flex gap-3">
           <Button size="lg">Start for Free</Button>
-          <Button size="lg" variant="outline">View Docs</Button>
+          <Button size="lg" variant="outline">
+            View Docs
+          </Button>
         </div>
       </section>
 
       <Separator className="my-8" />
 
       {/* Features Section */}
-      <section id="features" className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8 py-16 max-w-6xl mx-auto">
+      <section
+        id="features"
+        className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8 py-16 max-w-6xl mx-auto"
+      >
         {[
           {
             title: "Passwordless Login",

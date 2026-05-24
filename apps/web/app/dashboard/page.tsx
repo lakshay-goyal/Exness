@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -23,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
+import { backendRequestHeaders, getBackendUrl } from "@/lib/backend-api";
 import {
   Activity,
   Menu,
@@ -141,8 +148,8 @@ const intervalSeconds: Record<string, number> = {
   "1d": 24 * 60 * 60,
 };
 
-const getBackendUrl = () => {
-  return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const getWebSocketUrl = () => {
+  return process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:7070/";
 };
 
 const formatCurrency = (value?: number | null, digits = 2) => {
@@ -219,7 +226,7 @@ const getLiveAssetCandidates = (symbol: string) => {
 
 const findLiveAssetForOrder = (
   order: OpenOrder,
-  liveData: Record<string, CryptoAsset>
+  liveData: Record<string, CryptoAsset>,
 ) => {
   const candidates = getLiveAssetCandidates(order.symbol);
   return candidates.map((candidate) => liveData[candidate]).find(Boolean);
@@ -299,7 +306,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         linePrice: number | undefined,
         title: string,
         color: string,
-        lineStyle: 0 | 1 | 2 | 3 | 4 = 2
+        lineStyle: 0 | 1 | 2 | 3 | 4 = 2,
       ) => {
         if (linePrice === undefined || Number.isNaN(linePrice)) return;
 
@@ -326,7 +333,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
       const interval = intervalSeconds[time] ?? 60;
       const liveTime = (Math.floor(
-        ((updatedAt ?? Date.now()) / 1000) / interval
+        (updatedAt ?? Date.now()) / 1000 / interval,
       ) * interval) as UTCTimestamp;
       const lastCandle = lastCandleRef.current;
 
@@ -356,7 +363,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       series.update(nextCandle);
       lastCandleRef.current = nextCandle;
     },
-    [time]
+    [time],
   );
 
   async function fetchCandles(assetName: string, interval: string) {
@@ -366,18 +373,29 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
       const response = await axios.get<CandleResponse>(
         `${getBackendUrl()}/api/v1/candles?symbol=${assetName}&interval=${interval}`,
-        { timeout: 10000 }
+        {
+          headers: backendRequestHeaders,
+          timeout: 10000,
+        },
       );
+
+      if (!Array.isArray(response.data.data)) {
+        throw new Error("Candle response did not include a data array");
+      }
 
       return response.data.data.map((candle) => ({
         open: Number.parseFloat(candle.open),
         high: Number.parseFloat(candle.high),
         low: Number.parseFloat(candle.low),
         close: Number.parseFloat(candle.close),
-        time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp,
+        time: Math.floor(
+          new Date(candle.time).getTime() / 1000,
+        ) as UTCTimestamp,
       }));
     } catch (chartError) {
-      console.error("Error fetching candles:", chartError);
+      if (!isCanceledRequest(chartError)) {
+        console.warn("Chart data is unavailable:", chartError);
+      }
       setError("Chart data is unavailable");
       return null;
     } finally {
@@ -449,7 +467,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
           livePriceRef.current,
           liveUpdatedAtRef.current,
           liveBidRef.current,
-          liveAskRef.current
+          liveAskRef.current,
         );
         chart.timeScale().fitContent();
       }
@@ -492,7 +510,9 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
           <p className="truncate text-xs uppercase tracking-wide text-slate-400">
             Live candlestick chart
           </p>
-          <p className="truncate font-mono text-sm font-semibold text-white">{asset}</p>
+          <p className="truncate font-mono text-sm font-semibold text-white">
+            {asset}
+          </p>
         </div>
         <div className="flex max-w-full shrink-0 items-center gap-1 overflow-x-auto">
           {timeIntervals.map((interval) => (
@@ -542,7 +562,9 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 };
 
 const Dashboard = () => {
-  const [selectedCrypto, setSelectedCrypto] = useState<CryptoAsset | null>(null);
+  const [selectedCrypto, setSelectedCrypto] = useState<CryptoAsset | null>(
+    null,
+  );
   const [realTimeCryptoData, setRealTimeCryptoData] = useState<
     Record<string, CryptoAsset>
   >({});
@@ -575,9 +597,9 @@ const Dashboard = () => {
   const cryptoAssets = useMemo(
     () =>
       Object.values(realTimeCryptoData).sort((a, b) =>
-        a.symbol.localeCompare(b.symbol)
+        a.symbol.localeCompare(b.symbol),
       ),
-    [realTimeCryptoData]
+    [realTimeCryptoData],
   );
   const liveOrders = useMemo(
     () =>
@@ -596,11 +618,11 @@ const Dashboard = () => {
           pnl,
         };
       }),
-    [orders, realTimeCryptoData]
+    [orders, realTimeCryptoData],
   );
   const openActiveOrders = useMemo(
     () => liveOrders.filter((order) => order.status === "open"),
-    [liveOrders]
+    [liveOrders],
   );
   const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
   const leverageNumber = Number.parseInt(leverage, 10);
@@ -611,12 +633,16 @@ const Dashboard = () => {
       (leverageIsValid ? leverageNumber : 1)
     : null;
   const reservedMargin = useMemo(
-    () => openActiveOrders.reduce((total, order) => total + getOrderMargin(order), 0),
-    [openActiveOrders]
+    () =>
+      openActiveOrders.reduce(
+        (total, order) => total + getOrderMargin(order),
+        0,
+      ),
+    [openActiveOrders],
   );
   const floatingPnl = useMemo(
     () => openActiveOrders.reduce((total, order) => total + order.pnl, 0),
-    [openActiveOrders]
+    [openActiveOrders],
   );
   const accountBalance = balance !== null ? balance + reservedMargin : null;
   const accountEquity =
@@ -667,9 +693,10 @@ const Dashboard = () => {
       const response = await axios.get<OpenOrdersResponse>(
         `${getBackendUrl()}/api/v1/trade/open/`,
         {
+          headers: backendRequestHeaders,
           signal: controller.signal,
           timeout: 10000,
-        }
+        },
       );
       const data = response.data;
 
@@ -679,7 +706,8 @@ const Dashboard = () => {
         setOrders(
           parsedOrders.map((orderData) => {
             const openPrice = normalizeMarketPrice(orderData.openPrice) ?? 0;
-            const currentPrice = normalizeMarketPrice(orderData.currentPrice) ?? openPrice;
+            const currentPrice =
+              normalizeMarketPrice(orderData.currentPrice) ?? openPrice;
 
             return {
               id: orderData.orderId,
@@ -697,14 +725,14 @@ const Dashboard = () => {
                   : (openPrice - currentPrice) * orderData.quantity,
               status: orderData.status,
             };
-          })
+          }),
         );
       } else {
         setOrders([]);
       }
     } catch (error: unknown) {
       if (!isCanceledRequest(error)) {
-        console.error("Error fetching open orders:", error);
+        console.warn("Open orders are unavailable:", error);
         setOrders([]);
       }
     } finally {
@@ -735,11 +763,12 @@ const Dashboard = () => {
         `${getBackendUrl()}/api/v1/trade/close`,
         {
           headers: {
+            ...backendRequestHeaders,
             Authorization: `Bearer ${token}`,
           },
           signal: controller.signal,
           timeout: 10000,
-        }
+        },
       );
       const data = response.data;
 
@@ -759,14 +788,14 @@ const Dashboard = () => {
             pnl: orderData.profitLoss || 0,
             closeReason: orderData.closeReason || "manual",
             status: "closed",
-          }))
+          })),
         );
       } else {
         setCloseOrdersData([]);
       }
     } catch (error: unknown) {
       if (!isCanceledRequest(error)) {
-        console.error("Error fetching closed orders:", error);
+        console.warn("Closed orders are unavailable:", error);
         setCloseOrdersData([]);
       }
     } finally {
@@ -800,7 +829,9 @@ const Dashboard = () => {
   }, [fetchBalance, fetchCloseOrders, fetchOpenOrders, isAuthenticated, token]);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:7070/");
+    if (!isAuthenticated || !token) return;
+
+    const ws = new WebSocket(getWebSocketUrl());
 
     ws.onmessage = (event) => {
       try {
@@ -835,7 +866,8 @@ const Dashboard = () => {
               lastUpdated: Date.now(),
             };
 
-            if (selectedSymbolRef.current === symbol) setSelectedCrypto(updatedAsset);
+            if (selectedSymbolRef.current === symbol)
+              setSelectedCrypto(updatedAsset);
 
             return { ...prevData, [symbol]: updatedAsset };
           }
@@ -863,7 +895,9 @@ const Dashboard = () => {
           if (bidPrice === null || askPrice === null) return prevOrders;
 
           return prevOrders.map((order) => {
-            const matchesMarket = getLiveAssetCandidates(order.symbol).includes(symbol);
+            const matchesMarket = getLiveAssetCandidates(order.symbol).includes(
+              symbol,
+            );
             if (!matchesMarket) return order;
 
             const currentPrice = order.type === "Buy" ? bidPrice : askPrice;
@@ -882,7 +916,7 @@ const Dashboard = () => {
     return () => {
       ws.close();
     };
-  }, []);
+  }, [isAuthenticated, token]);
 
   useEffect(() => {
     if (selectedCrypto || cryptoAssets.length === 0) return;
@@ -900,7 +934,9 @@ const Dashboard = () => {
     }
 
     const entryPrice = type === "buy" ? selectedCrypto.ask : selectedCrypto.bid;
-    const takeProfitValue = takeProfit ? Number.parseFloat(takeProfit) : undefined;
+    const takeProfitValue = takeProfit
+      ? Number.parseFloat(takeProfit)
+      : undefined;
     const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
     const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
 
@@ -923,8 +959,10 @@ const Dashboard = () => {
     }
 
     if (
-      (takeProfitValue !== undefined && (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0)) ||
-      (stopLossValue !== undefined && (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
+      (takeProfitValue !== undefined &&
+        (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0)) ||
+      (stopLossValue !== undefined &&
+        (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
     ) {
       alert("Take profit and stop loss must be positive numbers.");
       return;
@@ -932,39 +970,49 @@ const Dashboard = () => {
 
     if (
       takeProfitValue !== undefined &&
-      (type === "buy" ? takeProfitValue <= entryPrice : takeProfitValue >= entryPrice)
+      (type === "buy"
+        ? takeProfitValue <= entryPrice
+        : takeProfitValue >= entryPrice)
     ) {
       alert(
         type === "buy"
           ? "For buy orders, take profit must be above the buy price."
-          : "For sell orders, take profit must be below the sell price."
+          : "For sell orders, take profit must be below the sell price.",
       );
       return;
     }
 
     if (
       stopLossValue !== undefined &&
-      (type === "buy" ? stopLossValue >= entryPrice : stopLossValue <= entryPrice)
+      (type === "buy"
+        ? stopLossValue >= entryPrice
+        : stopLossValue <= entryPrice)
     ) {
       alert(
         type === "buy"
           ? "For buy orders, stop loss must be below the buy price."
-          : "For sell orders, stop loss must be above the sell price."
+          : "For sell orders, stop loss must be above the sell price.",
       );
       return;
     }
 
     setCreateOrderLoading(true);
     try {
-      const response = await axios.post(`${getBackendUrl()}/api/v1/trade/create`, {
-        symbol: selectedCrypto.symbol,
-        type,
-        quantity: orderVolumeNumber,
-        leverage: leverageNumber,
-        slippage: slippageValue,
-        takeProfit: takeProfitValue,
-        stopLoss: stopLossValue,
-      });
+      const response = await axios.post(
+        `${getBackendUrl()}/api/v1/trade/create`,
+        {
+          symbol: selectedCrypto.symbol,
+          type,
+          quantity: orderVolumeNumber,
+          leverage: leverageNumber,
+          slippage: slippageValue,
+          takeProfit: takeProfitValue,
+          stopLoss: stopLossValue,
+        },
+        {
+          headers: backendRequestHeaders,
+        },
+      );
 
       if (response.data.message) {
         await fetchOpenOrders();
@@ -992,9 +1040,15 @@ const Dashboard = () => {
 
     setCloseOrderLoading(true);
     try {
-      const response = await axios.post(`${getBackendUrl()}/api/v1/trade/close`, {
-        orderId,
-      });
+      const response = await axios.post(
+        `${getBackendUrl()}/api/v1/trade/close`,
+        {
+          orderId,
+        },
+        {
+          headers: backendRequestHeaders,
+        },
+      );
 
       if (response.data.message) {
         alert("Order closed successfully!");
@@ -1100,14 +1154,18 @@ const Dashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                       <div className="min-w-0">
-                                        <p className="text-muted-foreground">Bid / Ask</p>
+                                        <p className="text-muted-foreground">
+                                          Bid / Ask
+                                        </p>
                                         <p className="truncate font-mono">
                                           {formatMarketPrice(crypto.bid)} /{" "}
                                           {formatMarketPrice(crypto.ask)}
                                         </p>
                                       </div>
                                       <div className="min-w-0 text-right">
-                                        <p className="text-muted-foreground">Price</p>
+                                        <p className="text-muted-foreground">
+                                          Price
+                                        </p>
                                         <p className="truncate font-mono">
                                           {formatCurrency(crypto.price)}
                                         </p>
@@ -1124,7 +1182,11 @@ const Dashboard = () => {
                     </>
                   )}
 
-                  <ResizablePanel defaultSize={58} minSize={34} className="min-w-0">
+                  <ResizablePanel
+                    defaultSize={58}
+                    minSize={34}
+                    className="min-w-0"
+                  >
                     <main className="flex h-full min-w-0 flex-col overflow-hidden bg-muted/20">
                       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card/60 px-3 py-3">
                         <div className="min-w-0">
@@ -1143,7 +1205,10 @@ const Dashboard = () => {
                             <span className="truncate text-sm font-semibold">
                               {selectedCrypto?.name || "No market selected"}
                             </span>
-                            <Badge variant="outline" className="shrink-0 font-mono">
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 font-mono"
+                            >
                               {selectedCrypto?.symbol || "--"}
                             </Badge>
                           </div>
@@ -1165,7 +1230,7 @@ const Dashboard = () => {
                               )}
                               {selectedCrypto
                                 ? `${selectedCrypto.change >= 0 ? "+" : ""}${formatNumber(
-                                    selectedCrypto.change
+                                    selectedCrypto.change,
                                   )} (${formatNumber(selectedCrypto.changePercent)}%)`
                                 : "--"}
                             </span>
@@ -1282,9 +1347,10 @@ const Dashboard = () => {
                                     className="size-8 shrink-0"
                                     onClick={() =>
                                       setOrderVolume(
-                                        Math.max(0.01, orderVolumeNumber - 0.01).toFixed(
-                                          2
-                                        )
+                                        Math.max(
+                                          0.01,
+                                          orderVolumeNumber - 0.01,
+                                        ).toFixed(2),
                                       )
                                     }
                                     disabled={createOrderLoading}
@@ -1304,7 +1370,9 @@ const Dashboard = () => {
                                     size="icon"
                                     className="size-8 shrink-0"
                                     onClick={() =>
-                                      setOrderVolume((orderVolumeNumber + 0.01).toFixed(2))
+                                      setOrderVolume(
+                                        (orderVolumeNumber + 0.01).toFixed(2),
+                                      )
                                     }
                                     disabled={createOrderLoading}
                                   >
@@ -1324,7 +1392,12 @@ const Dashboard = () => {
                                     className="size-8 shrink-0"
                                     onClick={() =>
                                       setLeverage(
-                                        String(Math.max(1, (leverageNumber || 1) - 1))
+                                        String(
+                                          Math.max(
+                                            1,
+                                            (leverageNumber || 1) - 1,
+                                          ),
+                                        ),
                                       )
                                     }
                                     disabled={createOrderLoading}
@@ -1333,7 +1406,9 @@ const Dashboard = () => {
                                   </Button>
                                   <Input
                                     value={leverage}
-                                    onChange={(event) => setLeverage(event.target.value)}
+                                    onChange={(event) =>
+                                      setLeverage(event.target.value)
+                                    }
                                     className="h-8 min-w-0 text-center text-sm"
                                     disabled={createOrderLoading}
                                     type="number"
@@ -1345,7 +1420,9 @@ const Dashboard = () => {
                                     size="icon"
                                     className="size-8 shrink-0"
                                     onClick={() =>
-                                      setLeverage(String((leverageNumber || 1) + 1))
+                                      setLeverage(
+                                        String((leverageNumber || 1) + 1),
+                                      )
                                     }
                                     disabled={createOrderLoading}
                                   >
@@ -1361,7 +1438,9 @@ const Dashboard = () => {
                                 <Input
                                   placeholder="Not set"
                                   value={takeProfit}
-                                  onChange={(event) => setTakeProfit(event.target.value)}
+                                  onChange={(event) =>
+                                    setTakeProfit(event.target.value)
+                                  }
                                   className="h-8 text-sm"
                                   disabled={createOrderLoading}
                                   type="number"
@@ -1377,7 +1456,9 @@ const Dashboard = () => {
                                 <Input
                                   placeholder="Not set"
                                   value={stopLoss}
-                                  onChange={(event) => setStopLoss(event.target.value)}
+                                  onChange={(event) =>
+                                    setStopLoss(event.target.value)
+                                  }
                                   className="h-8 text-sm"
                                   disabled={createOrderLoading}
                                   type="number"
@@ -1393,7 +1474,9 @@ const Dashboard = () => {
                                 <Input
                                   placeholder="0.5"
                                   value={slippage}
-                                  onChange={(event) => setSlippage(event.target.value)}
+                                  onChange={(event) =>
+                                    setSlippage(event.target.value)
+                                  }
                                   className="h-8 text-sm"
                                   disabled={createOrderLoading}
                                   type="number"
@@ -1431,7 +1514,9 @@ const Dashboard = () => {
                                       Leverage
                                     </span>
                                     <span className="font-mono">
-                                      {leverageIsValid ? `${leverageNumber}x` : "--"}
+                                      {leverageIsValid
+                                        ? `${leverageNumber}x`
+                                        : "--"}
                                     </span>
                                   </div>
                                 </CardContent>
@@ -1457,14 +1542,21 @@ const Dashboard = () => {
                     <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
                       <TabsList className="h-8">
                         <TabsTrigger value="open" className="text-xs">
-                          Open ({openOrdersLoading ? "..." : openActiveOrders.length})
+                          Open (
+                          {openOrdersLoading ? "..." : openActiveOrders.length})
                         </TabsTrigger>
                         <TabsTrigger value="closed" className="text-xs">
-                          Closed ({closedOrdersLoading ? "..." : closeOrdersData.length})
+                          Closed (
+                          {closedOrdersLoading ? "..." : closeOrdersData.length}
+                          )
                         </TabsTrigger>
                       </TabsList>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-8 text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                        >
                           Close all
                         </Button>
                         <Button
@@ -1645,8 +1737,12 @@ const Dashboard = () => {
                                     {formatCurrency(order.pnl)}
                                   </div>
                                   <div>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {order.closeReason?.replace("_", " ") || order.status}
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {order.closeReason?.replace("_", " ") ||
+                                        order.status}
                                     </Badge>
                                   </div>
                                 </div>
@@ -1668,14 +1764,18 @@ const Dashboard = () => {
           <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-t bg-slate-950 px-4 py-2 font-mono text-xs text-slate-100 shadow-[0_-1px_0_rgba(255,255,255,0.04)]">
             <div className="flex items-baseline gap-2">
               <span className="font-sans text-slate-400">Equity:</span>
-              <span className="font-semibold">{formatCurrency(accountEquity)}</span>
+              <span className="font-semibold">
+                {formatCurrency(accountEquity)}
+              </span>
               <span className="text-slate-400">USD</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-sans text-slate-400">Free Margin:</span>
               <span
                 className={`font-semibold ${
-                  (accountFreeMargin ?? 0) >= 0 ? "text-slate-100" : "text-red-300"
+                  (accountFreeMargin ?? 0) >= 0
+                    ? "text-slate-100"
+                    : "text-red-300"
                 }`}
               >
                 {formatCurrency(accountFreeMargin)}
@@ -1684,12 +1784,16 @@ const Dashboard = () => {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-sans text-slate-400">Balance:</span>
-              <span className="font-semibold">{formatCurrency(accountBalance)}</span>
+              <span className="font-semibold">
+                {formatCurrency(accountBalance)}
+              </span>
               <span className="text-slate-400">USD</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-sans text-slate-400">Margin:</span>
-              <span className="font-semibold">{formatCurrency(reservedMargin)}</span>
+              <span className="font-semibold">
+                {formatCurrency(reservedMargin)}
+              </span>
               <span className="text-slate-400">USD</span>
             </div>
             <div className="flex items-baseline gap-2">
