@@ -40,6 +40,7 @@ interface OpenOrder {
   symbol: string;
   type: string;
   volume: number;
+  leverage: number;
   openPrice: number;
   currentPrice: number;
   takeProfit?: number | null;
@@ -53,6 +54,7 @@ interface BackendOpenOrder {
   symbol: string;
   type: "buy" | "sell";
   quantity: number;
+  leverage?: number;
   openPrice: number;
   currentPrice: number;
   takeProfit?: number | null;
@@ -162,6 +164,11 @@ const formatNumber = (value?: number | null, digits = 2) => {
   });
 };
 
+const formatPercent = (value?: number | null, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "--";
+  return `${formatNumber(value, digits)}%`;
+};
+
 const normalizeMarketPrice = (value?: number | null) => {
   if (value === null || value === undefined) return null;
   const numericValue = Number(value);
@@ -180,6 +187,53 @@ const marketPriceDigits = (value?: number | null) => {
 const formatMarketPrice = (value?: number | null) => {
   const normalizedValue = normalizeMarketPrice(value);
   return formatNumber(normalizedValue, marketPriceDigits(normalizedValue));
+};
+
+const getLiveAssetKeyForSymbol = (symbol: string) => {
+  const symbolUpper = symbol.toUpperCase();
+  if (symbolUpper.includes("_")) return symbolUpper;
+  if (symbolUpper.includes("BTC")) return "BTC_USDC_PERP";
+  if (symbolUpper.includes("ETH")) return "ETH_USDC_PERP";
+  if (symbolUpper.includes("SOL")) return "SOL_USDC_PERP";
+  return symbolUpper;
+};
+
+const getMarketCode = (symbol: string) => {
+  const symbolUpper = symbol.toUpperCase();
+  if (symbolUpper.includes("BTC")) return "BTC";
+  if (symbolUpper.includes("ETH")) return "ETH";
+  if (symbolUpper.includes("SOL")) return "SOL";
+  return symbolUpper.replace(/[^A-Z0-9]/g, "");
+};
+
+const getLiveAssetCandidates = (symbol: string) => {
+  const marketCode = getMarketCode(symbol);
+  return [
+    symbol.toUpperCase(),
+    getLiveAssetKeyForSymbol(symbol),
+    `${marketCode}_USDC_PERP`,
+    `${marketCode}USDT`,
+    marketCode,
+  ];
+};
+
+const findLiveAssetForOrder = (
+  order: OpenOrder,
+  liveData: Record<string, CryptoAsset>
+) => {
+  const candidates = getLiveAssetCandidates(order.symbol);
+  return candidates.map((candidate) => liveData[candidate]).find(Boolean);
+};
+
+const getOrderPnl = (order: OpenOrder, currentPrice: number) => {
+  return order.type === "Buy"
+    ? (currentPrice - order.openPrice) * order.volume
+    : (order.openPrice - currentPrice) * order.volume;
+};
+
+const getOrderMargin = (order: OpenOrder) => {
+  const leverage = order.leverage > 0 ? order.leverage : 100;
+  return (order.volume * order.openPrice) / leverage;
 };
 
 const isCanceledRequest = (error: unknown) => {
@@ -524,15 +578,52 @@ const Dashboard = () => {
       ),
     [realTimeCryptoData]
   );
+  const liveOrders = useMemo(
+    () =>
+      orders.map((order) => {
+        const liveAsset = findLiveAssetForOrder(order, realTimeCryptoData);
+        const currentPrice = liveAsset
+          ? order.type === "Buy"
+            ? liveAsset.bid
+            : liveAsset.ask
+          : order.currentPrice;
+        const pnl = getOrderPnl(order, currentPrice);
+
+        return {
+          ...order,
+          currentPrice,
+          pnl,
+        };
+      }),
+    [orders, realTimeCryptoData]
+  );
   const openActiveOrders = useMemo(
-    () => orders.filter((order) => order.status === "open"),
-    [orders]
+    () => liveOrders.filter((order) => order.status === "open"),
+    [liveOrders]
   );
   const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
   const marginRequired = selectedCrypto
     ? (selectedCrypto.price * orderVolumeNumber) / 100
     : 0;
-  const freeMargin = balance !== null ? balance - marginRequired : null;
+  const reservedMargin = useMemo(
+    () => openActiveOrders.reduce((total, order) => total + getOrderMargin(order), 0),
+    [openActiveOrders]
+  );
+  const floatingPnl = useMemo(
+    () => openActiveOrders.reduce((total, order) => total + order.pnl, 0),
+    [openActiveOrders]
+  );
+  const accountBalance = balance !== null ? balance + reservedMargin : null;
+  const accountEquity =
+    accountBalance !== null ? accountBalance + floatingPnl : null;
+  const accountFreeMargin =
+    accountEquity !== null ? accountEquity - reservedMargin : null;
+  const accountMarginLevel =
+    accountEquity !== null && reservedMargin > 0
+      ? (accountEquity / reservedMargin) * 100
+      : null;
+  const estimatedFreeMargin =
+    accountFreeMargin !== null ? accountFreeMargin - marginRequired : null;
   const spread = selectedCrypto
     ? Math.max(selectedCrypto.ask - selectedCrypto.bid, 0)
     : null;
@@ -588,6 +679,7 @@ const Dashboard = () => {
               symbol: orderData.symbol.toUpperCase(),
               type: orderData.type === "buy" ? "Buy" : "Sell",
               volume: orderData.quantity,
+              leverage: Number(orderData.leverage) || 100,
               openPrice,
               currentPrice,
               takeProfit: normalizeMarketPrice(orderData.takeProfit),
@@ -705,12 +797,14 @@ const Dashboard = () => {
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const parsedData = JSON.parse(event.data);
+        const data =
+          typeof parsedData === "string" ? JSON.parse(parsedData) : parsedData;
 
         if (!data.asset || !data.bid || !data.ask) return;
 
         setRealTimeCryptoData((prevData) => {
-          const symbol = data.asset;
+          const symbol = String(data.asset).toUpperCase();
           const prevAsset = prevData[symbol];
           const bidPrice = normalizeMarketPrice(data.bid);
           const askPrice = normalizeMarketPrice(data.ask);
@@ -753,6 +847,25 @@ const Dashboard = () => {
               lastUpdated: Date.now(),
             },
           };
+        });
+
+        setOrders((prevOrders) => {
+          const symbol = String(data.asset).toUpperCase();
+          const bidPrice = normalizeMarketPrice(data.bid);
+          const askPrice = normalizeMarketPrice(data.ask);
+          if (bidPrice === null || askPrice === null) return prevOrders;
+
+          return prevOrders.map((order) => {
+            const matchesMarket = getLiveAssetCandidates(order.symbol).includes(symbol);
+            if (!matchesMarket) return order;
+
+            const currentPrice = order.type === "Buy" ? bidPrice : askPrice;
+            return {
+              ...order,
+              currentPrice,
+              pnl: getOrderPnl(order, currentPrice),
+            };
+          });
         });
       } catch (socketError) {
         console.error("Unable to parse WebSocket tick:", socketError);
@@ -1240,12 +1353,12 @@ const Dashboard = () => {
                                     </span>
                                     <span
                                       className={`font-mono ${
-                                        (freeMargin ?? 0) >= 0
+                                        (estimatedFreeMargin ?? 0) >= 0
                                           ? "text-emerald-600"
                                           : "text-red-600"
                                       }`}
                                     >
-                                      {formatCurrency(freeMargin)}
+                                      {formatCurrency(estimatedFreeMargin)}
                                     </span>
                                   </div>
                                   <div className="flex justify-between gap-3">
@@ -1484,6 +1597,46 @@ const Dashboard = () => {
                 </section>
               </ResizablePanel>
             </ResizablePanelGroup>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-t bg-slate-950 px-4 py-2 font-mono text-xs text-slate-100 shadow-[0_-1px_0_rgba(255,255,255,0.04)]">
+            <div className="flex items-baseline gap-2">
+              <span className="font-sans text-slate-400">Equity:</span>
+              <span className="font-semibold">{formatCurrency(accountEquity)}</span>
+              <span className="text-slate-400">USD</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-sans text-slate-400">Free Margin:</span>
+              <span
+                className={`font-semibold ${
+                  (accountFreeMargin ?? 0) >= 0 ? "text-slate-100" : "text-red-300"
+                }`}
+              >
+                {formatCurrency(accountFreeMargin)}
+              </span>
+              <span className="text-slate-400">USD</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-sans text-slate-400">Balance:</span>
+              <span className="font-semibold">{formatCurrency(accountBalance)}</span>
+              <span className="text-slate-400">USD</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-sans text-slate-400">Margin:</span>
+              <span className="font-semibold">{formatCurrency(reservedMargin)}</span>
+              <span className="text-slate-400">USD</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-sans text-slate-400">Margin level:</span>
+              <span
+                className={`font-semibold ${
+                  accountMarginLevel !== null && accountMarginLevel < 100
+                    ? "text-red-300"
+                    : "text-slate-100"
+                }`}
+              >
+                {formatPercent(accountMarginLevel)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
