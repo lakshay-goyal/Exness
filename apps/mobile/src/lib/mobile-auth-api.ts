@@ -1,4 +1,8 @@
-import { getStoredAuthItem, setStoredAuthItem } from "./auth-storage";
+import {
+  deleteStoredAuthItem,
+  getStoredAuthItem,
+  setStoredAuthItem,
+} from "./auth-storage";
 import { authClient, BACKEND_URL } from "./auth-client";
 import { logAuthEvent } from "./auth-logger";
 
@@ -6,6 +10,7 @@ const ACCESS_TOKEN_KEY = "exness_access_token";
 const REFRESH_TOKEN_KEY = "exness_refresh_token";
 const ACCESS_TOKEN_EXPIRES_AT_KEY = "exness_access_token_expires_at";
 const MOBILE_USER_KEY = "exness_mobile_user";
+const AUTH_COOKIE_KEY = "exness_cookie";
 const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60 * 1000;
 
 export type MobileSessionResponse = {
@@ -245,6 +250,68 @@ export async function restoreMobileSession() {
   }
 
   return null;
+}
+
+export async function getMobileAccessToken() {
+  const [accessToken, legacyToken, refreshToken, expiresAtValue] =
+    await Promise.all([
+      getStoredAuthItem(ACCESS_TOKEN_KEY),
+      getStoredAuthItem("exness_legacy_token"),
+      getStoredAuthItem(REFRESH_TOKEN_KEY),
+      getStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
+    ]);
+  const storedAccessToken = accessToken || legacyToken;
+
+  if (storedAccessToken) {
+    const expiresAt = Number(expiresAtValue);
+    const hasValidStoredToken =
+      (Number.isFinite(expiresAt) &&
+        Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < expiresAt) ||
+      (() => {
+        const payload = decodeJwtPayload(storedAccessToken);
+        return (
+          payload?.type !== "refresh" &&
+          (typeof payload?.exp !== "number" ||
+            Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < payload.exp * 1000)
+        );
+      })();
+
+    if (hasValidStoredToken) {
+      return storedAccessToken;
+    }
+  }
+
+  if (refreshToken) {
+    const refreshedSession = await refreshMobileSession(refreshToken);
+    return refreshedSession.accessToken || refreshedSession.token;
+  }
+
+  return storedAccessToken || null;
+}
+
+export async function logoutMobileSession() {
+  try {
+    await authClient.signOut();
+  } catch (error) {
+    logAuthEvent(
+      "session_logout_signout_failed",
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "warn",
+    );
+  }
+
+  await Promise.all([
+    deleteStoredAuthItem("exness_legacy_token"),
+    deleteStoredAuthItem(ACCESS_TOKEN_KEY),
+    deleteStoredAuthItem(REFRESH_TOKEN_KEY),
+    deleteStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
+    deleteStoredAuthItem(MOBILE_USER_KEY),
+    deleteStoredAuthItem(AUTH_COOKIE_KEY),
+  ]);
+
+  logAuthEvent("session_logout_completed");
 }
 
 export async function setMobilePin(pin: string) {

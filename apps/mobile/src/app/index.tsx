@@ -14,6 +14,7 @@ import { TradingValueIcon } from "@/components/TradingValueIcon";
 import { WalletLoadingScreen } from "@/components/WalletLoadingScreen";
 import { logAuthEvent } from "@/lib/auth-logger";
 import {
+  logoutMobileSession,
   MobileSessionResponse,
   restoreMobileSession,
 } from "@/lib/mobile-auth-api";
@@ -42,6 +43,11 @@ export default function App() {
   const completeOnboarding = useCallback(() => {
     logAuthEvent("onboarding_completed");
     setScreen("hello");
+  }, []);
+  const logout = useCallback(async () => {
+    await logoutMobileSession();
+    setAuthenticatedUser(null);
+    setScreen("onboarding");
   }, []);
 
   useEffect(() => {
@@ -122,7 +128,7 @@ export default function App() {
   }
 
   if (screen === "hello") {
-    return <HelloWorldScreen user={authenticatedUser} />;
+    return <HelloWorldScreen onLogout={logout} user={authenticatedUser} />;
   }
 
   if (screen === "setup") {

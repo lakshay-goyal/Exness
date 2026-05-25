@@ -3,6 +3,8 @@ declare const require: (moduleName: string) => unknown;
 import { logAuthEvent } from "./auth-logger";
 
 type SecureStoreModule = {
+  deleteItem?: (key: string) => void;
+  deleteItemAsync?: (key: string) => Promise<void>;
   getItem?: (key: string) => string | null;
   getItemAsync?: (key: string) => Promise<string | null>;
   setItem?: (key: string, value: string) => void;
@@ -60,6 +62,15 @@ function setWebStorageItem(key: string, value: string) {
   return true;
 }
 
+function deleteWebStorageItem(key: string) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return false;
+  }
+
+  window.localStorage.removeItem(key);
+  return true;
+}
+
 export const authStorage = {
   getItem(key: string) {
     const store = getSecureStore();
@@ -104,6 +115,30 @@ export const authStorage = {
 
     if (!setWebStorageItem(key, value)) {
       memoryStore.set(key, value);
+    }
+  },
+  deleteItem(key: string) {
+    const store = getSecureStore();
+
+    if (store?.deleteItem) {
+      try {
+        store.deleteItem(key);
+        return;
+      } catch {
+        logAuthEvent(
+          "secure_store_delete_failed",
+          {
+            key,
+            storageFallback: "web_or_memory",
+          },
+          "warn",
+        );
+        // Fall back below when the current dev client lacks the native module.
+      }
+    }
+
+    if (!deleteWebStorageItem(key)) {
+      memoryStore.delete(key);
     }
   },
 };
@@ -151,4 +186,27 @@ export async function getStoredAuthItem(key: string) {
   }
 
   return authStorage.getItem(key);
+}
+
+export async function deleteStoredAuthItem(key: string) {
+  const store = getSecureStore();
+
+  if (store?.deleteItemAsync) {
+    try {
+      await store.deleteItemAsync(key);
+      return;
+    } catch {
+      logAuthEvent(
+        "secure_store_delete_async_failed",
+        {
+          key,
+          storageFallback: "sync_or_memory",
+        },
+        "warn",
+      );
+      // Fall back to sync storage below.
+    }
+  }
+
+  authStorage.deleteItem(key);
 }

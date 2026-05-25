@@ -1,7 +1,9 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   useWindowDimensions,
@@ -12,12 +14,18 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MobileSessionResponse } from "@/lib/mobile-auth-api";
+import {
+  BackendClosedTrade,
+  BackendOpenTrade,
+  fetchTradingProfileData,
+} from "@/lib/trading-api";
 
 type HelloWorldScreenProps = {
+  onLogout: () => void;
   user: MobileSessionResponse["user"] | null;
 };
 
-type DashboardTab = "wallet" | "open" | "closed" | "profile";
+type DashboardTab = "wallet" | "trade" | "profile";
 type IconName =
   | "apps"
   | "arrowDown"
@@ -75,67 +83,87 @@ const assets = [
   },
 ] as const;
 
-const accountStats = [
-  { label: "Available", value: "$18.98" },
-  { label: "Reserved", value: "$2.25" },
-  { label: "Open P/L", value: "+$0.36", tone: "up" },
-  { label: "Closed P/L", value: "+$3.41", tone: "up" },
-] as const;
+type DashboardData = {
+  balance: number | null;
+  openTrades: BackendOpenTrade[];
+  closedTrades: BackendClosedTrade[];
+};
 
-const openTrades = [
-  {
-    pair: "ETH/USD",
-    side: "Buy",
-    size: "0.00687 ETH",
-    entry: "$2,707.42",
-    current: "$2,759.78",
-    pnl: "+$0.36",
-    pct: "+1.74%",
-    margin: "$4.75",
-    leverage: "4x",
-  },
-  {
-    pair: "SOL/USD",
-    side: "Buy",
-    size: "0.25 SOL",
-    entry: "$166.20",
-    current: "$166.20",
-    pnl: "+$0.00",
-    pct: "0.00%",
-    margin: "$0.00",
-    leverage: "2x",
-  },
-] as const;
+const emptyDashboardData: DashboardData = {
+  balance: null,
+  openTrades: [],
+  closedTrades: [],
+};
 
-const closedTrades = [
-  {
-    pair: "BTC/USD",
-    side: "Sell",
-    size: "0.001 BTC",
-    entry: "$69,420.00",
-    exit: "$68,885.12",
-    pnl: "+$2.47",
-    closedAt: "Today, 09:18",
-  },
-  {
-    pair: "ETH/USD",
-    side: "Buy",
-    size: "0.004 ETH",
-    entry: "$2,632.15",
-    exit: "$2,868.44",
-    pnl: "+$0.94",
-    closedAt: "Yesterday, 21:44",
-  },
-  {
-    pair: "USDC/USD",
-    side: "Buy",
-    size: "2.24 USDC",
-    entry: "$1.00",
-    exit: "$1.00",
-    pnl: "$0.00",
-    closedAt: "May 22, 18:03",
-  },
-] as const;
+const normalizeMarketPrice = (value?: number | null) => {
+  if (value === null || value === undefined) return null;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+
+  return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
+};
+
+const formatCurrency = (value?: number | null, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "--";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+};
+
+const formatSignedCurrency = (value: number) => {
+  const formatted = formatCurrency(Math.abs(value));
+  if (value > 0) return `+${formatted}`;
+  if (value < 0) return `-${formatted}`;
+  return formatted;
+};
+
+const formatPercent = (value: number) => {
+  const formatted = Math.abs(value).toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
+
+  if (value > 0) return `+${formatted}%`;
+  if (value < 0) return `-${formatted}%`;
+  return "0.00%";
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return "Unavailable";
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const getTradePnl = (trade: BackendOpenTrade) => {
+  const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
+  const currentPrice = normalizeMarketPrice(trade.currentPrice) ?? openPrice;
+
+  return trade.type === "buy"
+    ? (currentPrice - openPrice) * trade.quantity
+    : (openPrice - currentPrice) * trade.quantity;
+};
+
+const getTradeMargin = (trade: BackendOpenTrade) => {
+  const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
+  const leverage = Number(trade.leverage) > 0 ? Number(trade.leverage) : 1;
+  return (trade.quantity * openPrice) / leverage;
+};
 
 function Icon({
   color = "#A594F7",
@@ -303,8 +331,7 @@ function BottomTabs({
 }) {
   const tabs: { icon: IconName; label: string; tab: DashboardTab }[] = [
     { icon: "home", label: "Wallet", tab: "wallet" },
-    { icon: "swap", label: "Open", tab: "open" },
-    { icon: "clock", label: "Closed", tab: "closed" },
+    { icon: "swap", label: "Trade", tab: "trade" },
     { icon: "profile", label: "Profile", tab: "profile" },
   ];
 
@@ -319,7 +346,7 @@ function BottomTabs({
               key={tab}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              className="min-h-[54px] min-w-[60px] items-center justify-center gap-1 active:opacity-70"
+              className="min-h-[54px] min-w-[80px] items-center justify-center gap-1 active:opacity-70"
               onPress={() => onTabChange(tab)}
             >
               <Icon
@@ -374,7 +401,7 @@ function Avatar({ user }: { user: MobileSessionResponse["user"] | null }) {
 }
 
 function Header({
-  accountName = "Account 2",
+  accountName = "Trading account",
   user,
 }: {
   accountName?: string;
@@ -387,12 +414,12 @@ function Header({
         <View>
           <Text
             numberOfLines={1}
-            className="max-w-[210px] text-[18px] font-black text-[#8D9290]"
+            className="max-w-[210px] text-[15px] font-black text-[#8D9290]"
           >
             @
             {user?.name?.replace(/\s+/g, "").toLowerCase() || "alexsmithmobbin"}
           </Text>
-          <Text className="text-[25px] font-black tracking-normal text-white">
+          <Text className="text-[21px] font-black tracking-normal text-white">
             {accountName} <Text className="text-[#C9CFCC]">v</Text>
           </Text>
         </View>
@@ -407,9 +434,9 @@ function Header({
 
 function ActionButton({ icon, label }: { icon: IconName; label: string }) {
   return (
-    <Pressable className="h-[92px] flex-1 items-center justify-center rounded-[22px] bg-[#2C2E2E] active:opacity-75">
-      <Icon color="#A594F7" name={icon} size={36} />
-      <Text className="mt-2 text-[16px] font-black text-[#9B9B9B]">
+    <Pressable className="h-[76px] flex-1 items-center justify-center rounded-[18px] bg-[#2C2E2E] active:opacity-75">
+      <Icon color="#A594F7" name={icon} size={30} />
+      <Text className="mt-1.5 text-[13px] font-black text-[#9B9B9B]">
         {label}
       </Text>
     </Pressable>
@@ -466,17 +493,17 @@ function AssetRow({ asset }: { asset: (typeof assets)[number] }) {
         : "text-[#A2A2A2]";
 
   return (
-    <View className="min-h-[84px] flex-row items-center rounded-[22px] bg-[#292C2B] px-4">
+    <View className="min-h-[78px] flex-row items-center rounded-[18px] bg-[#292C2B] px-4">
       <TokenLogo network={asset.network} symbol={asset.symbol} />
       <View className="ml-4 flex-1">
-        <Text className="text-[22px] font-black text-white">{asset.name}</Text>
-        <Text className="mt-1 text-[17px] font-bold text-[#9A9A9A]">
+        <Text className="text-[18px] font-black text-white">{asset.name}</Text>
+        <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
           {asset.amount}
         </Text>
       </View>
       <View className="items-end">
-        <Text className="text-[23px] font-black text-white">{asset.value}</Text>
-        <Text className={`mt-1 text-[17px] font-bold ${trendClass}`}>
+        <Text className="text-[18px] font-black text-white">{asset.value}</Text>
+        <Text className={`mt-1 text-[14px] font-bold ${trendClass}`}>
           {asset.change}
         </Text>
       </View>
@@ -490,19 +517,22 @@ function InfoCard({
   value,
 }: {
   label: string;
-  tone?: "up";
+  tone?: "up" | "down";
   value: string;
 }) {
+  const valueClass =
+    tone === "up"
+      ? "text-[#28E978]"
+      : tone === "down"
+        ? "text-[#FF5366]"
+        : "text-white";
+
   return (
-    <View className="min-h-[74px] flex-1 rounded-[18px] bg-[#292C2B] px-4 py-4">
-      <Text className="text-[13px] font-extrabold uppercase text-[#8D9290]">
+    <View className="min-h-[70px] flex-1 rounded-[16px] bg-[#292C2B] px-4 py-4">
+      <Text className="text-[12px] font-extrabold uppercase text-[#8D9290]">
         {label}
       </Text>
-      <Text
-        className={`mt-2 text-[20px] font-black ${
-          tone === "up" ? "text-[#28E978]" : "text-white"
-        }`}
-      >
+      <Text className={`mt-2 text-[17px] font-black ${valueClass}`}>
         {value}
       </Text>
     </View>
@@ -510,37 +540,86 @@ function InfoCard({
 }
 
 function WalletTab({
+  data,
+  isRefreshing,
   onTabChange,
+  onRefresh,
   user,
 }: {
+  data: DashboardData;
+  isRefreshing: boolean;
   onTabChange: (tab: DashboardTab) => void;
+  onRefresh: () => void;
   user: MobileSessionResponse["user"] | null;
 }) {
+  const openPnl = data.openTrades.reduce(
+    (total, trade) => total + getTradePnl(trade),
+    0,
+  );
+  const reservedMargin = data.openTrades.reduce(
+    (total, trade) => total + getTradeMargin(trade),
+    0,
+  );
+  const closedPnl = data.closedTrades.reduce(
+    (total, trade) => total + Number(trade.profitLoss || 0),
+    0,
+  );
+  const accountBalance = data.balance;
+  const accountEquity =
+    accountBalance === null ? null : accountBalance + reservedMargin + openPnl;
+  const accountStats = [
+    { label: "Available", value: formatCurrency(accountBalance) },
+    { label: "Reserved", value: formatCurrency(reservedMargin) },
+    {
+      label: "Open P/L",
+      value: formatSignedCurrency(openPnl),
+      tone: openPnl >= 0 ? "up" : "down",
+    },
+    {
+      label: "Closed P/L",
+      value: formatSignedCurrency(closedPnl),
+      tone: closedPnl >= 0 ? "up" : "down",
+    },
+  ] as const;
+  const openPct =
+    accountBalance && accountBalance > 0 ? (openPnl / accountBalance) * 100 : 0;
+
   return (
     <ScrollView
       className="flex-1"
       contentContainerClassName="pb-28"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
       showsVerticalScrollIndicator={false}
     >
-      <View className="bg-[#173120] pb-7">
+      <View className="bg-[#173120] pb-6">
         <Header user={user} />
-        <View className="items-center px-6 pt-11">
-          <Text className="text-[70px] font-black leading-[76px] tracking-normal text-white">
-            $21.23
+        <View className="items-center px-6 pt-8">
+          <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
+            {formatCurrency(accountEquity)}
           </Text>
           <View className="mt-1 flex-row items-center gap-3">
-            <Text className="text-[27px] font-black text-[#28E978]">
-              +$0.36
+            <Text
+              className={`text-[18px] font-black ${
+                openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+              }`}
+            >
+              {formatSignedCurrency(openPnl)}
             </Text>
             <View className="rounded-lg bg-[#255F3C] px-3 py-1">
-              <Text className="text-[24px] font-black text-[#28E978]">
-                +1.74%
+              <Text
+                className={`text-[16px] font-black ${
+                  openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                }`}
+              >
+                {formatPercent(openPct)}
               </Text>
             </View>
           </View>
         </View>
 
-        <View className="mt-12 flex-row gap-3 px-6">
+        <View className="mt-8 flex-row gap-3 px-6">
           <ActionButton icon="arrowDown" label="Receive" />
           <ActionButton icon="arrowUp" label="Send" />
           <ActionButton icon="swap" label="Swap" />
@@ -561,18 +640,16 @@ function WalletTab({
           <View className="h-[58px] w-[58px] items-center justify-center">
             <Icon color="#A594F7" name="search" size={55} />
           </View>
-          <Text className="ml-4 flex-1 text-[19px] font-black leading-7 text-white">
+          <Text className="ml-4 flex-1 text-[16px] font-black leading-6 text-white">
             Search from Explore to find new tokens faster
           </Text>
-          <Text className="text-[24px] font-black text-[#777]">x</Text>
+          <Text className="text-[20px] font-black text-[#777]">x</Text>
         </Pressable>
 
         <View className="mt-8 flex-row items-center justify-between">
-          <Text className="text-[24px] font-black text-white">Assets</Text>
-          <Pressable onPress={() => onTabChange("open")}>
-            <Text className="text-[15px] font-black text-[#A594F7]">
-              Open trades
-            </Text>
+          <Text className="text-[21px] font-black text-white">Assets</Text>
+          <Pressable onPress={() => onTabChange("trade")}>
+            <Text className="text-[15px] font-black text-[#A594F7]">Trade</Text>
           </Pressable>
         </View>
 
@@ -589,31 +666,45 @@ function WalletTab({
   );
 }
 
-function TradeCard({ trade }: { trade: (typeof openTrades)[number] }) {
+function TradeCard({ trade }: { trade: BackendOpenTrade }) {
+  const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
+  const currentPrice = normalizeMarketPrice(trade.currentPrice) ?? openPrice;
+  const pnl = getTradePnl(trade);
+  const pnlPct = openPrice > 0 ? (pnl / (openPrice * trade.quantity)) * 100 : 0;
+  const side = trade.type === "buy" ? "Buy" : "Sell";
+  const symbol = `${trade.symbol.toUpperCase()}/USD`;
+
   return (
     <View className="rounded-[22px] bg-[#292C2B] px-5 py-5">
       <View className="flex-row items-start justify-between">
         <View>
           <View className="flex-row items-center gap-2">
-            <Text className="text-[23px] font-black text-white">
-              {trade.pair}
-            </Text>
+            <Text className="text-[20px] font-black text-white">{symbol}</Text>
             <View className="rounded-full bg-[#235638] px-3 py-1">
               <Text className="text-[12px] font-black text-[#28E978]">
-                {trade.side}
+                {side}
               </Text>
             </View>
           </View>
-          <Text className="mt-1 text-[15px] font-bold text-[#9A9A9A]">
-            {trade.size} | {trade.leverage}
+          <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
+            {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
+            {Number(trade.leverage) || 1}x
           </Text>
         </View>
         <View className="items-end">
-          <Text className="text-[23px] font-black text-[#28E978]">
-            {trade.pnl}
+          <Text
+            className={`text-[20px] font-black ${
+              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
+          >
+            {formatSignedCurrency(pnl)}
           </Text>
-          <Text className="mt-1 text-[15px] font-black text-[#28E978]">
-            {trade.pct}
+          <Text
+            className={`mt-1 text-[14px] font-black ${
+              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
+          >
+            {formatPercent(pnlPct)}
           </Text>
         </View>
       </View>
@@ -621,49 +712,61 @@ function TradeCard({ trade }: { trade: (typeof openTrades)[number] }) {
       <View className="mt-5 h-px bg-[#3A3E3C]" />
 
       <View className="mt-5 flex-row justify-between">
-        <TradeMetric label="Entry" value={trade.entry} />
-        <TradeMetric label="Current" value={trade.current} />
-        <TradeMetric alignRight label="Margin" value={trade.margin} />
+        <TradeMetric label="Entry" value={formatCurrency(openPrice)} />
+        <TradeMetric label="Current" value={formatCurrency(currentPrice)} />
+        <TradeMetric
+          alignRight
+          label="Margin"
+          value={formatCurrency(getTradeMargin(trade))}
+        />
       </View>
     </View>
   );
 }
 
-function ClosedTradeCard({ trade }: { trade: (typeof closedTrades)[number] }) {
-  const isPositive = trade.pnl.startsWith("+");
+function ClosedTradeCard({ trade }: { trade: BackendClosedTrade }) {
+  const pnl = Number(trade.profitLoss || 0);
+  const isPositive = pnl >= 0;
+  const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
     <View className="rounded-[22px] bg-[#292C2B] px-5 py-5">
       <View className="flex-row items-start justify-between">
         <View>
           <View className="flex-row items-center gap-2">
-            <Text className="text-[23px] font-black text-white">
-              {trade.pair}
-            </Text>
+            <Text className="text-[20px] font-black text-white">{symbol}</Text>
             <View className="rounded-full bg-[#343635] px-3 py-1">
               <Text className="text-[12px] font-black text-[#BDBDBD]">
-                {trade.side}
+                {trade.type === "buy" ? "Buy" : "Sell"}
               </Text>
             </View>
           </View>
-          <Text className="mt-1 text-[15px] font-bold text-[#9A9A9A]">
-            {trade.size} | {trade.closedAt}
+          <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
+            {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
+            {formatDate(trade.closeTime)}
           </Text>
         </View>
         <Text
-          className={`text-[23px] font-black ${
-            isPositive ? "text-[#28E978]" : "text-white"
+          className={`text-[20px] font-black ${
+            isPositive ? "text-[#28E978]" : "text-[#FF5366]"
           }`}
         >
-          {trade.pnl}
+          {formatSignedCurrency(pnl)}
         </Text>
       </View>
 
       <View className="mt-5 h-px bg-[#3A3E3C]" />
 
       <View className="mt-5 flex-row justify-between">
-        <TradeMetric label="Entry" value={trade.entry} />
-        <TradeMetric alignRight label="Exit" value={trade.exit} />
+        <TradeMetric
+          label="Entry"
+          value={formatCurrency(normalizeMarketPrice(trade.openPrice))}
+        />
+        <TradeMetric
+          alignRight
+          label="Exit"
+          value={formatCurrency(normalizeMarketPrice(trade.closePrice))}
+        />
       </View>
     </View>
   );
@@ -689,25 +792,38 @@ function TradeMetric({
 }
 
 function TradesTab({
-  kind,
-  onTabChange,
+  data,
+  isRefreshing,
+  onRefresh,
 }: {
-  kind: "open" | "closed";
-  onTabChange: (tab: DashboardTab) => void;
+  data: DashboardData;
+  isRefreshing: boolean;
+  onRefresh: () => void;
 }) {
+  const [kind, setKind] = useState<"open" | "closed">("open");
   const isOpen = kind === "open";
+  const openPnl = data.openTrades.reduce(
+    (total, trade) => total + getTradePnl(trade),
+    0,
+  );
+  const closedPnl = data.closedTrades.reduce(
+    (total, trade) => total + Number(trade.profitLoss || 0),
+    0,
+  );
+  const visibleTrades = isOpen ? data.openTrades : data.closedTrades;
 
   return (
     <ScrollView
       className="flex-1"
       contentContainerClassName="px-6 pb-28 pt-5"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
       showsVerticalScrollIndicator={false}
     >
       <View className="flex-row items-center justify-between">
         <View>
-          <Text className="text-[34px] font-black text-white">
-            {isOpen ? "Open Trades" : "Closed Trades"}
-          </Text>
+          <Text className="text-[28px] font-black text-white">Trade</Text>
           <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
             {isOpen
               ? "Positions currently live in the market."
@@ -724,7 +840,7 @@ function TradesTab({
           className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
             isOpen ? "bg-[#A594F7]" : ""
           }`}
-          onPress={() => onTabChange("open")}
+          onPress={() => setKind("open")}
         >
           <Text
             className={`text-[15px] font-black ${
@@ -738,7 +854,7 @@ function TradesTab({
           className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
             !isOpen ? "bg-[#A594F7]" : ""
           }`}
-          onPress={() => onTabChange("closed")}
+          onPress={() => setKind("closed")}
         >
           <Text
             className={`text-[15px] font-black ${
@@ -753,27 +869,36 @@ function TradesTab({
       <View className="mt-6 flex-row gap-3">
         <InfoCard
           label={isOpen ? "Open Value" : "Realized"}
-          tone="up"
-          value={isOpen ? "$21.23" : "+$3.41"}
+          tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
+          value={
+            isOpen
+              ? formatSignedCurrency(openPnl)
+              : formatSignedCurrency(closedPnl)
+          }
         />
         <InfoCard
-          label={isOpen ? "Live P/L" : "Win Rate"}
+          label={isOpen ? "Open Count" : "Closed Count"}
           tone="up"
-          value={isOpen ? "+$0.36" : "67%"}
+          value={`${visibleTrades.length}`}
         />
       </View>
 
       <View className="mt-6 gap-4">
-        {isOpen
-          ? openTrades.map((trade) => (
-              <TradeCard key={trade.pair} trade={trade} />
-            ))
-          : closedTrades.map((trade) => (
-              <ClosedTradeCard
-                key={`${trade.pair}-${trade.closedAt}`}
-                trade={trade}
-              />
-            ))}
+        {visibleTrades.length === 0 ? (
+          <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
+            <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
+              {isOpen ? "No open trades." : "No closed trades."}
+            </Text>
+          </View>
+        ) : isOpen ? (
+          data.openTrades.map((trade) => (
+            <TradeCard key={trade.orderId} trade={trade} />
+          ))
+        ) : (
+          data.closedTrades.map((trade) => (
+            <ClosedTradeCard key={trade.orderId} trade={trade} />
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -790,16 +915,50 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ProfileTab({ user }: { user: MobileSessionResponse["user"] | null }) {
+function ProfileTab({
+  data,
+  errorMessage,
+  isLoading,
+  isRefreshing,
+  onLogout,
+  onRefresh,
+  user,
+}: {
+  data: DashboardData;
+  errorMessage: string | null;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  onLogout: () => void;
+  onRefresh: () => void;
+  user: MobileSessionResponse["user"] | null;
+}) {
+  const openPnl = data.openTrades.reduce(
+    (total, trade) => total + getTradePnl(trade),
+    0,
+  );
+  const reservedMargin = data.openTrades.reduce(
+    (total, trade) => total + getTradeMargin(trade),
+    0,
+  );
+  const closedPnl = data.closedTrades.reduce(
+    (total, trade) => total + Number(trade.profitLoss || 0),
+    0,
+  );
+  const equity =
+    data.balance === null ? null : data.balance + reservedMargin + openPnl;
+
   return (
     <ScrollView
       className="flex-1"
       contentContainerClassName="px-6 pb-28 pt-5"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
       showsVerticalScrollIndicator={false}
     >
-      <Text className="text-[34px] font-black text-white">Profile</Text>
+      <Text className="text-[28px] font-black text-white">Profile</Text>
       <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
-        Account identity and mobile security.
+        Account identity, balance, and trades.
       </Text>
 
       <View className="mt-8 items-center rounded-[24px] bg-[#292C2B] px-5 py-7">
@@ -818,27 +977,101 @@ function ProfileTab({ user }: { user: MobileSessionResponse["user"] | null }) {
       </View>
 
       <View className="mt-5 rounded-[22px] bg-[#292C2B] px-5">
-        <ProfileRow label="User ID" value={user?.id || "Unavailable"} />
-        <ProfileRow label="Account" value="Account 2" />
-        <ProfileRow label="Portfolio Balance" value="$21.23" />
-        <ProfileRow label="Available Balance" value="$18.98" />
-        <ProfileRow label="Open Trades" value={`${openTrades.length}`} />
+        <ProfileRow label="Email" value={user?.email || "Unavailable"} />
+        <ProfileRow label="Account Equity" value={formatCurrency(equity)} />
+        <ProfileRow
+          label="Available Balance"
+          value={formatCurrency(data.balance)}
+        />
+        <ProfileRow
+          label="Reserved Margin"
+          value={formatCurrency(reservedMargin)}
+        />
+        <ProfileRow label="Open P/L" value={formatSignedCurrency(openPnl)} />
+        <ProfileRow
+          label="Closed P/L"
+          value={formatSignedCurrency(closedPnl)}
+        />
+        <ProfileRow label="Open Trades" value={`${data.openTrades.length}`} />
         <View className="py-4">
           <Text className="text-[13px] font-extrabold uppercase text-[#858585]">
             Closed Trades
           </Text>
           <Text className="mt-2 text-[17px] font-black text-white">
-            {closedTrades.length}
+            {data.closedTrades.length}
           </Text>
         </View>
       </View>
+
+      {isLoading ? (
+        <View className="mt-5 flex-row items-center justify-center gap-2 rounded-[18px] bg-[#292C2B] px-5 py-4">
+          <ActivityIndicator color="#A594F7" />
+          <Text className="text-[14px] font-bold text-[#9A9A9A]">
+            Loading account data
+          </Text>
+        </View>
+      ) : null}
+
+      {errorMessage ? (
+        <View className="mt-5 rounded-[18px] bg-[#3A2328] px-5 py-4">
+          <Text className="text-[14px] font-bold text-[#FF8C99]">
+            {errorMessage}
+          </Text>
+        </View>
+      ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126] active:opacity-75"
+        onPress={onLogout}
+      >
+        <Text className="text-[15px] font-black text-[#FF8C99]">Logout</Text>
+      </Pressable>
     </ScrollView>
   );
 }
 
-export function HelloWorldScreen({ user }: HelloWorldScreenProps) {
+export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("wallet");
+  const [dashboardData, setDashboardData] =
+    useState<DashboardData>(emptyDashboardData);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   const { width } = useWindowDimensions();
+  const loadDashboardData = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshingData(true);
+    } else {
+      setIsLoadingData(true);
+    }
+
+    try {
+      const data = await fetchTradingProfileData();
+      setDashboardData({
+        balance: data.balance,
+        openTrades: data.openTrades,
+        closedTrades: data.closedTrades,
+      });
+      setDataError(null);
+    } catch (error) {
+      setDataError(
+        error instanceof Error ? error.message : "Unable to load account data",
+      );
+    } finally {
+      setIsLoadingData(false);
+      setIsRefreshingData(false);
+    }
+  }, []);
+  const refreshDashboardData = useCallback(() => {
+    loadDashboardData(true);
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    }
+  }, [loadDashboardData, user]);
 
   return (
     <ScreenShell activeTab={activeTab} onTabChange={setActiveTab}>
@@ -851,15 +1084,32 @@ export function HelloWorldScreen({ user }: HelloWorldScreenProps) {
         }}
       >
         {activeTab === "wallet" ? (
-          <WalletTab onTabChange={setActiveTab} user={user} />
+          <WalletTab
+            data={dashboardData}
+            isRefreshing={isRefreshingData}
+            onRefresh={refreshDashboardData}
+            onTabChange={setActiveTab}
+            user={user}
+          />
         ) : null}
-        {activeTab === "open" ? (
-          <TradesTab kind="open" onTabChange={setActiveTab} />
+        {activeTab === "trade" ? (
+          <TradesTab
+            data={dashboardData}
+            isRefreshing={isRefreshingData}
+            onRefresh={refreshDashboardData}
+          />
         ) : null}
-        {activeTab === "closed" ? (
-          <TradesTab kind="closed" onTabChange={setActiveTab} />
+        {activeTab === "profile" ? (
+          <ProfileTab
+            data={dashboardData}
+            errorMessage={dataError}
+            isLoading={isLoadingData}
+            isRefreshing={isRefreshingData}
+            onLogout={onLogout}
+            onRefresh={refreshDashboardData}
+            user={user}
+          />
         ) : null}
-        {activeTab === "profile" ? <ProfileTab user={user} /> : null}
       </View>
     </ScreenShell>
   );
