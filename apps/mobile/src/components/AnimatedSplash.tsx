@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Text } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
+import { Animated, Easing, StyleSheet } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 type AnimatedSplashProps = {
   visible: boolean;
@@ -10,7 +10,6 @@ type AnimatedSplashProps = {
 export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
   const opacity = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(0)).current;
-  const drift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!visible) {
@@ -34,25 +33,7 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
       ]),
     );
 
-    const driftLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(drift, {
-          toValue: 1,
-          duration: 1300,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(drift, {
-          toValue: 0,
-          duration: 1300,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
     pulseLoop.start();
-    driftLoop.start();
 
     const finishTimer = setTimeout(() => {
       Animated.timing(opacity, {
@@ -69,10 +50,9 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
 
     return () => {
       pulseLoop.stop();
-      driftLoop.stop();
       clearTimeout(finishTimer);
     };
-  }, [drift, onFinish, opacity, pulse, visible]);
+  }, [onFinish, opacity, pulse, visible]);
 
   if (!visible) {
     return null;
@@ -80,71 +60,40 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
 
   const ringScale = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.94, 1.08],
-  });
-  const markTranslate = drift.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-5, 5],
+    outputRange: [0.92, 1.08],
   });
 
   return (
     <Animated.View
-      className="absolute inset-0 z-20 items-center justify-center bg-black"
-      style={{ opacity }}
+      pointerEvents="auto"
+      style={[styles.container, { opacity }]}
     >
       <Animated.View
-        className="items-center justify-center"
-        style={{
-          transform: [{ scale: ringScale }],
-        }}
+        style={[styles.logoWrap, { transform: [{ scale: ringScale }] }]}
       >
-        <Svg width={180} height={180} viewBox="0 0 180 180" fill="none">
-          <Circle
-            cx="90"
-            cy="90"
-            r="66"
-            stroke="#FFFFFF"
-            strokeOpacity="0.9"
-            strokeWidth="2"
-          />
-          <Circle
-            cx="90"
-            cy="90"
-            r="42"
-            stroke="#FFFFFF"
-            strokeOpacity="0.42"
-            strokeWidth="14"
-          />
+        <Svg width={170} height={170} viewBox="0 0 16 16" fill="none">
           <Path
-            d="M63 93C75 113 105 113 117 93"
-            stroke="#FFFFFF"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <Path
-            d="M57 70C64 78 73 78 80 70"
-            stroke="#FFFFFF"
-            strokeWidth="7"
-            strokeLinecap="round"
-          />
-          <Path
-            d="M100 70C107 78 116 78 123 70"
-            stroke="#FFFFFF"
-            strokeWidth="7"
-            strokeLinecap="round"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M8 16L3.54223 12.3383C1.93278 11.0162 1 9.04287 1 6.96005C1 3.11612 4.15607 0 8 0C11.8439 0 15 3.11612 15 6.96005C15 9.04287 14.0672 11.0162 12.4578 12.3383L8 16ZM3 6H5C6.10457 6 7 6.89543 7 8V9L3 7.5V6ZM11 6C9.89543 6 9 6.89543 9 8V9L13 7.5V6H11Z"
+            fill="#FFFFFF"
           />
         </Svg>
-      </Animated.View>
-      <Animated.View
-        className="mt-[18px] rounded-full border border-white px-[22px] py-[9px]"
-        style={{
-          transform: [{ translateY: markTranslate }],
-        }}
-      >
-        <Text className="text-[13px] font-extrabold tracking-normal text-white">
-          MOOD
-        </Text>
       </Animated.View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    backgroundColor: "#000000",
+    justifyContent: "center",
+    zIndex: 20,
+  },
+  logoWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

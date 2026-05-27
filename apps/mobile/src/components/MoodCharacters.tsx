@@ -17,7 +17,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
   return (
     <Svg width={width} height={height} viewBox="0 0 390 430" fill="none">
       <G transform="translate(94 26)">
-        <Circle cx="74" cy="74" r="73" fill="#F4F4F4" />
+        <Circle cx="74" cy="74" r="73" fill="#9DFF8F" />
         <Path
           d="M47 78C53 88 64 94 75 94C86 94 97 88 103 78"
           stroke="#0B0B0B"
@@ -43,14 +43,13 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
           cx="64"
           cy="64"
           r="56"
-          stroke="#DCDCDC"
+          stroke="#C77AF6"
           strokeWidth="16"
           strokeLinecap="round"
         />
         <Path
           d="M34 21C55 3 89 7 107 29"
-          stroke="#0B0B0B"
-          strokeOpacity="0.88"
+          stroke="#C77AF6"
           strokeWidth="11"
           strokeLinecap="round"
         />
@@ -71,7 +70,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       </G>
 
       <G transform="translate(-28 154) rotate(-4 78 78)">
-        <Circle cx="78" cy="78" r="78" fill="#E9E9E9" />
+        <Circle cx="78" cy="78" r="78" fill="#F48ADC" />
         <Circle cx="50" cy="62" r="12" fill="#0B0B0B" />
         <Circle cx="88" cy="62" r="12" fill="#0B0B0B" />
         <Path
@@ -85,9 +84,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       <G transform="translate(152 145) rotate(6 66 101)">
         <Path
           d="M58 0H128L105 83H142L57 202L70 111H14L58 0Z"
-          fill="#F7F7F7"
-          stroke="#0B0B0B"
-          strokeWidth="2"
+          fill="#FFD33D"
           strokeLinejoin="round"
         />
         <Path
@@ -105,7 +102,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       </G>
 
       <G transform="translate(299 124) rotate(-14 82 76)">
-        <Rect width="164" height="153" rx="31" fill="#CECECE" />
+        <Rect width="164" height="153" rx="31" fill="#FF8549" />
         <Ellipse cx="60" cy="55" rx="20" ry="12" fill="#FFFFFF" />
         <Ellipse cx="111" cy="55" rx="20" ry="12" fill="#FFFFFF" />
         <Circle cx="69" cy="52" r="8" fill="#0B0B0B" />
@@ -119,7 +116,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       </G>
 
       <G transform="translate(24 276) rotate(4 74 73)">
-        <Rect width="148" height="147" rx="43" fill="#D8D8D8" />
+        <Rect width="148" height="147" rx="43" fill="#94C7FF" />
         <Path
           d="M35 72C41 82 52 84 61 75"
           stroke="#0B0B0B"
@@ -143,9 +140,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       <G transform="translate(239 264) rotate(-5 80 76)">
         <Polygon
           points="72,3 159,146 0,157"
-          fill="#EDEDED"
-          stroke="#0B0B0B"
-          strokeWidth="2"
+          fill="#FF777B"
           strokeLinejoin="round"
         />
         <Line
