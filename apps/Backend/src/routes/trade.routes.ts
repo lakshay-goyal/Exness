@@ -375,7 +375,7 @@ tradeRouter.get("/close", authMiddleware as any, async (req: Request, res: Respo
     console.log("Get Close Orders Request: User ID - ", userId);
 
     const RedisStreams = req.app.locals.redisStreams as any;
-    const streamResult = await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+    const streamResult = await RedisStreams.addToRedisStream(constant.redisStream, {
       function: "getCloseOrders",
       userId,
     });

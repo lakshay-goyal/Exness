@@ -50,10 +50,12 @@ interface OpenOrder {
   leverage: number;
   openPrice: number;
   currentPrice: number;
+  openTime: string;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
   pnl: number;
-  status: string;
+  status: "open";
 }
 
 interface BackendOpenOrder {
@@ -64,8 +66,11 @@ interface BackendOpenOrder {
   leverage?: number;
   openPrice: number;
   currentPrice: number;
+  openTime: string;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
+  stippage?: number | null;
   status: "open";
 }
 
@@ -74,6 +79,7 @@ interface BackendClosedOrder {
   symbol: string;
   type: "buy" | "sell";
   quantity: number;
+  leverage?: number;
   openPrice: number;
   closePrice: number;
   openTime: string;
@@ -81,6 +87,8 @@ interface BackendClosedOrder {
   profitLoss?: number;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
+  stippage?: number | null;
   closeReason?: string | null;
 }
 
@@ -89,16 +97,23 @@ interface CloseOrder {
   symbol: string;
   type: string;
   volume: number;
+  leverage: number;
   openPrice: number;
   closePrice: number;
   openTime: string;
   closeTime: string;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
   pnl: number;
   closeReason?: string | null;
-  status: string;
+  status: "closed";
 }
+
+type TradeSelection = {
+  id: string;
+  status: "open" | "closed";
+};
 
 type CryptoAsset = {
   symbol: string;
@@ -174,6 +189,21 @@ const formatNumber = (value?: number | null, digits = 2) => {
 const formatPercent = (value?: number | null, digits = 2) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "--";
   return `${formatNumber(value, digits)}%`;
+};
+
+const formatDateTime = (value?: string | Date | null) => {
+  if (!value) return "--";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleString();
+};
+
+const formatCloseReason = (value?: string | null) => {
+  if (!value) return "Manual";
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 };
 
 const normalizeMarketPrice = (value?: number | null) => {
@@ -582,6 +612,8 @@ const Dashboard = () => {
   const [closeOrderLoading, setCloseOrderLoading] = useState(false);
   const [openOrdersLoading, setOpenOrdersLoading] = useState(false);
   const [closedOrdersLoading, setClosedOrdersLoading] = useState(false);
+  const [selectedTradeRef, setSelectedTradeRef] =
+    useState<TradeSelection | null>(null);
 
   const router = useRouter();
   const { token, isAuthenticated, balance, fetchBalance } = useAuth();
@@ -624,6 +656,20 @@ const Dashboard = () => {
     () => liveOrders.filter((order) => order.status === "open"),
     [liveOrders],
   );
+  const selectedTrade = useMemo(() => {
+    if (!selectedTradeRef) return null;
+
+    if (selectedTradeRef.status === "open") {
+      return (
+        openActiveOrders.find((order) => order.id === selectedTradeRef.id) ??
+        null
+      );
+    }
+
+    return (
+      closeOrdersData.find((order) => order.id === selectedTradeRef.id) ?? null
+    );
+  }, [closeOrdersData, openActiveOrders, selectedTradeRef]);
   const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
   const leverageNumber = Number.parseInt(leverage, 10);
   const leverageIsValid =
@@ -644,11 +690,15 @@ const Dashboard = () => {
     () => openActiveOrders.reduce((total, order) => total + order.pnl, 0),
     [openActiveOrders],
   );
-  const accountBalance = balance !== null ? balance + reservedMargin : null;
+  // The backend balance is the user's available cash after open-order margin is
+  // reserved. Add reserved margin only for equity, not for the Balance label.
+  const accountBalance = balance;
   const accountEquity =
-    accountBalance !== null ? accountBalance + floatingPnl : null;
+    accountBalance !== null
+      ? accountBalance + reservedMargin + floatingPnl
+      : null;
   const accountFreeMargin =
-    accountEquity !== null ? accountEquity - reservedMargin : null;
+    accountBalance !== null ? accountBalance + floatingPnl : null;
   const accountMarginLevel =
     accountEquity !== null && reservedMargin > 0
       ? (accountEquity / reservedMargin) * 100
@@ -717,13 +767,15 @@ const Dashboard = () => {
               leverage: Number(orderData.leverage) || 100,
               openPrice,
               currentPrice,
+              openTime: orderData.openTime,
               takeProfit: normalizeMarketPrice(orderData.takeProfit),
               stopLoss: normalizeMarketPrice(orderData.stopLoss),
+              slippage: orderData.slippage ?? orderData.stippage ?? null,
               pnl:
                 orderData.type === "buy"
                   ? (currentPrice - openPrice) * orderData.quantity
                   : (openPrice - currentPrice) * orderData.quantity,
-              status: orderData.status,
+              status: "open",
             };
           }),
         );
@@ -779,12 +831,14 @@ const Dashboard = () => {
             symbol: orderData.symbol.toUpperCase(),
             type: orderData.type === "buy" ? "Buy" : "Sell",
             volume: orderData.quantity,
+            leverage: Number(orderData.leverage) || 100,
             openPrice: normalizeMarketPrice(orderData.openPrice) ?? 0,
             closePrice: normalizeMarketPrice(orderData.closePrice) ?? 0,
             openTime: orderData.openTime,
             closeTime: orderData.closeTime,
             takeProfit: normalizeMarketPrice(orderData.takeProfit),
             stopLoss: normalizeMarketPrice(orderData.stopLoss),
+            slippage: orderData.slippage ?? orderData.stippage ?? null,
             pnl: orderData.profitLoss || 0,
             closeReason: orderData.closeReason || "manual",
             status: "closed",
@@ -1065,6 +1119,98 @@ const Dashboard = () => {
       setCloseOrderLoading(false);
     }
   };
+
+  const selectedTradeMargin = selectedTrade
+    ? (selectedTrade.volume * selectedTrade.openPrice) /
+      (selectedTrade.leverage > 0 ? selectedTrade.leverage : 100)
+    : null;
+  const selectedTradeDetails: Array<{
+    label: string;
+    value: React.ReactNode;
+  }> = selectedTrade
+    ? [
+        { label: "Order ID", value: selectedTrade.id },
+        { label: "Status", value: formatCloseReason(selectedTrade.status) },
+        { label: "Symbol", value: selectedTrade.symbol },
+        { label: "Side", value: selectedTrade.type },
+        { label: "Volume", value: formatNumber(selectedTrade.volume) },
+        { label: "Leverage", value: `${selectedTrade.leverage}x` },
+        {
+          label: "Open price",
+          value: formatMarketPrice(selectedTrade.openPrice),
+        },
+        ...(selectedTrade.status === "open"
+          ? [
+              {
+                label: "Current price",
+                value: formatMarketPrice(selectedTrade.currentPrice),
+              },
+              {
+                label: "Floating P/L",
+                value: (
+                  <span
+                    className={
+                      selectedTrade.pnl >= 0
+                        ? "text-emerald-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {selectedTrade.pnl >= 0 ? "+" : ""}
+                    {formatCurrency(selectedTrade.pnl)}
+                  </span>
+                ),
+              },
+            ]
+          : [
+              {
+                label: "Close price",
+                value: formatMarketPrice(selectedTrade.closePrice),
+              },
+              {
+                label: "Realized P/L",
+                value: (
+                  <span
+                    className={
+                      selectedTrade.pnl >= 0
+                        ? "text-emerald-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {selectedTrade.pnl >= 0 ? "+" : ""}
+                    {formatCurrency(selectedTrade.pnl)}
+                  </span>
+                ),
+              },
+            ]),
+        {
+          label: "Take profit",
+          value: formatMarketPrice(selectedTrade.takeProfit),
+        },
+        { label: "Stop loss", value: formatMarketPrice(selectedTrade.stopLoss) },
+        {
+          label: "Slippage",
+          value:
+            selectedTrade.slippage === null ||
+            selectedTrade.slippage === undefined
+              ? "--"
+              : `${formatNumber(selectedTrade.slippage)}%`,
+        },
+        { label: "Reserved margin", value: formatCurrency(selectedTradeMargin) },
+        { label: "Open time", value: formatDateTime(selectedTrade.openTime) },
+        ...(selectedTrade.status === "closed"
+          ? [
+              {
+                label: "Close time",
+                value: formatDateTime(selectedTrade.closeTime),
+              },
+              {
+                label: "Closed by",
+                value: formatCloseReason(selectedTrade.closeReason),
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   return (
     <ProtectedRoute>
@@ -1593,7 +1739,26 @@ const Dashboard = () => {
                               openActiveOrders.map((order) => (
                                 <div
                                   key={order.id}
-                                  className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                  role="button"
+                                  tabIndex={0}
+                                  className="grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+                                  onClick={() =>
+                                    setSelectedTradeRef({
+                                      id: order.id,
+                                      status: "open",
+                                    })
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key === "Enter" ||
+                                      event.key === " "
+                                    ) {
+                                      setSelectedTradeRef({
+                                        id: order.id,
+                                        status: "open",
+                                      });
+                                    }
+                                  }}
                                 >
                                   <div className="flex min-w-0 items-center gap-2">
                                     <span className="size-2 rounded-full bg-amber-500" />
@@ -1641,7 +1806,10 @@ const Dashboard = () => {
                                       variant="ghost"
                                       size="icon"
                                       className="size-7 text-muted-foreground hover:text-destructive"
-                                      onClick={() => handleCloseOrder(order.id)}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleCloseOrder(order.id);
+                                      }}
                                       disabled={closeOrderLoading}
                                       aria-label={`Close ${order.symbol} order`}
                                     >
@@ -1687,7 +1855,26 @@ const Dashboard = () => {
                               closeOrdersData.map((order) => (
                                 <div
                                   key={order.id}
-                                  className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30"
+                                  role="button"
+                                  tabIndex={0}
+                                  className="grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+                                  onClick={() =>
+                                    setSelectedTradeRef({
+                                      id: order.id,
+                                      status: "closed",
+                                    })
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key === "Enter" ||
+                                      event.key === " "
+                                    ) {
+                                      setSelectedTradeRef({
+                                        id: order.id,
+                                        status: "closed",
+                                      });
+                                    }
+                                  }}
                                 >
                                   <div className="flex min-w-0 items-center gap-2">
                                     <span className="size-2 rounded-full bg-amber-500" />
@@ -1721,10 +1908,10 @@ const Dashboard = () => {
                                     {formatMarketPrice(order.stopLoss)}
                                   </div>
                                   <div className="truncate font-mono text-xs">
-                                    {new Date(order.openTime).toLocaleString()}
+                                    {formatDateTime(order.openTime)}
                                   </div>
                                   <div className="truncate font-mono text-xs">
-                                    {new Date(order.closeTime).toLocaleString()}
+                                    {formatDateTime(order.closeTime)}
                                   </div>
                                   <div
                                     className={`font-mono ${
@@ -1741,8 +1928,7 @@ const Dashboard = () => {
                                       variant="secondary"
                                       className="text-xs"
                                     >
-                                      {order.closeReason?.replace("_", " ") ||
-                                        order.status}
+                                      {formatCloseReason(order.closeReason)}
                                     </Badge>
                                   </div>
                                 </div>
@@ -1810,6 +1996,129 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {selectedTrade && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+            onClick={() => setSelectedTradeRef(null)}
+          >
+            <div
+              className="w-full max-w-2xl overflow-hidden rounded-lg border bg-background shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 border-b p-4">
+                <div className="min-w-0">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant={
+                        selectedTrade.status === "open"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {formatCloseReason(selectedTrade.status)}
+                    </Badge>
+                    {selectedTrade.status === "open" && (
+                      <span className="inline-flex items-center gap-2 rounded-md bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600">
+                        <span className="size-2 rounded-full bg-emerald-500" />
+                        Live
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="truncate text-lg font-semibold">
+                    {selectedTrade.symbol} {selectedTrade.type}
+                  </h3>
+                  <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                    {selectedTrade.id}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={() => setSelectedTradeRef(null)}
+                  aria-label="Close trade details"
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto p-4">
+                <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">Open</p>
+                    <p className="truncate font-mono text-sm font-medium">
+                      {formatMarketPrice(selectedTrade.openPrice)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      {selectedTrade.status === "open" ? "Current" : "Close"}
+                    </p>
+                    <p className="truncate font-mono text-sm font-medium">
+                      {selectedTrade.status === "open"
+                        ? formatMarketPrice(selectedTrade.currentPrice)
+                        : formatMarketPrice(selectedTrade.closePrice)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">P/L</p>
+                    <p
+                      className={`truncate font-mono text-sm font-medium ${
+                        selectedTrade.pnl >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {selectedTrade.pnl >= 0 ? "+" : ""}
+                      {formatCurrency(selectedTrade.pnl)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">Margin</p>
+                    <p className="truncate font-mono text-sm font-medium">
+                      {formatCurrency(selectedTradeMargin)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {selectedTradeDetails.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex min-w-0 justify-between gap-3 rounded-md border bg-card/40 px-3 py-2"
+                    >
+                      <span className="shrink-0 text-sm text-muted-foreground">
+                        {item.label}
+                      </span>
+                      <span className="min-w-0 truncate text-right font-mono text-sm">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t p-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedTradeRef(null)}
+                >
+                  Close
+                </Button>
+                {selectedTrade.status === "open" && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleCloseOrder(selectedTrade.id)}
+                    disabled={closeOrderLoading}
+                  >
+                    {closeOrderLoading ? "Closing..." : "Close trade"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );

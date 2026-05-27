@@ -25,11 +25,15 @@ export async function getMobileAuthUser(req: Request) {
     return null;
   }
 
-  await ensureTradingUser(session.user.id, session.user.email);
+  const tradingUser = await ensureTradingUser(
+    session.user.id,
+    session.user.email,
+  );
 
   return {
     authUser,
     sessionUser: session.user,
+    tradingUser,
   };
 }
 

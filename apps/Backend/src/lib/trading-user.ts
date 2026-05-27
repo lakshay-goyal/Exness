@@ -6,13 +6,6 @@ export async function ensureTradingUser(userId: string, email: string) {
   });
 
   if (existingByEmail) {
-    if (existingByEmail.userID !== userId) {
-      return prisma.user.update({
-        where: { email },
-        data: { userID: userId },
-      });
-    }
-
     return existingByEmail;
   }
 

@@ -1,6 +1,6 @@
 import { redisStreams, config, constant } from "@repo/config";
 import { users } from "../data/users.js";
-import { openOrders } from "../data/orders.js";
+import { closeOrders, openOrders } from "../data/orders.js";
 import { prices } from "../data/price.js";
 import { prisma } from "@repo/db";
 
@@ -139,6 +139,8 @@ export async function closeOpenOrder({
     profitLoss,
     closeReason,
   };
+
+  closeOrders.unshift(orderResult);
 
   console.log("Closing order with calculated values:", {
     orderId: orderResult.orderId,

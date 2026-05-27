@@ -1,7 +1,9 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,8 +19,10 @@ import { MobileSessionResponse } from "@/lib/mobile-auth-api";
 import {
   BackendClosedTrade,
   BackendOpenTrade,
+  closeTrade,
   fetchTradingProfileData,
 } from "@/lib/trading-api";
+import { BACKEND_URL } from "@/lib/auth-client";
 
 type HelloWorldScreenProps = {
   onLogout: () => void;
@@ -89,10 +93,38 @@ type DashboardData = {
   closedTrades: BackendClosedTrade[];
 };
 
+type LiveMarketPrice = {
+  symbol: string;
+  marketPrice: number;
+  bid: number;
+  ask: number;
+  lastUpdated: number;
+};
+
+type SelectedTrade =
+  | { status: "open"; orderId: string }
+  | { status: "closed"; orderId: string };
+
 const emptyDashboardData: DashboardData = {
   balance: null,
   openTrades: [],
   closedTrades: [],
+};
+
+const getWebSocketUrl = () => {
+  const configuredUrl = process.env.EXPO_PUBLIC_WEBSOCKET_URL;
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  try {
+    const backendUrl = new URL(BACKEND_URL);
+    const protocol = backendUrl.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${backendUrl.hostname}:7070`;
+  } catch {
+    return "ws://localhost:7070";
+  }
 };
 
 const normalizeMarketPrice = (value?: number | null) => {
@@ -101,6 +133,34 @@ const normalizeMarketPrice = (value?: number | null) => {
   if (!Number.isFinite(numericValue)) return null;
 
   return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
+};
+
+const getMarketCode = (symbol: string) => {
+  const symbolUpper = symbol.toUpperCase();
+  if (symbolUpper.includes("BTC")) return "BTC";
+  if (symbolUpper.includes("ETH")) return "ETH";
+  if (symbolUpper.includes("SOL")) return "SOL";
+  return symbolUpper.replace(/[^A-Z0-9]/g, "");
+};
+
+const getLiveAssetCandidates = (symbol: string) => {
+  const marketCode = getMarketCode(symbol);
+  return [
+    symbol.toUpperCase(),
+    `${marketCode}_USDC_PERP`,
+    `${marketCode}_USDT_PERP`,
+    `${marketCode}USDT`,
+    `${marketCode}USD`,
+    marketCode,
+  ];
+};
+
+const findLivePriceForTrade = (
+  trade: BackendOpenTrade,
+  livePrices: Record<string, LiveMarketPrice>,
+) => {
+  const candidates = getLiveAssetCandidates(trade.symbol);
+  return candidates.map((candidate) => livePrices[candidate]).find(Boolean);
 };
 
 const formatCurrency = (value?: number | null, digits = 2) => {
@@ -148,6 +208,32 @@ const formatDate = (value?: string) => {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return "Unavailable";
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const formatCloseReason = (value?: string | null) => {
+  if (!value) return "Manual";
+
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 };
 
 const getTradePnl = (trade: BackendOpenTrade) => {
@@ -666,18 +752,35 @@ function WalletTab({
   );
 }
 
-function TradeCard({ trade }: { trade: BackendOpenTrade }) {
+function TradeCard({
+  isClosing,
+  onClose,
+  onPress,
+  trade,
+}: {
+  isClosing: boolean;
+  onClose: () => void;
+  onPress: () => void;
+  trade: BackendOpenTrade;
+}) {
   const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
   const currentPrice = normalizeMarketPrice(trade.currentPrice) ?? openPrice;
+  const bidPrice = normalizeMarketPrice(trade.bidPrice);
+  const askPrice = normalizeMarketPrice(trade.askPrice);
+  const marketPrice = normalizeMarketPrice(trade.marketPrice) ?? currentPrice;
   const pnl = getTradePnl(trade);
   const pnlPct = openPrice > 0 ? (pnl / (openPrice * trade.quantity)) * 100 : 0;
   const side = trade.type === "buy" ? "Buy" : "Sell";
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
-    <View className="rounded-[22px] bg-[#292C2B] px-5 py-5">
+    <Pressable
+      accessibilityRole="button"
+      className="rounded-[22px] bg-[#292C2B] px-5 py-5 active:opacity-80"
+      onPress={onPress}
+    >
       <View className="flex-row items-start justify-between">
-        <View>
+        <View className="flex-1 pr-3">
           <View className="flex-row items-center gap-2">
             <Text className="text-[20px] font-black text-white">{symbol}</Text>
             <View className="rounded-full bg-[#235638] px-3 py-1">
@@ -706,6 +809,19 @@ function TradeCard({ trade }: { trade: BackendOpenTrade }) {
           >
             {formatPercent(pnlPct)}
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            className="mt-3 h-9 items-center justify-center rounded-full bg-[#4A242B] px-4 active:opacity-75"
+            disabled={isClosing}
+            onPress={(event) => {
+              event.stopPropagation();
+              onClose();
+            }}
+          >
+            <Text className="text-[12px] font-black text-[#FF8C99]">
+              {isClosing ? "Closing..." : "Close"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -713,24 +829,39 @@ function TradeCard({ trade }: { trade: BackendOpenTrade }) {
 
       <View className="mt-5 flex-row justify-between">
         <TradeMetric label="Entry" value={formatCurrency(openPrice)} />
-        <TradeMetric label="Current" value={formatCurrency(currentPrice)} />
+        <TradeMetric label="Trade" value={formatCurrency(marketPrice)} />
         <TradeMetric
           alignRight
           label="Margin"
           value={formatCurrency(getTradeMargin(trade))}
         />
       </View>
-    </View>
+
+      <View className="mt-4 flex-row justify-between rounded-[14px] bg-[#222524] px-3 py-3">
+        <TradeMetric label="Bid" value={formatCurrency(bidPrice)} />
+        <TradeMetric alignRight label="Ask" value={formatCurrency(askPrice)} />
+      </View>
+    </Pressable>
   );
 }
 
-function ClosedTradeCard({ trade }: { trade: BackendClosedTrade }) {
+function ClosedTradeCard({
+  onPress,
+  trade,
+}: {
+  onPress: () => void;
+  trade: BackendClosedTrade;
+}) {
   const pnl = Number(trade.profitLoss || 0);
   const isPositive = pnl >= 0;
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
-    <View className="rounded-[22px] bg-[#292C2B] px-5 py-5">
+    <Pressable
+      accessibilityRole="button"
+      className="rounded-[22px] bg-[#292C2B] px-5 py-5 active:opacity-80"
+      onPress={onPress}
+    >
       <View className="flex-row items-start justify-between">
         <View>
           <View className="flex-row items-center gap-2">
@@ -768,7 +899,7 @@ function ClosedTradeCard({ trade }: { trade: BackendClosedTrade }) {
           value={formatCurrency(normalizeMarketPrice(trade.closePrice))}
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -791,16 +922,218 @@ function TradeMetric({
   );
 }
 
+function DetailRow({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone?: "up" | "down";
+  value: string;
+}) {
+  const valueClass =
+    tone === "up"
+      ? "text-[#28E978]"
+      : tone === "down"
+        ? "text-[#FF5366]"
+        : "text-white";
+
+  return (
+    <View className="border-b border-[#383B39] py-3">
+      <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
+        {label}
+      </Text>
+      <Text className={`mt-1 text-[16px] font-black ${valueClass}`}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function TradeDetailsModal({
+  isClosing,
+  onCloseTrade,
+  onDismiss,
+  selectedTrade,
+}: {
+  isClosing: boolean;
+  onCloseTrade: (orderId: string) => void;
+  onDismiss: () => void;
+  selectedTrade:
+    | { status: "open"; trade: BackendOpenTrade }
+    | { status: "closed"; trade: BackendClosedTrade }
+    | null;
+}) {
+  if (!selectedTrade) return null;
+
+  const { status, trade } = selectedTrade;
+  const isOpen = status === "open";
+  const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
+  const leverage = Number(trade.leverage) > 0 ? Number(trade.leverage) : 1;
+  const margin = (trade.quantity * openPrice) / leverage;
+  const side = trade.type === "buy" ? "Buy" : "Sell";
+  const symbol = `${trade.symbol.toUpperCase()}/USD`;
+  const slippage = trade.slippage ?? trade.stippage ?? null;
+  const pnl = isOpen
+    ? getTradePnl(trade)
+    : Number((trade as BackendClosedTrade).profitLoss || 0);
+  const currentOrClosePrice = isOpen
+    ? normalizeMarketPrice(trade.currentPrice) ?? openPrice
+    : normalizeMarketPrice((trade as BackendClosedTrade).closePrice) ?? 0;
+
+  return (
+    <Modal animationType="fade" transparent visible onRequestClose={onDismiss}>
+      <View className="flex-1 justify-end bg-black/65">
+        <Pressable className="flex-1" onPress={onDismiss} />
+        <View className="max-h-[84%] rounded-t-[28px] bg-[#1F2221] px-6 pb-8 pt-5">
+          <View className="mb-4 h-1.5 w-14 self-center rounded-full bg-[#444846]" />
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[24px] font-black text-white">
+                  {symbol}
+                </Text>
+                <View
+                  className={`rounded-full px-3 py-1 ${
+                    isOpen ? "bg-[#235638]" : "bg-[#343635]"
+                  }`}
+                >
+                  <Text
+                    className={`text-[12px] font-black ${
+                      isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
+                    }`}
+                  >
+                    {isOpen ? "Open" : "Closed"}
+                  </Text>
+                </View>
+              </View>
+              <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
+                {side} | {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
+                {leverage}x
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              className="h-10 w-10 items-center justify-center rounded-full bg-[#292C2B]"
+              onPress={onDismiss}
+            >
+              <Text className="text-[18px] font-black text-white">x</Text>
+            </Pressable>
+          </View>
+
+          <View className="mt-5 flex-row gap-3">
+            <InfoCard
+              label={isOpen ? "Floating P/L" : "Realized P/L"}
+              tone={pnl >= 0 ? "up" : "down"}
+              value={formatSignedCurrency(pnl)}
+            />
+            <InfoCard
+              label={isOpen ? "Trade Price" : "Close Price"}
+              value={formatCurrency(currentOrClosePrice)}
+            />
+          </View>
+
+          <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
+            <View className="rounded-[20px] bg-[#292C2B] px-5">
+              <DetailRow label="Order ID" value={trade.orderId} />
+              <DetailRow label="Side" value={side} />
+              <DetailRow label="Open price" value={formatCurrency(openPrice)} />
+              {isOpen ? (
+                <>
+                  <DetailRow
+                    label="Current price"
+                    value={formatCurrency(normalizeMarketPrice(trade.currentPrice))}
+                  />
+                  <DetailRow
+                    label="Market price"
+                    value={formatCurrency(normalizeMarketPrice(trade.marketPrice))}
+                  />
+                  <DetailRow
+                    label="Bid"
+                    value={formatCurrency(normalizeMarketPrice(trade.bidPrice))}
+                  />
+                  <DetailRow
+                    label="Ask"
+                    value={formatCurrency(normalizeMarketPrice(trade.askPrice))}
+                  />
+                </>
+              ) : (
+                <>
+                  <DetailRow
+                    label="Close price"
+                    value={formatCurrency(
+                      normalizeMarketPrice((trade as BackendClosedTrade).closePrice),
+                    )}
+                  />
+                  <DetailRow
+                    label="Closed by"
+                    value={formatCloseReason(
+                      (trade as BackendClosedTrade).closeReason,
+                    )}
+                  />
+                </>
+              )}
+              <DetailRow
+                label="Take profit"
+                value={formatCurrency(normalizeMarketPrice(trade.takeProfit))}
+              />
+              <DetailRow
+                label="Stop loss"
+                value={formatCurrency(normalizeMarketPrice(trade.stopLoss))}
+              />
+              <DetailRow
+                label="Slippage"
+                value={slippage === null ? "--" : `${slippage}%`}
+              />
+              <DetailRow label="Margin" value={formatCurrency(margin)} />
+              <DetailRow
+                label="Open time"
+                value={formatDateTime(trade.openTime)}
+              />
+              {!isOpen ? (
+                <DetailRow
+                  label="Close time"
+                  value={formatDateTime((trade as BackendClosedTrade).closeTime)}
+                />
+              ) : null}
+            </View>
+
+            {isOpen ? (
+              <Pressable
+                accessibilityRole="button"
+                className="mt-5 h-14 items-center justify-center rounded-[18px] bg-[#4A242B] active:opacity-75"
+                disabled={isClosing}
+                onPress={() => onCloseTrade(trade.orderId)}
+              >
+                <Text className="text-[15px] font-black text-[#FF8C99]">
+                  {isClosing ? "Closing trade..." : "Close trade"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function TradesTab({
   data,
+  isClosingTrade,
   isRefreshing,
+  onCloseTrade,
   onRefresh,
 }: {
   data: DashboardData;
+  isClosingTrade: boolean;
   isRefreshing: boolean;
+  onCloseTrade: (orderId: string) => void;
   onRefresh: () => void;
 }) {
   const [kind, setKind] = useState<"open" | "closed">("open");
+  const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(
+    null,
+  );
   const isOpen = kind === "open";
   const openPnl = data.openTrades.reduce(
     (total, trade) => total + getTradePnl(trade),
@@ -811,16 +1144,40 @@ function TradesTab({
     0,
   );
   const visibleTrades = isOpen ? data.openTrades : data.closedTrades;
+  const selectedTradeDetails = useMemo(() => {
+    if (!selectedTrade) return null;
+
+    if (selectedTrade.status === "open") {
+      const trade = data.openTrades.find(
+        (item) => item.orderId === selectedTrade.orderId,
+      );
+      return trade ? { status: "open" as const, trade } : null;
+    }
+
+    const trade = data.closedTrades.find(
+      (item) => item.orderId === selectedTrade.orderId,
+    );
+    return trade ? { status: "closed" as const, trade } : null;
+  }, [data.closedTrades, data.openTrades, selectedTrade]);
+
+  const closeSelectedTrade = useCallback(
+    (orderId: string) => {
+      onCloseTrade(orderId);
+      setSelectedTrade(null);
+    },
+    [onCloseTrade],
+  );
 
   return (
-    <ScrollView
-      className="flex-1"
-      contentContainerClassName="px-6 pb-28 pt-5"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-      }
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-6 pb-28 pt-5"
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
       <View className="flex-row items-center justify-between">
         <View>
           <Text className="text-[28px] font-black text-white">Trade</Text>
@@ -892,15 +1249,43 @@ function TradesTab({
           </View>
         ) : isOpen ? (
           data.openTrades.map((trade) => (
-            <TradeCard key={trade.orderId} trade={trade} />
+            <TradeCard
+              key={trade.orderId}
+              isClosing={isClosingTrade}
+              onClose={() => onCloseTrade(trade.orderId)}
+              onPress={() =>
+                setSelectedTrade({
+                  status: "open",
+                  orderId: trade.orderId,
+                })
+              }
+              trade={trade}
+            />
           ))
         ) : (
           data.closedTrades.map((trade) => (
-            <ClosedTradeCard key={trade.orderId} trade={trade} />
+            <ClosedTradeCard
+              key={trade.orderId}
+              onPress={() =>
+                setSelectedTrade({
+                  status: "closed",
+                  orderId: trade.orderId,
+                })
+              }
+              trade={trade}
+            />
           ))
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      <TradeDetailsModal
+        isClosing={isClosingTrade}
+        onCloseTrade={closeSelectedTrade}
+        onDismiss={() => setSelectedTrade(null)}
+        selectedTrade={selectedTradeDetails}
+      />
+    </>
   );
 }
 
@@ -1035,10 +1420,38 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("wallet");
   const [dashboardData, setDashboardData] =
     useState<DashboardData>(emptyDashboardData);
+  const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>(
+    {},
+  );
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [isClosingTrade, setIsClosingTrade] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
   const { width } = useWindowDimensions();
+  const enhancedDashboardData = useMemo<DashboardData>(
+    () => ({
+      ...dashboardData,
+      openTrades: dashboardData.openTrades.map((trade) => {
+        const livePrice = findLivePriceForTrade(trade, livePrices);
+
+        if (!livePrice) {
+          return trade;
+        }
+
+        const currentPrice =
+          trade.type === "buy" ? livePrice.bid : livePrice.ask;
+
+        return {
+          ...trade,
+          currentPrice,
+          marketPrice: livePrice.marketPrice,
+          bidPrice: livePrice.bid,
+          askPrice: livePrice.ask,
+        };
+      }),
+    }),
+    [dashboardData, livePrices],
+  );
   const loadDashboardData = useCallback(async (refreshing = false) => {
     if (refreshing) {
       setIsRefreshingData(true);
@@ -1066,12 +1479,82 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
   const refreshDashboardData = useCallback(() => {
     loadDashboardData(true);
   }, [loadDashboardData]);
+  const handleCloseTrade = useCallback(
+    async (orderId: string) => {
+      if (isClosingTrade) return;
+
+      try {
+        setIsClosingTrade(true);
+        await closeTrade(orderId);
+        await loadDashboardData(true);
+      } catch (error) {
+        Alert.alert(
+          "Unable to close trade",
+          error instanceof Error ? error.message : "Please try again.",
+        );
+      } finally {
+        setIsClosingTrade(false);
+      }
+    },
+    [isClosingTrade, loadDashboardData],
+  );
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [loadDashboardData, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = new WebSocket(getWebSocketUrl());
+
+    socket.onmessage = (event) => {
+      try {
+        const parsedMessage = JSON.parse(String(event.data));
+        const data =
+          typeof parsedMessage === "string"
+            ? JSON.parse(parsedMessage)
+            : parsedMessage;
+
+        if (!data.asset || data.bid === undefined || data.ask === undefined) {
+          return;
+        }
+
+        const bid = normalizeMarketPrice(data.bid);
+        const ask = normalizeMarketPrice(data.ask);
+
+        if (bid === null || ask === null) {
+          return;
+        }
+
+        const marketPrice = (bid + ask) / 2;
+        const symbol = String(data.asset).toUpperCase();
+
+        setLivePrices((previousPrices) => ({
+          ...previousPrices,
+          [symbol]: {
+            symbol,
+            bid,
+            ask,
+            marketPrice,
+            lastUpdated: Date.now(),
+          },
+        }));
+      } catch (error) {
+        console.warn("Unable to parse live price update", error);
+      }
+    };
+
+    socket.onerror = () => {
+      console.warn("Mobile price websocket connection failed");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [user]);
 
   return (
     <ScreenShell activeTab={activeTab} onTabChange={setActiveTab}>
@@ -1085,7 +1568,7 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
       >
         {activeTab === "wallet" ? (
           <WalletTab
-            data={dashboardData}
+            data={enhancedDashboardData}
             isRefreshing={isRefreshingData}
             onRefresh={refreshDashboardData}
             onTabChange={setActiveTab}
@@ -1094,14 +1577,16 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
         ) : null}
         {activeTab === "trade" ? (
           <TradesTab
-            data={dashboardData}
+            data={enhancedDashboardData}
+            isClosingTrade={isClosingTrade}
             isRefreshing={isRefreshingData}
+            onCloseTrade={handleCloseTrade}
             onRefresh={refreshDashboardData}
           />
         ) : null}
         {activeTab === "profile" ? (
           <ProfileTab
-            data={dashboardData}
+            data={enhancedDashboardData}
             errorMessage={dataError}
             isLoading={isLoadingData}
             isRefreshing={isRefreshingData}

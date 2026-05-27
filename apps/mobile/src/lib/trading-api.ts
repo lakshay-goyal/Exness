@@ -9,9 +9,14 @@ export type BackendOpenTrade = {
   leverage?: number;
   openPrice: number;
   currentPrice?: number;
+  marketPrice?: number;
+  bidPrice?: number;
+  askPrice?: number;
   openTime?: string;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
+  stippage?: number | null;
   status?: "open";
 };
 
@@ -28,6 +33,8 @@ export type BackendClosedTrade = {
   profitLoss?: number;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  slippage?: number | null;
+  stippage?: number | null;
   closeReason?: string | null;
   status?: "closed";
 };
@@ -63,6 +70,33 @@ async function backendRequest<T>(path: string, token: string) {
     const body = await response.json().catch(() => null);
     throw new Error(
       body?.message || body?.error || `Backend request failed: ${path}`,
+    );
+  }
+
+  return (await response.json()) as T;
+}
+
+async function backendMutation<T>(
+  path: string,
+  token: string,
+  body: Record<string, unknown>,
+) {
+  const response = await fetch(`${BACKEND_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.json().catch(() => null);
+    throw new Error(
+      responseBody?.message ||
+        responseBody?.error ||
+        `Backend request failed: ${path}`,
     );
   }
 
@@ -106,4 +140,16 @@ export async function fetchTradingProfileData(): Promise<TradingProfileData> {
     openTrades: parseArray<BackendOpenTrade>(openResponse.message),
     closedTrades: parseArray<BackendClosedTrade>(closedResponse.message),
   };
+}
+
+export async function closeTrade(orderId: string) {
+  const token = await getMobileAccessToken();
+
+  if (!token) {
+    throw new Error("No active mobile access token");
+  }
+
+  return backendMutation<{ message?: string }>("/api/v1/trade/close", token, {
+    orderId,
+  });
 }

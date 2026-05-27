@@ -12,11 +12,56 @@ import {
   isValidPin,
   verifyMobileRefreshToken,
 } from "../lib/mobile-auth.js";
+import { ensureTradingUser } from "../lib/trading-user.js";
 
 const authRouter = express.Router();
 
 // Use shared Redis Streams client from app.locals (initialized in index.ts)
 const jwtSecret = config.JWT_SECRET;
+
+async function getTradingUserForEmail(email: string) {
+  const existingTradingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingTradingUser) {
+    return existingTradingUser;
+  }
+
+  const authUser = await prisma.authUser.findUnique({
+    where: { email },
+  });
+
+  if (authUser) {
+    return ensureTradingUser(authUser.id, authUser.email);
+  }
+
+  return null;
+}
+
+async function ensureEngineUser(req: Request, userId: string, userEmail: string) {
+  const RedisStreams = req.app.locals.redisStreams as any;
+
+  const streamResult = await RedisStreams.addToRedisStream(
+    constant.redisStream,
+    {
+      function: "createUser",
+      userId,
+      userEmail,
+    },
+  );
+  const requestId = streamResult?.requestId;
+
+  if (!requestId) {
+    throw new Error("Failed to generate request ID");
+  }
+
+  return RedisStreams.readNextFromRedisStream(
+    constant.secondaryRedisStream,
+    5000,
+    { requestId },
+  );
+}
 
 authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
   const mobileUser = await getMobileAuthUser(req);
@@ -26,13 +71,23 @@ authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
   }
 
   const token = createLegacyJwt({
-    id: mobileUser.authUser.id,
-    email: mobileUser.authUser.email,
+    id: mobileUser.tradingUser.userID,
+    email: mobileUser.tradingUser.email,
   });
   const refreshToken = createMobileRefreshToken({
-    id: mobileUser.authUser.id,
-    email: mobileUser.authUser.email,
+    id: mobileUser.tradingUser.userID,
+    email: mobileUser.tradingUser.email,
   });
+
+  try {
+    await ensureEngineUser(
+      req,
+      mobileUser.tradingUser.userID,
+      mobileUser.tradingUser.email,
+    );
+  } catch (error) {
+    console.error("Failed to ensure mobile user in Engine:", error);
+  }
 
   return res.json({
     token,
@@ -41,8 +96,8 @@ authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
     accessTokenExpiresIn: 60 * 60 * 24 * 7,
     refreshTokenExpiresIn: 60 * 60 * 24 * 30,
     user: {
-      id: mobileUser.authUser.id,
-      email: mobileUser.authUser.email,
+      id: mobileUser.tradingUser.userID,
+      email: mobileUser.tradingUser.email,
       name: mobileUser.authUser.name,
       image: mobileUser.authUser.image,
       hasMobilePin: Boolean(mobileUser.authUser.mobilePinHash),
@@ -66,18 +121,30 @@ authRouter.post(
         return res.status(401).json({ error: "Invalid refresh token" });
       }
 
-      const authUser = await prisma.authUser.findUnique({
-        where: { id: refreshUser.id },
+      const tradingUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ userID: refreshUser.id }, { email: refreshUser.email }],
+        },
       });
 
-      if (!authUser || authUser.email !== refreshUser.email) {
+      if (!tradingUser || tradingUser.email !== refreshUser.email) {
         return res.status(401).json({ error: "Invalid refresh token" });
       }
 
-      const accessToken = createLegacyJwt({
-        id: authUser.id,
-        email: authUser.email,
+      const authUser = await prisma.authUser.findUnique({
+        where: { email: tradingUser.email },
       });
+
+      const accessToken = createLegacyJwt({
+        id: tradingUser.userID,
+        email: tradingUser.email,
+      });
+
+      try {
+        await ensureEngineUser(req, tradingUser.userID, tradingUser.email);
+      } catch (error) {
+        console.error("Failed to ensure refreshed mobile user in Engine:", error);
+      }
 
       return res.json({
         token: accessToken,
@@ -86,11 +153,11 @@ authRouter.post(
         accessTokenExpiresIn: 60 * 60 * 24 * 7,
         refreshTokenExpiresIn: 60 * 60 * 24 * 30,
         user: {
-          id: authUser.id,
-          email: authUser.email,
-          name: authUser.name,
-          image: authUser.image,
-          hasMobilePin: Boolean(authUser.mobilePinHash),
+          id: tradingUser.userID,
+          email: tradingUser.email,
+          name: authUser?.name || tradingUser.email,
+          image: authUser?.image,
+          hasMobilePin: Boolean(authUser?.mobilePinHash),
         },
       });
     } catch {
@@ -140,9 +207,9 @@ authRouter.post("/login", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server configuration error" });
   }
 
-  const userId = uuidv4();
-
   try {
+    const existingTradingUser = await getTradingUserForEmail(email);
+    const userId = existingTradingUser?.userID || uuidv4();
     const token = jwt.sign({ userId: userId, email: email }, jwtSecret);
 
     // Try to send email in production, but don't fail the request if it fails
@@ -263,11 +330,15 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid token payload." });
     }
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
         OR: [{ userID: userId }, { email: userEmail }],
       },
     });
+
+    if (!user) {
+      user = await getTradingUserForEmail(userEmail);
+    }
 
     if (!user) {
       console.log("User not found in database, creating user:", {
@@ -309,6 +380,7 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
             return res.json({
               success: true,
               exists: true,
+              userId: userAfterCreation.userID,
               message: "User verified and exists in database",
             });
           }
@@ -326,6 +398,7 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
     return res.json({
       success: true,
       exists: true,
+      userId: user.userID,
       message: "User verified and exists in database",
     });
   } catch (err) {
@@ -359,7 +432,18 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid token payload." });
     }
 
-    console.log("Ensuring user exists:", { userId, userEmail });
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ userID: userId }, { email: userEmail }],
+      },
+    });
+    const canonicalUserId = existingUser?.userID || userId;
+
+    console.log("Ensuring user exists:", {
+      userId: canonicalUserId,
+      tokenUserId: userId,
+      userEmail,
+    });
 
     const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
 
@@ -367,7 +451,7 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
       constant.redisStream,
       {
         function: "createUser",
-        userId,
+        userId: canonicalUserId,
         userEmail,
       },
     );
@@ -388,15 +472,18 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
         return res.json({
           success: true,
           message:
-            result.message === userId || result.message === "user Already Exist"
+            result.message === canonicalUserId ||
+            result.message === "user Already Exist"
               ? "User ensured in Engine and DBStorage"
               : "User creation initiated",
+          userId: canonicalUserId,
         });
       }
 
       return res.json({
         success: true,
         message: "User creation initiated",
+        userId: canonicalUserId,
       });
     } catch (e) {
       console.error("Error ensuring user:", e);

@@ -2,6 +2,7 @@ import { config } from "@repo/config";
 import { createUserFunction } from "./createUser.js";
 import { createOrderFunction } from "./createOrder.js";
 import { getOpenOrderFunction } from "./getOpenOrder.js";
+import { getCloseOrdersFunction } from "./getCloseOrders.js";
 import { createCloseOrderFunction } from "./createCloseOrder.js";
 import { pricePollerFunction } from "./pricePoller.js";
 
@@ -23,6 +24,9 @@ export async function tradeFunction(result: any) {
   }
   if (result.function === "getOpenOrder") {
     await getOpenOrderFunction(result);
+  }
+  if (result.function === "getCloseOrders") {
+    await getCloseOrdersFunction(result);
   }
   if (result.function === "pricePoller") {
     await pricePollerFunction(result);

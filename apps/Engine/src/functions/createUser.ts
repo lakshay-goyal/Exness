@@ -1,4 +1,5 @@
 import { users } from "../data/users.js";
+import { closeOrders, openOrders } from "../data/orders.js";
 import { redisStreams, config, constant } from "@repo/config";
 
 const INITIAL_USER_BALANCE = 500000;
@@ -26,7 +27,14 @@ export async function createUserFunction(result: any) {
     console.log("Updated users array:", users);
   } else {
     if (user.userId !== result.userId) {
+      const previousUserId = user.userId;
       user.userId = result.userId;
+      openOrders.forEach((order) => {
+        if (order.userId === previousUserId) order.userId = result.userId;
+      });
+      closeOrders.forEach((order) => {
+        if (order.userId === previousUserId) order.userId = result.userId;
+      });
       console.log("Updated user userId in memory:", user);
     }
     if (user.userEmail !== result.userEmail) {

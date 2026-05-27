@@ -5,9 +5,9 @@ export interface OpenOrders {
   type: "buy" | "sell";
   quantity: number;
   leverage: number;
-  takeProfit?: number;
-  stopLoss?: number;
-  stippage?: number;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
+  stippage?: number | null;
   openPrice: number;
   openTime: Date;
 }
@@ -41,12 +41,15 @@ export interface CloseOrders {
   type: "buy" | "sell";
   quantity: number;
   leverage: number;
-  takeProfit?: number;
-  stopLoss?: number;
-  stippage?: number;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
+  stippage?: number | null;
   openPrice: number;
   closePrice: number;
   openTime: Date;
   closeTime: Date;
   profitLoss: number;
+  closeReason?: "manual" | "take_profit" | "stop_loss";
 }
+
+export const closeOrders: CloseOrders[] = [];
