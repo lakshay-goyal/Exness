@@ -297,7 +297,7 @@ export default function App() {
   return (
     <View className="flex-1 bg-white">
       <StatusBar style="dark" />
-      <SafeAreaView className="flex-1">
+      <SafeAreaView className="flex-1" edges={["top", "left", "right"]}>
         <View className="relative flex-1 overflow-hidden">
           <View className="z-10 items-center px-6 pt-10">
             <Text

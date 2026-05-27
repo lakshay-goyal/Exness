@@ -64,10 +64,7 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
   });
 
   return (
-    <Animated.View
-      pointerEvents="auto"
-      style={[styles.container, { opacity }]}
-    >
+    <Animated.View pointerEvents="auto" style={[styles.container, { opacity }]}>
       <Animated.View
         style={[styles.logoWrap, { transform: [{ scale: ringScale }] }]}
       >
