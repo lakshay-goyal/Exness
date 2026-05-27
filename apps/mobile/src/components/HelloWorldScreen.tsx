@@ -44,49 +44,6 @@ type IconName =
   | "search"
   | "swap";
 
-const assets = [
-  {
-    name: "Ethereum",
-    symbol: "ETH",
-    amount: "0.00687 ETH",
-    value: "$18.98",
-    change: "+$0.36",
-    accent: "#F4F4F4",
-    network: "ETH",
-    trend: "up",
-  },
-  {
-    name: "USDC",
-    symbol: "USDC",
-    amount: "2.24262 USDC",
-    value: "$2.25",
-    change: "-<$0.01",
-    accent: "#2F86DE",
-    network: "ETH",
-    trend: "down",
-  },
-  {
-    name: "Solana",
-    symbol: "SOL",
-    amount: "0 SOL",
-    value: "$0.00",
-    change: "+$0.00",
-    accent: "#050505",
-    network: "SOL",
-    trend: "flat",
-  },
-  {
-    name: "Ethereum",
-    symbol: "ETH",
-    amount: "0 ETH",
-    value: "$0.00",
-    change: "+$0.00",
-    accent: "#F4F4F4",
-    network: "BASE",
-    trend: "flat",
-  },
-] as const;
-
 type DashboardData = {
   balance: number | null;
   openTrades: BackendOpenTrade[];
@@ -98,6 +55,8 @@ type LiveMarketPrice = {
   marketPrice: number;
   bid: number;
   ask: number;
+  change: number;
+  changePercent: number;
   lastUpdated: number;
 };
 
@@ -143,6 +102,16 @@ const getMarketCode = (symbol: string) => {
   return symbolUpper.replace(/[^A-Z0-9]/g, "");
 };
 
+const getMarketName = (symbol: string) => {
+  const marketCode = getMarketCode(symbol);
+
+  if (marketCode === "BTC") return "Bitcoin";
+  if (marketCode === "ETH") return "Ethereum";
+  if (marketCode === "SOL") return "Solana";
+
+  return marketCode;
+};
+
 const getLiveAssetCandidates = (symbol: string) => {
   const marketCode = getMarketCode(symbol);
   return [
@@ -174,6 +143,12 @@ const formatCurrency = (value?: number | null, digits = 2) => {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
+};
+
+const getPriceDigits = (value: number) => {
+  if (value >= 100) return 2;
+  if (value >= 1) return 4;
+  return 6;
 };
 
 const formatSignedCurrency = (value: number) => {
@@ -441,9 +416,8 @@ function BottomTabs({
                 size={27}
               />
               <Text
-                className={`text-[11px] font-extrabold tracking-normal ${
-                  isActive ? "text-[#A594F7]" : "text-[#8B8B8B]"
-                }`}
+                className={`text-[11px] font-extrabold tracking-normal ${isActive ? "text-[#A594F7]" : "text-[#8B8B8B]"
+                  }`}
               >
                 {label}
               </Text>
@@ -473,21 +447,20 @@ function Avatar({ user }: { user: MobileSessionResponse["user"] | null }) {
     return (
       <Image
         accessibilityIgnoresInvertColors
-        className="h-[54px] w-[54px] rounded-full bg-[#303231]"
+        className="h-[36px] w-[36px] rounded-full bg-[#303231]"
         source={{ uri: user.image }}
       />
     );
   }
 
   return (
-    <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-[#303231]">
+    <View className="h-[36px] w-[36px] items-center justify-center rounded-full bg-[#303231]">
       <Text className="text-[18px] font-black text-[#A594F7]">{initials}</Text>
     </View>
   );
 }
 
 function Header({
-  accountName = "Trading account",
   user,
 }: {
   accountName?: string;
@@ -495,24 +468,17 @@ function Header({
 }) {
   return (
     <View className="flex-row items-center justify-between px-6 pt-3">
-      <View className="flex-row items-center gap-4">
+      <View className="flex-row justify-center items-center gap-3">
         <Avatar user={user} />
         <View>
           <Text
             numberOfLines={1}
-            className="max-w-[210px] text-[15px] font-black text-[#8D9290]"
+            className="max-w-[210px] text-[15px] font-black text-[#8D9290] text-center"
           >
             @
             {user?.name?.replace(/\s+/g, "").toLowerCase() || "alexsmithmobbin"}
           </Text>
-          <Text className="text-[21px] font-black tracking-normal text-white">
-            {accountName} <Text className="text-[#C9CFCC]">v</Text>
-          </Text>
         </View>
-      </View>
-      <View className="flex-row items-center gap-4">
-        <Icon color="#F3F6F4" name="expand" size={31} />
-        <Icon color="#F3F6F4" name="search" size={34} />
       </View>
     </View>
   );
@@ -529,14 +495,10 @@ function ActionButton({ icon, label }: { icon: IconName; label: string }) {
   );
 }
 
-function TokenLogo({
-  network,
-  symbol,
-}: {
-  network: string;
-  symbol: "ETH" | "SOL" | "USDC";
-}) {
-  if (symbol === "ETH") {
+function MarketLogo({ symbol }: { symbol: string }) {
+  const marketCode = getMarketCode(symbol);
+
+  if (marketCode === "ETH") {
     return (
       <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#F2F2F2]">
         <Svg width={35} height={35} viewBox="0 0 32 32">
@@ -548,50 +510,88 @@ function TokenLogo({
     );
   }
 
-  if (symbol === "USDC") {
+  if (marketCode === "BTC") {
     return (
-      <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#2F86DE]">
-        <Text className="text-[29px] font-black text-white">$</Text>
-        <View className="absolute bottom-0 right-0 h-6 w-6 items-center justify-center rounded-full border-2 border-[#2B2D2D] bg-white">
-          <Text className="text-[11px] font-black text-[#222]">
-            {network[0]}
-          </Text>
-        </View>
+      <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#F7931A]">
+        <Text className="text-[31px] font-black text-white">B</Text>
+      </View>
+    );
+  }
+
+  if (marketCode === "SOL") {
+    return (
+      <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-black">
+        <View className="h-2 w-9 -skew-x-12 rounded-full bg-[#00FFA3]" />
+        <View className="my-1.5 h-2 w-9 -skew-x-12 rounded-full bg-[#64D7FF]" />
+        <View className="h-2 w-9 -skew-x-12 rounded-full bg-[#A855F7]" />
       </View>
     );
   }
 
   return (
-    <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-black">
-      <View className="h-2 w-9 -skew-x-12 rounded-full bg-[#00FFA3]" />
-      <View className="my-1.5 h-2 w-9 -skew-x-12 rounded-full bg-[#64D7FF]" />
-      <View className="h-2 w-9 -skew-x-12 rounded-full bg-[#A855F7]" />
+    <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#343837]">
+      <Text className="text-[22px] font-black text-white">
+        {marketCode.charAt(0)}
+      </Text>
     </View>
   );
 }
 
-function AssetRow({ asset }: { asset: (typeof assets)[number] }) {
-  const trendClass =
-    asset.trend === "up"
-      ? "text-[#28E978]"
-      : asset.trend === "down"
-        ? "text-[#FF5366]"
-        : "text-[#A2A2A2]";
+function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
+  const isUp = market.change >= 0;
+  const priceDigits = getPriceDigits(market.marketPrice);
+  const spread = Math.max(market.ask - market.bid, 0);
 
   return (
-    <View className="min-h-[78px] flex-row items-center rounded-[18px] bg-[#292C2B] px-4">
-      <TokenLogo network={asset.network} symbol={asset.symbol} />
-      <View className="ml-4 flex-1">
-        <Text className="text-[18px] font-black text-white">{asset.name}</Text>
-        <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
-          {asset.amount}
-        </Text>
+    <View className="rounded-[18px] bg-[#292C2B] px-4 py-4">
+      <View className="flex-row items-center">
+        <MarketLogo symbol={market.symbol} />
+        <View className="ml-4 flex-1">
+          <Text className="text-[18px] font-black text-white">
+            {getMarketName(market.symbol)}
+          </Text>
+          <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
+            {market.symbol}
+          </Text>
+        </View>
+        <View className="items-end">
+          <Text className="text-[18px] font-black text-white">
+            {formatCurrency(market.marketPrice, priceDigits)}
+          </Text>
+          <Text
+            className={`mt-1 text-[14px] font-black ${isUp ? "text-[#28E978]" : "text-[#FF5366]"
+              }`}
+          >
+            {`${formatSignedCurrency(market.change)} (${formatPercent(market.changePercent)})`}
+          </Text>
+        </View>
       </View>
-      <View className="items-end">
-        <Text className="text-[18px] font-black text-white">{asset.value}</Text>
-        <Text className={`mt-1 text-[14px] font-bold ${trendClass}`}>
-          {asset.change}
-        </Text>
+
+      <View className="mt-4 flex-row gap-3">
+        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+            Bid
+          </Text>
+          <Text className="mt-1 text-[14px] font-black text-white">
+            {formatCurrency(market.bid, priceDigits)}
+          </Text>
+        </View>
+        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+            Ask
+          </Text>
+          <Text className="mt-1 text-[14px] font-black text-white">
+            {formatCurrency(market.ask, priceDigits)}
+          </Text>
+        </View>
+        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+            Spread
+          </Text>
+          <Text className="mt-1 text-[14px] font-black text-white">
+            {formatCurrency(spread, priceDigits)}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -628,13 +628,13 @@ function InfoCard({
 function WalletTab({
   data,
   isRefreshing,
-  onTabChange,
+  livePrices,
   onRefresh,
   user,
 }: {
   data: DashboardData;
   isRefreshing: boolean;
-  onTabChange: (tab: DashboardTab) => void;
+  livePrices: Record<string, LiveMarketPrice>;
   onRefresh: () => void;
   user: MobileSessionResponse["user"] | null;
 }) {
@@ -669,6 +669,9 @@ function WalletTab({
   ] as const;
   const openPct =
     accountBalance && accountBalance > 0 ? (openPnl / accountBalance) * 100 : 0;
+  const liveCryptoMarkets = Object.values(livePrices).sort((a, b) =>
+    getMarketCode(a.symbol).localeCompare(getMarketCode(b.symbol)),
+  );
 
   return (
     <ScrollView
@@ -687,17 +690,15 @@ function WalletTab({
           </Text>
           <View className="mt-1 flex-row items-center gap-3">
             <Text
-              className={`text-[18px] font-black ${
-                openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-              }`}
+              className={`text-[18px] font-black ${openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                }`}
             >
               {formatSignedCurrency(openPnl)}
             </Text>
             <View className="rounded-lg bg-[#255F3C] px-3 py-1">
               <Text
-                className={`text-[16px] font-black ${
-                  openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-                }`}
+                className={`text-[16px] font-black ${openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                  }`}
               >
                 {formatPercent(openPct)}
               </Text>
@@ -705,47 +706,37 @@ function WalletTab({
           </View>
         </View>
 
-        <View className="mt-8 flex-row gap-3 px-6">
-          <ActionButton icon="arrowDown" label="Receive" />
-          <ActionButton icon="arrowUp" label="Send" />
-          <ActionButton icon="swap" label="Swap" />
-          <ActionButton icon="buy" label="Buy" />
-        </View>
-      </View>
-
-      <View className="px-6 pt-6">
-        <View className="flex-row flex-wrap gap-3">
+        <View className="flex-row flex-wrap gap-3 pt-12 px-6">
           {accountStats.map((stat) => (
-            <View key={stat.label} className="w-[48%] flex-1 basis-[47%]">
+            <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
               <InfoCard {...stat} />
             </View>
           ))}
         </View>
+      </View>
 
-        <Pressable className="mt-5 min-h-[86px] flex-row items-center rounded-[18px] bg-[#292C2B] px-4 active:opacity-75">
-          <View className="h-[58px] w-[58px] items-center justify-center">
-            <Icon color="#A594F7" name="search" size={55} />
-          </View>
-          <Text className="ml-4 flex-1 text-[16px] font-black leading-6 text-white">
-            Search from Explore to find new tokens faster
-          </Text>
-          <Text className="text-[20px] font-black text-[#777]">x</Text>
-        </Pressable>
+      <View className="px-6 pt-6">
+
 
         <View className="mt-8 flex-row items-center justify-between">
-          <Text className="text-[21px] font-black text-white">Assets</Text>
-          <Pressable onPress={() => onTabChange("trade")}>
-            <Text className="text-[15px] font-black text-[#A594F7]">Trade</Text>
-          </Pressable>
+          <Text className="text-[21px] font-black text-white">
+            Live crypto values
+          </Text>
         </View>
 
         <View className="mt-4 gap-4">
-          {assets.map((asset, index) => (
-            <AssetRow
-              key={`${asset.name}-${asset.network}-${index}`}
-              asset={asset}
-            />
-          ))}
+          {liveCryptoMarkets.length === 0 ? (
+            <View className="min-h-[110px] items-center justify-center rounded-[18px] bg-[#292C2B] px-5 py-5">
+              <ActivityIndicator color="#A594F7" />
+              <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
+                Waiting for live crypto prices
+              </Text>
+            </View>
+          ) : (
+            liveCryptoMarkets.map((market) => (
+              <LiveCryptoRow key={market.symbol} market={market} />
+            ))
+          )}
         </View>
       </View>
     </ScrollView>
@@ -796,16 +787,14 @@ function TradeCard({
         </View>
         <View className="items-end">
           <Text
-            className={`text-[20px] font-black ${
-              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-            }`}
+            className={`text-[20px] font-black ${pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+              }`}
           >
             {formatSignedCurrency(pnl)}
           </Text>
           <Text
-            className={`mt-1 text-[14px] font-black ${
-              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-            }`}
+            className={`mt-1 text-[14px] font-black ${pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+              }`}
           >
             {formatPercent(pnlPct)}
           </Text>
@@ -878,9 +867,8 @@ function ClosedTradeCard({
           </Text>
         </View>
         <Text
-          className={`text-[20px] font-black ${
-            isPositive ? "text-[#28E978]" : "text-[#FF5366]"
-          }`}
+          className={`text-[20px] font-black ${isPositive ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
         >
           {formatSignedCurrency(pnl)}
         </Text>
@@ -960,9 +948,9 @@ function TradeDetailsModal({
   onCloseTrade: (orderId: string) => void;
   onDismiss: () => void;
   selectedTrade:
-    | { status: "open"; trade: BackendOpenTrade }
-    | { status: "closed"; trade: BackendClosedTrade }
-    | null;
+  | { status: "open"; trade: BackendOpenTrade }
+  | { status: "closed"; trade: BackendClosedTrade }
+  | null;
 }) {
   if (!selectedTrade) return null;
 
@@ -994,14 +982,12 @@ function TradeDetailsModal({
                   {symbol}
                 </Text>
                 <View
-                  className={`rounded-full px-3 py-1 ${
-                    isOpen ? "bg-[#235638]" : "bg-[#343635]"
-                  }`}
+                  className={`rounded-full px-3 py-1 ${isOpen ? "bg-[#235638]" : "bg-[#343635]"
+                    }`}
                 >
                   <Text
-                    className={`text-[12px] font-black ${
-                      isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
-                    }`}
+                    className={`text-[12px] font-black ${isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
+                      }`}
                   >
                     {isOpen ? "Open" : "Closed"}
                   </Text>
@@ -1178,105 +1164,101 @@ function TradesTab({
         }
         showsVerticalScrollIndicator={false}
       >
-      <View className="flex-row items-center justify-between">
-        <View>
-          <Text className="text-[28px] font-black text-white">Trade</Text>
-          <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
-            {isOpen
-              ? "Positions currently live in the market."
-              : "Completed positions and realized returns."}
-          </Text>
-        </View>
-        <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-[#292C2B]">
-          <Icon color="#A594F7" name={isOpen ? "swap" : "check"} size={31} />
-        </View>
-      </View>
-
-      <View className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5">
-        <Pressable
-          className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
-            isOpen ? "bg-[#A594F7]" : ""
-          }`}
-          onPress={() => setKind("open")}
-        >
-          <Text
-            className={`text-[15px] font-black ${
-              isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-            }`}
-          >
-            Open
-          </Text>
-        </Pressable>
-        <Pressable
-          className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
-            !isOpen ? "bg-[#A594F7]" : ""
-          }`}
-          onPress={() => setKind("closed")}
-        >
-          <Text
-            className={`text-[15px] font-black ${
-              !isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-            }`}
-          >
-            Closed
-          </Text>
-        </Pressable>
-      </View>
-
-      <View className="mt-6 flex-row gap-3">
-        <InfoCard
-          label={isOpen ? "Open Value" : "Realized"}
-          tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
-          value={
-            isOpen
-              ? formatSignedCurrency(openPnl)
-              : formatSignedCurrency(closedPnl)
-          }
-        />
-        <InfoCard
-          label={isOpen ? "Open Count" : "Closed Count"}
-          tone="up"
-          value={`${visibleTrades.length}`}
-        />
-      </View>
-
-      <View className="mt-6 gap-4">
-        {visibleTrades.length === 0 ? (
-          <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
-            <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
-              {isOpen ? "No open trades." : "No closed trades."}
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-[28px] font-black text-white">Trade</Text>
+            <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
+              {isOpen
+                ? "Positions currently live in the market."
+                : "Completed positions and realized returns."}
             </Text>
           </View>
-        ) : isOpen ? (
-          data.openTrades.map((trade) => (
-            <TradeCard
-              key={trade.orderId}
-              isClosing={isClosingTrade}
-              onClose={() => onCloseTrade(trade.orderId)}
-              onPress={() =>
-                setSelectedTrade({
-                  status: "open",
-                  orderId: trade.orderId,
-                })
-              }
-              trade={trade}
-            />
-          ))
-        ) : (
-          data.closedTrades.map((trade) => (
-            <ClosedTradeCard
-              key={trade.orderId}
-              onPress={() =>
-                setSelectedTrade({
-                  status: "closed",
-                  orderId: trade.orderId,
-                })
-              }
-              trade={trade}
-            />
-          ))
-        )}
-      </View>
+          <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-[#292C2B]">
+            <Icon color="#A594F7" name={isOpen ? "swap" : "check"} size={31} />
+          </View>
+        </View>
+
+        <View className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5">
+          <Pressable
+            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${isOpen ? "bg-[#A594F7]" : ""
+              }`}
+            onPress={() => setKind("open")}
+          >
+            <Text
+              className={`text-[15px] font-black ${isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
+                }`}
+            >
+              Open
+            </Text>
+          </Pressable>
+          <Pressable
+            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${!isOpen ? "bg-[#A594F7]" : ""
+              }`}
+            onPress={() => setKind("closed")}
+          >
+            <Text
+              className={`text-[15px] font-black ${!isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
+                }`}
+            >
+              Closed
+            </Text>
+          </Pressable>
+        </View>
+
+        <View className="mt-6 flex-row gap-3">
+          <InfoCard
+            label={isOpen ? "Open Value" : "Realized"}
+            tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
+            value={
+              isOpen
+                ? formatSignedCurrency(openPnl)
+                : formatSignedCurrency(closedPnl)
+            }
+          />
+          <InfoCard
+            label={isOpen ? "Open Count" : "Closed Count"}
+            tone="up"
+            value={`${visibleTrades.length}`}
+          />
+        </View>
+
+        <View className="mt-6 gap-4">
+          {visibleTrades.length === 0 ? (
+            <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
+              <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
+                {isOpen ? "No open trades." : "No closed trades."}
+              </Text>
+            </View>
+          ) : isOpen ? (
+            data.openTrades.map((trade) => (
+              <TradeCard
+                key={trade.orderId}
+                isClosing={isClosingTrade}
+                onClose={() => onCloseTrade(trade.orderId)}
+                onPress={() =>
+                  setSelectedTrade({
+                    status: "open",
+                    orderId: trade.orderId,
+                  })
+                }
+                trade={trade}
+              />
+            ))
+          ) : (
+            data.closedTrades.map((trade) => (
+              <ClosedTradeCard
+                key={trade.orderId}
+                onPress={() =>
+                  setSelectedTrade({
+                    status: "closed",
+                    orderId: trade.orderId,
+                  })
+                }
+                trade={trade}
+              />
+            ))
+          )}
+        </View>
       </ScrollView>
 
       <TradeDetailsModal
@@ -1532,16 +1514,29 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
         const marketPrice = (bid + ask) / 2;
         const symbol = String(data.asset).toUpperCase();
 
-        setLivePrices((previousPrices) => ({
-          ...previousPrices,
-          [symbol]: {
-            symbol,
-            bid,
-            ask,
-            marketPrice,
-            lastUpdated: Date.now(),
-          },
-        }));
+        setLivePrices((previousPrices) => {
+          const previousPrice = previousPrices[symbol];
+          const change = previousPrice
+            ? marketPrice - previousPrice.marketPrice
+            : 0;
+          const changePercent =
+            previousPrice && previousPrice.marketPrice !== 0
+              ? (change / previousPrice.marketPrice) * 100
+              : 0;
+
+          return {
+            ...previousPrices,
+            [symbol]: {
+              symbol,
+              bid,
+              ask,
+              marketPrice,
+              change,
+              changePercent,
+              lastUpdated: Date.now(),
+            },
+          };
+        });
       } catch (error) {
         console.warn("Unable to parse live price update", error);
       }
@@ -1570,8 +1565,8 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
           <WalletTab
             data={enhancedDashboardData}
             isRefreshing={isRefreshingData}
+            livePrices={livePrices}
             onRefresh={refreshDashboardData}
-            onTabChange={setActiveTab}
             user={user}
           />
         ) : null}
