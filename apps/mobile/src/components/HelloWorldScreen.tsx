@@ -3,15 +3,19 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { LineChart } from "react-native-gifted-charts";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,7 +23,10 @@ import { MobileSessionResponse } from "@/lib/mobile-auth-api";
 import {
   BackendClosedTrade,
   BackendOpenTrade,
+  CandleInterval,
   closeTrade,
+  createTrade,
+  fetchCandles,
   fetchTradingProfileData,
 } from "@/lib/trading-api";
 import { BACKEND_URL } from "@/lib/auth-client";
@@ -60,9 +67,31 @@ type LiveMarketPrice = {
   lastUpdated: number;
 };
 
+type ChartPoint = {
+  value: number;
+  dataPointText: string;
+  date: string;
+  label?: string;
+  labelTextStyle?: {
+    color: string;
+    fontSize: number;
+    width: number;
+  };
+};
+
 type SelectedTrade =
   | { status: "open"; orderId: string }
   | { status: "closed"; orderId: string };
+
+const candleIntervals: { label: string; value: CandleInterval }[] = [
+  { label: "1m", value: "1m" },
+  { label: "5m", value: "5m" },
+  { label: "15m", value: "15m" },
+  { label: "30m", value: "30m" },
+  { label: "1h", value: "1h" },
+  { label: "4h", value: "4h" },
+  { label: "1d", value: "1d" },
+];
 
 const emptyDashboardData: DashboardData = {
   balance: null,
@@ -199,6 +228,27 @@ const formatDateTime = (value?: string) => {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  }).format(date);
+};
+
+const formatChartDate = (value: string, interval: CandleInterval) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  if (interval === "1d") {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).format(date);
 };
 
@@ -416,8 +466,9 @@ function BottomTabs({
                 size={27}
               />
               <Text
-                className={`text-[11px] font-extrabold tracking-normal ${isActive ? "text-[#A594F7]" : "text-[#8B8B8B]"
-                  }`}
+                className={`text-[11px] font-extrabold tracking-normal ${
+                  isActive ? "text-[#A594F7]" : "text-[#8B8B8B]"
+                }`}
               >
                 {label}
               </Text>
@@ -537,13 +588,23 @@ function MarketLogo({ symbol }: { symbol: string }) {
   );
 }
 
-function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
+function LiveCryptoRow({
+  market,
+  onPress,
+}: {
+  market: LiveMarketPrice;
+  onPress: () => void;
+}) {
   const isUp = market.change >= 0;
   const priceDigits = getPriceDigits(market.marketPrice);
   const spread = Math.max(market.ask - market.bid, 0);
 
   return (
-    <View className="rounded-[18px] bg-[#292C2B] px-4 py-4">
+    <Pressable
+      accessibilityRole="button"
+      className="rounded-[18px] bg-[#292C2B] px-4 py-4 active:opacity-80"
+      onPress={onPress}
+    >
       <View className="flex-row items-center">
         <MarketLogo symbol={market.symbol} />
         <View className="ml-4 flex-1">
@@ -559,8 +620,9 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
             {formatCurrency(market.marketPrice, priceDigits)}
           </Text>
           <Text
-            className={`mt-1 text-[14px] font-black ${isUp ? "text-[#28E978]" : "text-[#FF5366]"
-              }`}
+            className={`mt-1 text-[14px] font-black ${
+              isUp ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
           >
             {`${formatSignedCurrency(market.change)} (${formatPercent(market.changePercent)})`}
           </Text>
@@ -593,7 +655,7 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
           </Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -625,19 +687,676 @@ function InfoCard({
   );
 }
 
+function MarketTradeBottomSheet({
+  data,
+  market,
+  onDismiss,
+  onTradeCreated,
+}: {
+  data: DashboardData;
+  market: LiveMarketPrice | null;
+  onDismiss: () => void;
+  onTradeCreated: () => void | Promise<void>;
+}) {
+  const { width } = useWindowDimensions();
+  const [selectedInterval, setSelectedInterval] =
+    useState<CandleInterval>("1m");
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [chartRetry, setChartRetry] = useState(0);
+  const [orderVolume, setOrderVolume] = useState("0.01");
+  const [leverage, setLeverage] = useState("100");
+  const [takeProfit, setTakeProfit] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
+  const [slippage, setSlippage] = useState("0.5");
+  const [submitSide, setSubmitSide] = useState<"buy" | "sell" | null>(null);
+
+  const marketSymbol = market?.symbol ?? null;
+  const sheetWidth = Math.min(width, 520);
+  const chartWidth = Math.max(sheetWidth - 92, 250);
+  const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
+  const leverageNumber = Number.parseInt(leverage, 10);
+  const leverageIsValid =
+    Number.isInteger(leverageNumber) && leverageNumber > 0;
+  const marginRequired = market
+    ? (market.marketPrice * orderVolumeNumber) /
+      (leverageIsValid ? leverageNumber : 1)
+    : null;
+  const reservedMargin = data.openTrades.reduce(
+    (total, trade) => total + getTradeMargin(trade),
+    0,
+  );
+  const floatingPnl = data.openTrades.reduce(
+    (total, trade) => total + getTradePnl(trade),
+    0,
+  );
+  const accountFreeMargin =
+    data.balance === null ? null : data.balance + floatingPnl;
+  const estimatedFreeMargin =
+    accountFreeMargin !== null && marginRequired !== null
+      ? accountFreeMargin - marginRequired
+      : null;
+  const priceDigits = market ? getPriceDigits(market.marketPrice) : 2;
+  const spread = market ? Math.max(market.ask - market.bid, 0) : 0;
+  const chartValues = chartData.map((point) => point.value);
+  const dataMax = chartValues.length ? Math.max(...chartValues) : 0;
+  const dataMin = chartValues.length ? Math.min(...chartValues) : 0;
+  const chartPadding = Math.max((dataMax - dataMin) * 0.15, dataMax * 0.002, 1);
+  const yAxisOffset = Math.max(dataMin - chartPadding, 0);
+  const chartMaxValue = Math.max(dataMax - yAxisOffset + chartPadding, 1);
+
+  useEffect(() => {
+    if (!marketSymbol) return;
+
+    let isCancelled = false;
+
+    async function loadChart() {
+      if (!marketSymbol) return;
+
+      setChartLoading(true);
+      setChartError(null);
+
+      try {
+        const candles = await fetchCandles(marketSymbol, selectedInterval);
+        const points = candles
+          .map((candle) => {
+            const value = Number(candle.close);
+            if (!Number.isFinite(value)) return null;
+
+            return {
+              time: candle.time,
+              value,
+            };
+          })
+          .filter(
+            (point): point is { time: string; value: number } => point !== null,
+          );
+        const labelEvery = Math.max(1, Math.floor(points.length / 4));
+        const nextChartData = points.map((point, index) => {
+          const date = formatChartDate(point.time, selectedInterval);
+          const shouldShowLabel =
+            index % labelEvery === 0 || index === points.length - 1;
+
+          return {
+            value: point.value,
+            dataPointText: point.value.toFixed(priceDigits),
+            date,
+            ...(shouldShowLabel
+              ? {
+                  label: date,
+                  labelTextStyle: {
+                    color: "#858585",
+                    fontSize: 10,
+                    width: 58,
+                  },
+                }
+              : {}),
+          };
+        });
+
+        if (!isCancelled) {
+          setChartData(nextChartData);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setChartError(
+            error instanceof Error
+              ? error.message
+              : "Chart data is unavailable",
+          );
+          setChartData([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setChartLoading(false);
+        }
+      }
+    }
+
+    loadChart();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chartRetry, marketSymbol, selectedInterval]);
+
+  if (!market) return null;
+
+  const updateNumericValue = (
+    value: string,
+    fallback: number,
+    delta: number,
+    min: number,
+    digits = 2,
+  ) => {
+    const parsed = Number.parseFloat(value);
+    const next = Math.max(
+      min,
+      (Number.isFinite(parsed) ? parsed : fallback) + delta,
+    );
+    return digits === 0 ? String(Math.round(next)) : next.toFixed(digits);
+  };
+
+  const submitOrder = async (type: "buy" | "sell") => {
+    const entryPrice = type === "buy" ? market.ask : market.bid;
+    const takeProfitValue = takeProfit
+      ? Number.parseFloat(takeProfit)
+      : undefined;
+    const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
+    const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
+
+    if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
+      Alert.alert("Invalid volume", "Volume must be greater than 0.");
+      return;
+    }
+
+    if (!leverageIsValid) {
+      Alert.alert(
+        "Invalid leverage",
+        "Leverage must be a positive whole number.",
+      );
+      return;
+    }
+
+    if (
+      slippageValue !== undefined &&
+      (!Number.isFinite(slippageValue) || slippageValue < 0)
+    ) {
+      Alert.alert(
+        "Invalid slippage",
+        "Slippage must be zero or a positive number.",
+      );
+      return;
+    }
+
+    if (
+      (takeProfitValue !== undefined &&
+        (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0)) ||
+      (stopLossValue !== undefined &&
+        (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
+    ) {
+      Alert.alert(
+        "Invalid protection",
+        "Take profit and stop loss must be positive numbers.",
+      );
+      return;
+    }
+
+    if (
+      takeProfitValue !== undefined &&
+      (type === "buy"
+        ? takeProfitValue <= entryPrice
+        : takeProfitValue >= entryPrice)
+    ) {
+      Alert.alert(
+        "Invalid take profit",
+        type === "buy"
+          ? "For buy orders, take profit must be above the buy price."
+          : "For sell orders, take profit must be below the sell price.",
+      );
+      return;
+    }
+
+    if (
+      stopLossValue !== undefined &&
+      (type === "buy"
+        ? stopLossValue >= entryPrice
+        : stopLossValue <= entryPrice)
+    ) {
+      Alert.alert(
+        "Invalid stop loss",
+        type === "buy"
+          ? "For buy orders, stop loss must be below the buy price."
+          : "For sell orders, stop loss must be above the sell price.",
+      );
+      return;
+    }
+
+    try {
+      setSubmitSide(type);
+      await createTrade({
+        symbol: market.symbol,
+        type,
+        quantity: orderVolumeNumber,
+        leverage: leverageNumber,
+        slippage: slippageValue,
+        takeProfit: takeProfitValue,
+        stopLoss: stopLossValue,
+      });
+      await onTradeCreated();
+      Alert.alert(
+        "Order created",
+        `${type === "buy" ? "Buy" : "Sell"} order created successfully.`,
+      );
+      onDismiss();
+    } catch (error) {
+      Alert.alert(
+        "Unable to create order",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setSubmitSide(null);
+    }
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible onRequestClose={onDismiss}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1 justify-end bg-black/70"
+      >
+        <Pressable className="flex-1" onPress={onDismiss} />
+        <View className="max-h-[92%] rounded-t-[30px] bg-[#1F2221] px-5 pb-7 pt-4">
+          <View className="mb-4 h-1.5 w-14 self-center rounded-full bg-[#444846]" />
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="flex-1">
+              <Text className="text-[25px] font-black text-white">
+                {getMarketName(market.symbol)}
+              </Text>
+              <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
+                {market.symbol} | Bid {formatCurrency(market.bid, priceDigits)}{" "}
+                | Ask {formatCurrency(market.ask, priceDigits)}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              className="h-10 w-10 items-center justify-center rounded-full bg-[#292C2B]"
+              onPress={onDismiss}
+            >
+              <Text className="text-[18px] font-black text-white">x</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
+            <View className="rounded-[22px] bg-[#292C2B] px-4 py-4">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
+                    Market price
+                  </Text>
+                  <Text className="mt-1 text-[24px] font-black text-white">
+                    {formatCurrency(market.marketPrice, priceDigits)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text
+                    className={`text-[16px] font-black ${
+                      market.change >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                    }`}
+                  >
+                    {formatPercent(market.changePercent)}
+                  </Text>
+                  <Text className="mt-1 text-[12px] font-bold text-[#9A9A9A]">
+                    Spread {formatCurrency(spread, priceDigits)}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="mt-4 flex-row rounded-[14px] bg-[#222524] p-1">
+                {candleIntervals.map((interval) => {
+                  const isActive = selectedInterval === interval.value;
+                  return (
+                    <Pressable
+                      key={interval.value}
+                      className={`h-9 flex-1 items-center justify-center rounded-[11px] ${
+                        isActive ? "bg-[#A594F7]" : ""
+                      }`}
+                      onPress={() => setSelectedInterval(interval.value)}
+                    >
+                      <Text
+                        className={`text-[12px] font-black ${
+                          isActive ? "text-[#151515]" : "text-[#9A9A9A]"
+                        }`}
+                      >
+                        {interval.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View className="mt-4 min-h-[286px] justify-center overflow-hidden rounded-[18px] bg-[#111827] px-2 py-4">
+                {chartLoading ? (
+                  <View className="items-center justify-center py-16">
+                    <ActivityIndicator color="#A594F7" />
+                    <Text className="mt-3 text-[13px] font-bold text-[#9A9A9A]">
+                      Loading chart
+                    </Text>
+                  </View>
+                ) : chartError ? (
+                  <View className="items-center justify-center px-4 py-12">
+                    <Text className="text-center text-[14px] font-bold text-[#FF8C99]">
+                      {chartError}
+                    </Text>
+                    <Pressable
+                      className="mt-4 rounded-full bg-[#A594F7] px-5 py-2"
+                      onPress={() => setChartRetry((value) => value + 1)}
+                    >
+                      <Text className="text-[13px] font-black text-[#151515]">
+                        Retry
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : chartData.length === 0 ? (
+                  <View className="items-center justify-center py-16">
+                    <Text className="text-center text-[14px] font-bold text-[#9A9A9A]">
+                      No candle history available for this market.
+                    </Text>
+                  </View>
+                ) : (
+                  <LineChart
+                    areaChart
+                    data={chartData}
+                    width={chartWidth}
+                    height={210}
+                    hideDataPoints
+                    spacing={Math.max(
+                      5,
+                      Math.min(
+                        13,
+                        chartWidth / Math.max(chartData.length - 1, 1),
+                      ),
+                    )}
+                    color="#A594F7"
+                    thickness={2}
+                    startFillColor="rgba(165,148,247,0.32)"
+                    endFillColor="rgba(165,148,247,0.03)"
+                    startOpacity={0.9}
+                    endOpacity={0.2}
+                    initialSpacing={0}
+                    endSpacing={8}
+                    noOfSections={4}
+                    maxValue={chartMaxValue}
+                    yAxisOffset={yAxisOffset}
+                    yAxisColor="rgba(148,163,184,0.35)"
+                    yAxisThickness={1}
+                    yAxisLabelWidth={54}
+                    rulesType="dotted"
+                    rulesColor="rgba(148,163,184,0.22)"
+                    yAxisTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                    xAxisColor="rgba(148,163,184,0.35)"
+                    xAxisLabelTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                    pointerConfig={{
+                      pointerStripHeight: 210,
+                      pointerStripColor: "rgba(148,163,184,0.5)",
+                      pointerStripWidth: 1,
+                      pointerColor: "#A594F7",
+                      radius: 4,
+                      activatePointersOnLongPress: true,
+                      autoAdjustPointerLabelPosition: true,
+                      pointerLabelComponent: (items: ChartPoint[]) => (
+                        <View className="items-center rounded-lg bg-[#A594F7] px-2 py-1">
+                          <Text className="text-[10px] font-bold text-[#151515]">
+                            {items[0]?.date || "--"}
+                          </Text>
+                          <Text className="text-[11px] font-black text-[#151515]">
+                            {formatCurrency(items[0]?.value, priceDigits)}
+                          </Text>
+                        </View>
+                      ),
+                    }}
+                  />
+                )}
+              </View>
+            </View>
+
+            <View className="mt-5 rounded-[22px] bg-[#292C2B] px-4 py-4">
+              <Text className="text-[18px] font-black text-white">
+                New trade
+              </Text>
+
+              <View className="mt-4 gap-3">
+                <TradeInputRow label="Volume">
+                  <StepperButton
+                    disabled={submitSide !== null}
+                    label="-"
+                    onPress={() =>
+                      setOrderVolume((value) =>
+                        updateNumericValue(value, 0.01, -0.01, 0.01, 2),
+                      )
+                    }
+                  />
+                  <TradeTextInput
+                    editable={submitSide === null}
+                    keyboardType="decimal-pad"
+                    onChangeText={setOrderVolume}
+                    value={orderVolume}
+                  />
+                  <StepperButton
+                    disabled={submitSide !== null}
+                    label="+"
+                    onPress={() =>
+                      setOrderVolume((value) =>
+                        updateNumericValue(value, 0.01, 0.01, 0.01, 2),
+                      )
+                    }
+                  />
+                </TradeInputRow>
+
+                <TradeInputRow label="Leverage">
+                  <StepperButton
+                    disabled={submitSide !== null}
+                    label="-"
+                    onPress={() =>
+                      setLeverage((value) =>
+                        updateNumericValue(value, 100, -1, 1, 0),
+                      )
+                    }
+                  />
+                  <TradeTextInput
+                    editable={submitSide === null}
+                    keyboardType="number-pad"
+                    onChangeText={setLeverage}
+                    value={leverage}
+                  />
+                  <StepperButton
+                    disabled={submitSide !== null}
+                    label="+"
+                    onPress={() =>
+                      setLeverage((value) =>
+                        updateNumericValue(value, 100, 1, 1, 0),
+                      )
+                    }
+                  />
+                </TradeInputRow>
+
+                <TradeInputRow label="Take Profit">
+                  <TradeTextInput
+                    editable={submitSide === null}
+                    keyboardType="decimal-pad"
+                    onChangeText={setTakeProfit}
+                    placeholder="Not set"
+                    value={takeProfit}
+                  />
+                </TradeInputRow>
+
+                <TradeInputRow label="Stop Loss">
+                  <TradeTextInput
+                    editable={submitSide === null}
+                    keyboardType="decimal-pad"
+                    onChangeText={setStopLoss}
+                    placeholder="Not set"
+                    value={stopLoss}
+                  />
+                </TradeInputRow>
+
+                <TradeInputRow label="Slippage (%)">
+                  <TradeTextInput
+                    editable={submitSide === null}
+                    keyboardType="decimal-pad"
+                    onChangeText={setSlippage}
+                    placeholder="0.5"
+                    value={slippage}
+                  />
+                </TradeInputRow>
+              </View>
+
+              <View className="mt-4 rounded-[16px] bg-[#222524] px-4 py-4">
+                <SummaryRow
+                  label="Margin Required"
+                  value={formatCurrency(marginRequired)}
+                />
+                <SummaryRow
+                  label="Free Margin"
+                  tone={(estimatedFreeMargin ?? 0) >= 0 ? "up" : "down"}
+                  value={formatCurrency(estimatedFreeMargin)}
+                />
+                <SummaryRow
+                  label="Reserved Margin"
+                  value={formatCurrency(reservedMargin)}
+                />
+                <SummaryRow
+                  label="Leverage"
+                  value={leverageIsValid ? `${leverageNumber}x` : "--"}
+                />
+              </View>
+
+              <View className="mt-4 flex-row gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#EF233C] active:opacity-75"
+                  disabled={submitSide !== null}
+                  onPress={() => submitOrder("sell")}
+                >
+                  <Text className="text-[16px] font-black text-white">
+                    {submitSide === "sell" ? "Selling..." : "Sell"}
+                  </Text>
+                  <Text className="mt-1 text-[11px] font-black text-white">
+                    {formatCurrency(market.bid, priceDigits)}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#009B72] active:opacity-75"
+                  disabled={submitSide !== null}
+                  onPress={() => submitOrder("buy")}
+                >
+                  <Text className="text-[16px] font-black text-white">
+                    {submitSide === "buy" ? "Buying..." : "Buy"}
+                  </Text>
+                  <Text className="mt-1 text-[11px] font-black text-white">
+                    {formatCurrency(market.ask, priceDigits)}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function TradeInputRow({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <View>
+      <Text className="mb-2 text-[12px] font-extrabold uppercase text-[#858585]">
+        {label}
+      </Text>
+      <View className="flex-row items-center gap-2">{children}</View>
+    </View>
+  );
+}
+
+function TradeTextInput({
+  editable,
+  keyboardType,
+  onChangeText,
+  placeholder,
+  value,
+}: {
+  editable: boolean;
+  keyboardType: "decimal-pad" | "number-pad";
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+  value: string;
+}) {
+  return (
+    <TextInput
+      className="h-11 flex-1 rounded-[14px] bg-[#1C1F1E] px-4 text-center text-[15px] font-black text-white"
+      editable={editable}
+      keyboardType={keyboardType}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#777D7A"
+      value={value}
+    />
+  );
+}
+
+function StepperButton({
+  disabled,
+  label,
+  onPress,
+}: {
+  disabled: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#1C1F1E] active:opacity-75"
+      disabled={disabled}
+      onPress={onPress}
+    >
+      <Text className="text-[20px] font-black text-white">{label}</Text>
+    </Pressable>
+  );
+}
+
+function SummaryRow({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone?: "up" | "down";
+  value: string;
+}) {
+  const valueClass =
+    tone === "up"
+      ? "text-[#28E978]"
+      : tone === "down"
+        ? "text-[#FF5366]"
+        : "text-white";
+
+  return (
+    <View className="flex-row items-center justify-between py-1.5">
+      <Text className="text-[12px] font-bold text-[#9A9A9A]">{label}</Text>
+      <Text className={`text-[13px] font-black ${valueClass}`}>{value}</Text>
+    </View>
+  );
+}
+
 function WalletTab({
   data,
   isRefreshing,
   livePrices,
+  onMarketTradeCreated,
   onRefresh,
   user,
 }: {
   data: DashboardData;
   isRefreshing: boolean;
   livePrices: Record<string, LiveMarketPrice>;
+  onMarketTradeCreated: () => void | Promise<void>;
   onRefresh: () => void;
   user: MobileSessionResponse["user"] | null;
 }) {
+  const [selectedMarketSymbol, setSelectedMarketSymbol] = useState<
+    string | null
+  >(null);
+  const selectedMarket = selectedMarketSymbol
+    ? (livePrices[selectedMarketSymbol] ?? null)
+    : null;
   const openPnl = data.openTrades.reduce(
     (total, trade) => total + getTradePnl(trade),
     0,
@@ -674,72 +1393,85 @@ function WalletTab({
   );
 
   return (
-    <ScrollView
-      className="flex-1"
-      contentContainerClassName="pb-28"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      <View className="bg-[#173120] pb-6">
-        <Header user={user} />
-        <View className="items-center px-6 pt-8">
-          <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
-            {formatCurrency(accountEquity)}
-          </Text>
-          <View className="mt-1 flex-row items-center gap-3">
-            <Text
-              className={`text-[18px] font-black ${openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-                }`}
-            >
-              {formatSignedCurrency(openPnl)}
+    <>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="pb-28"
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="bg-[#173120] pb-6">
+          <Header user={user} />
+          <View className="items-center px-6 pt-8">
+            <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
+              {formatCurrency(accountEquity)}
             </Text>
-            <View className="rounded-lg bg-[#255F3C] px-3 py-1">
+            <View className="mt-1 flex-row items-center gap-3">
               <Text
-                className={`text-[16px] font-black ${openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-                  }`}
+                className={`text-[18px] font-black ${
+                  openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                }`}
               >
-                {formatPercent(openPct)}
+                {formatSignedCurrency(openPnl)}
               </Text>
+              <View className="rounded-lg bg-[#255F3C] px-3 py-1">
+                <Text
+                  className={`text-[16px] font-black ${
+                    openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                  }`}
+                >
+                  {formatPercent(openPct)}
+                </Text>
+              </View>
             </View>
+          </View>
+
+          <View className="flex-row flex-wrap gap-3 pt-12 px-6">
+            {accountStats.map((stat) => (
+              <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
+                <InfoCard {...stat} />
+              </View>
+            ))}
           </View>
         </View>
 
-        <View className="flex-row flex-wrap gap-3 pt-12 px-6">
-          {accountStats.map((stat) => (
-            <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
-              <InfoCard {...stat} />
-            </View>
-          ))}
+        <View className="px-6 pt-6">
+          <View className="mt-8 flex-row items-center justify-between">
+            <Text className="text-[21px] font-black text-white">
+              Live crypto values
+            </Text>
+          </View>
+
+          <View className="mt-4 gap-4">
+            {liveCryptoMarkets.length === 0 ? (
+              <View className="min-h-[110px] items-center justify-center rounded-[18px] bg-[#292C2B] px-5 py-5">
+                <ActivityIndicator color="#A594F7" />
+                <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
+                  Waiting for live crypto prices
+                </Text>
+              </View>
+            ) : (
+              liveCryptoMarkets.map((market) => (
+                <LiveCryptoRow
+                  key={market.symbol}
+                  market={market}
+                  onPress={() => setSelectedMarketSymbol(market.symbol)}
+                />
+              ))
+            )}
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
-      <View className="px-6 pt-6">
-
-
-        <View className="mt-8 flex-row items-center justify-between">
-          <Text className="text-[21px] font-black text-white">
-            Live crypto values
-          </Text>
-        </View>
-
-        <View className="mt-4 gap-4">
-          {liveCryptoMarkets.length === 0 ? (
-            <View className="min-h-[110px] items-center justify-center rounded-[18px] bg-[#292C2B] px-5 py-5">
-              <ActivityIndicator color="#A594F7" />
-              <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
-                Waiting for live crypto prices
-              </Text>
-            </View>
-          ) : (
-            liveCryptoMarkets.map((market) => (
-              <LiveCryptoRow key={market.symbol} market={market} />
-            ))
-          )}
-        </View>
-      </View>
-    </ScrollView>
+      <MarketTradeBottomSheet
+        data={data}
+        market={selectedMarket}
+        onDismiss={() => setSelectedMarketSymbol(null)}
+        onTradeCreated={onMarketTradeCreated}
+      />
+    </>
   );
 }
 
@@ -787,14 +1519,16 @@ function TradeCard({
         </View>
         <View className="items-end">
           <Text
-            className={`text-[20px] font-black ${pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-              }`}
+            className={`text-[20px] font-black ${
+              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
           >
             {formatSignedCurrency(pnl)}
           </Text>
           <Text
-            className={`mt-1 text-[14px] font-black ${pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-              }`}
+            className={`mt-1 text-[14px] font-black ${
+              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+            }`}
           >
             {formatPercent(pnlPct)}
           </Text>
@@ -867,8 +1601,9 @@ function ClosedTradeCard({
           </Text>
         </View>
         <Text
-          className={`text-[20px] font-black ${isPositive ? "text-[#28E978]" : "text-[#FF5366]"
-            }`}
+          className={`text-[20px] font-black ${
+            isPositive ? "text-[#28E978]" : "text-[#FF5366]"
+          }`}
         >
           {formatSignedCurrency(pnl)}
         </Text>
@@ -948,9 +1683,9 @@ function TradeDetailsModal({
   onCloseTrade: (orderId: string) => void;
   onDismiss: () => void;
   selectedTrade:
-  | { status: "open"; trade: BackendOpenTrade }
-  | { status: "closed"; trade: BackendClosedTrade }
-  | null;
+    | { status: "open"; trade: BackendOpenTrade }
+    | { status: "closed"; trade: BackendClosedTrade }
+    | null;
 }) {
   if (!selectedTrade) return null;
 
@@ -966,8 +1701,8 @@ function TradeDetailsModal({
     ? getTradePnl(trade)
     : Number((trade as BackendClosedTrade).profitLoss || 0);
   const currentOrClosePrice = isOpen
-    ? normalizeMarketPrice(trade.currentPrice) ?? openPrice
-    : normalizeMarketPrice((trade as BackendClosedTrade).closePrice) ?? 0;
+    ? (normalizeMarketPrice(trade.currentPrice) ?? openPrice)
+    : (normalizeMarketPrice((trade as BackendClosedTrade).closePrice) ?? 0);
 
   return (
     <Modal animationType="fade" transparent visible onRequestClose={onDismiss}>
@@ -982,12 +1717,14 @@ function TradeDetailsModal({
                   {symbol}
                 </Text>
                 <View
-                  className={`rounded-full px-3 py-1 ${isOpen ? "bg-[#235638]" : "bg-[#343635]"
-                    }`}
+                  className={`rounded-full px-3 py-1 ${
+                    isOpen ? "bg-[#235638]" : "bg-[#343635]"
+                  }`}
                 >
                   <Text
-                    className={`text-[12px] font-black ${isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
-                      }`}
+                    className={`text-[12px] font-black ${
+                      isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
+                    }`}
                   >
                     {isOpen ? "Open" : "Closed"}
                   </Text>
@@ -1028,11 +1765,15 @@ function TradeDetailsModal({
                 <>
                   <DetailRow
                     label="Current price"
-                    value={formatCurrency(normalizeMarketPrice(trade.currentPrice))}
+                    value={formatCurrency(
+                      normalizeMarketPrice(trade.currentPrice),
+                    )}
                   />
                   <DetailRow
                     label="Market price"
-                    value={formatCurrency(normalizeMarketPrice(trade.marketPrice))}
+                    value={formatCurrency(
+                      normalizeMarketPrice(trade.marketPrice),
+                    )}
                   />
                   <DetailRow
                     label="Bid"
@@ -1048,7 +1789,9 @@ function TradeDetailsModal({
                   <DetailRow
                     label="Close price"
                     value={formatCurrency(
-                      normalizeMarketPrice((trade as BackendClosedTrade).closePrice),
+                      normalizeMarketPrice(
+                        (trade as BackendClosedTrade).closePrice,
+                      ),
                     )}
                   />
                   <DetailRow
@@ -1079,7 +1822,9 @@ function TradeDetailsModal({
               {!isOpen ? (
                 <DetailRow
                   label="Close time"
-                  value={formatDateTime((trade as BackendClosedTrade).closeTime)}
+                  value={formatDateTime(
+                    (trade as BackendClosedTrade).closeTime,
+                  )}
                 />
               ) : null}
             </View>
@@ -1180,25 +1925,29 @@ function TradesTab({
 
         <View className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5">
           <Pressable
-            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${isOpen ? "bg-[#A594F7]" : ""
-              }`}
+            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
+              isOpen ? "bg-[#A594F7]" : ""
+            }`}
             onPress={() => setKind("open")}
           >
             <Text
-              className={`text-[15px] font-black ${isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-                }`}
+              className={`text-[15px] font-black ${
+                isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
+              }`}
             >
               Open
             </Text>
           </Pressable>
           <Pressable
-            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${!isOpen ? "bg-[#A594F7]" : ""
-              }`}
+            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
+              !isOpen ? "bg-[#A594F7]" : ""
+            }`}
             onPress={() => setKind("closed")}
           >
             <Text
-              className={`text-[15px] font-black ${!isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-                }`}
+              className={`text-[15px] font-black ${
+                !isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
+              }`}
             >
               Closed
             </Text>
@@ -1459,7 +2208,7 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
     }
   }, []);
   const refreshDashboardData = useCallback(() => {
-    loadDashboardData(true);
+    return loadDashboardData(true);
   }, [loadDashboardData]);
   const handleCloseTrade = useCallback(
     async (orderId: string) => {
@@ -1566,6 +2315,7 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
             data={enhancedDashboardData}
             isRefreshing={isRefreshingData}
             livePrices={livePrices}
+            onMarketTradeCreated={refreshDashboardData}
             onRefresh={refreshDashboardData}
             user={user}
           />

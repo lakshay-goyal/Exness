@@ -45,6 +45,28 @@ export type TradingProfileData = {
   closedTrades: BackendClosedTrade[];
 };
 
+export type CandleInterval = "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1d";
+
+export type BackendCandle = {
+  time: string;
+  open: string | number;
+  high: string | number;
+  low: string | number;
+  close: string | number;
+  volume?: string | number;
+  trade_count?: string | number;
+};
+
+export type CreateTradePayload = {
+  symbol: string;
+  type: "buy" | "sell";
+  quantity: number;
+  leverage: number;
+  slippage?: number;
+  takeProfit?: number;
+  stopLoss?: number;
+};
+
 type BalanceResponse = {
   status?: "success" | "error";
   message?: number | string;
@@ -58,10 +80,31 @@ type ClosedTradesResponse = {
   message?: BackendClosedTrade[] | string;
 };
 
+type CandlesResponse = {
+  data?: BackendCandle[];
+};
+
 async function backendRequest<T>(path: string, token: string) {
   const response = await fetch(`${BACKEND_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(
+      body?.message || body?.error || `Backend request failed: ${path}`,
+    );
+  }
+
+  return (await response.json()) as T;
+}
+
+async function publicBackendRequest<T>(path: string) {
+  const response = await fetch(`${BACKEND_URL}${path}`, {
+    headers: {
       "ngrok-skip-browser-warning": "true",
     },
   });
@@ -152,4 +195,29 @@ export async function closeTrade(orderId: string) {
   return backendMutation<{ message?: string }>("/api/v1/trade/close", token, {
     orderId,
   });
+}
+
+export async function createTrade(payload: CreateTradePayload) {
+  const token = await getMobileAccessToken();
+
+  if (!token) {
+    throw new Error("No active mobile access token");
+  }
+
+  return backendMutation<{ message?: string; orderId?: string }>(
+    "/api/v1/trade/create",
+    token,
+    payload,
+  );
+}
+
+export async function fetchCandles(
+  symbol: string,
+  interval: CandleInterval,
+): Promise<BackendCandle[]> {
+  const response = await publicBackendRequest<CandlesResponse>(
+    `/api/v1/candles?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`,
+  );
+
+  return Array.isArray(response.data) ? response.data : [];
 }
