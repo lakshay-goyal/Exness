@@ -5,7 +5,6 @@ import {
   Animated,
   Easing,
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -25,6 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { EaseView, type EaseViewProps } from "react-native-ease";
 
 import { PressableScaleMotion } from "@/components/PressMotion";
+import { getKeyboardControllerPackage } from "@/lib/keyboard-controller";
 import { MobileSessionResponse } from "@/lib/mobile-auth-api";
 import {
   playSubtleTapHaptic,
@@ -108,6 +108,21 @@ const emptyDashboardData: DashboardData = {
   balance: null,
   openTrades: [],
   closedTrades: [],
+};
+
+const tradeKeyboardToolbarTheme = {
+  light: {
+    primary: "#151515",
+    disabled: "#8F8F8F",
+    background: "#F4F4F4",
+    ripple: "rgba(0,0,0,0.08)",
+  },
+  dark: {
+    primary: "#FFFFFF",
+    disabled: "#777D7A",
+    background: "#1C1F1E",
+    ripple: "rgba(255,255,255,0.12)",
+  },
 };
 
 const tabEnterInitial = { opacity: 0, translateY: 10 };
@@ -1035,10 +1050,7 @@ function MarketTradeBottomSheet({
 
   return (
     <Modal animationType="slide" transparent visible onRequestClose={onDismiss}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1 justify-end bg-black/70"
-      >
+      <View className="flex-1 justify-end bg-black/70">
         <Pressable className="flex-1" onPress={onDismiss} />
         <View className="max-h-[92%] rounded-t-[30px] bg-[#1F2221] px-5 pb-7 pt-4">
           <View className="mb-4 h-1.5 w-14 self-center rounded-full bg-[#444846]" />
@@ -1061,7 +1073,7 @@ function MarketTradeBottomSheet({
             </PressableScaleMotion>
           </View>
 
-          <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
+          <TradeEntryScroll>
             <View className="rounded-[22px] bg-[#292C2B] px-4 py-4">
               <View className="flex-row items-center justify-between">
                 <View>
@@ -1334,11 +1346,50 @@ function MarketTradeBottomSheet({
                 </PressableScaleMotion>
               </View>
             </View>
-          </ScrollView>
+          </TradeEntryScroll>
         </View>
-      </KeyboardAvoidingView>
+        <TradeKeyboardToolbar />
+      </View>
     </Modal>
   );
+}
+
+function TradeEntryScroll({ children }: { children: ReactNode }) {
+  const KeyboardAwareScrollView =
+    getKeyboardControllerPackage()?.KeyboardAwareScrollView;
+  const sharedProps = {
+    contentContainerStyle: { paddingBottom: 88 },
+    keyboardDismissMode:
+      Platform.OS === "ios" ? ("interactive" as const) : ("on-drag" as const),
+    keyboardShouldPersistTaps: "handled" as const,
+    showsVerticalScrollIndicator: false,
+    style: { marginTop: 20 },
+  };
+
+  if (!KeyboardAwareScrollView) {
+    return <ScrollView {...sharedProps}>{children}</ScrollView>;
+  }
+
+  return (
+    <KeyboardAwareScrollView
+      {...sharedProps}
+      bottomOffset={76}
+      disableScrollOnKeyboardHide
+      extraKeyboardSpace={10}
+    >
+      {children}
+    </KeyboardAwareScrollView>
+  );
+}
+
+function TradeKeyboardToolbar() {
+  const KeyboardToolbar = getKeyboardControllerPackage()?.KeyboardToolbar;
+
+  if (!KeyboardToolbar) {
+    return null;
+  }
+
+  return <KeyboardToolbar doneText="Done" theme={tradeKeyboardToolbarTheme} />;
 }
 
 function TradeInputRow({

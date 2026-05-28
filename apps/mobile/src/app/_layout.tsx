@@ -4,9 +4,11 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { PressablesConfig } from "pressto";
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { getKeyboardControllerPackage } from "@/lib/keyboard-controller";
 
 SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({
@@ -29,9 +31,21 @@ export default function RootLayout() {
         defaultProps={{ rippleColor: "transparent" }}
       >
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <KeyboardControllerProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </KeyboardControllerProvider>
         </SafeAreaProvider>
       </PressablesConfig>
     </GestureHandlerRootView>
   );
+}
+
+function KeyboardControllerProvider({ children }: { children: ReactNode }) {
+  const KeyboardProvider = getKeyboardControllerPackage()?.KeyboardProvider;
+
+  if (!KeyboardProvider) {
+    return <>{children}</>;
+  }
+
+  return <KeyboardProvider>{children}</KeyboardProvider>;
 }
