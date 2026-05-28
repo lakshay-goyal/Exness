@@ -2,6 +2,8 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -11,13 +13,16 @@ import {
   ScrollView,
   Text,
   TextInput,
+  UIManager,
   useWindowDimensions,
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { cssInterop } from "nativewind";
 import { LineChart } from "react-native-gifted-charts";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { EaseView, type EaseViewProps } from "react-native-ease";
 
 import { PressableScaleMotion } from "@/components/PressMotion";
 import { MobileSessionResponse } from "@/lib/mobile-auth-api";
@@ -98,6 +103,20 @@ const emptyDashboardData: DashboardData = {
   balance: null,
   openTrades: [],
   closedTrades: [],
+};
+
+const tabEnterInitial = { opacity: 0, translateY: 10 };
+const tabEnterAnimate = { opacity: 1, translateY: 0 };
+const StyledAnimatedView = cssInterop(Animated.View, {
+  className: "style",
+});
+
+const hasNativeEaseView = () => {
+  if (Platform.OS === "web") {
+    return true;
+  }
+
+  return Boolean(UIManager.getViewManagerConfig?.("EaseView"));
 };
 
 const getWebSocketUrl = () => {
@@ -478,6 +497,73 @@ function BottomTabs({
         })}
       </View>
     </View>
+  );
+}
+
+function TabEaseItem({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const fallbackOpacity = useMemo(() => new Animated.Value(0), []);
+  const fallbackTranslateY = useMemo(() => new Animated.Value(10), []);
+  const transition = useMemo<EaseViewProps["transition"]>(
+    () => ({ type: "timing", duration: 260, easing: "easeIn", delay }),
+    [delay],
+  );
+
+  useEffect(() => {
+    if (hasNativeEaseView()) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fallbackOpacity, {
+          duration: 260,
+          easing: Easing.in(Easing.ease),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fallbackTranslateY, {
+          duration: 260,
+          easing: Easing.in(Easing.ease),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [delay, fallbackOpacity, fallbackTranslateY]);
+
+  if (!hasNativeEaseView()) {
+    return (
+      <StyledAnimatedView
+        className={className}
+        style={{
+          opacity: fallbackOpacity,
+          transform: [{ translateY: fallbackTranslateY }],
+        }}
+      >
+        {children}
+      </StyledAnimatedView>
+    );
+  }
+
+  return (
+    <EaseView
+      animate={tabEnterAnimate}
+      className={className}
+      initialAnimate={tabEnterInitial}
+      transition={transition}
+    >
+      {children}
+    </EaseView>
   );
 }
 
@@ -1404,8 +1490,10 @@ function WalletTab({
         showsVerticalScrollIndicator={false}
       >
         <View className="bg-[#173120] pb-6">
-          <Header user={user} />
-          <View className="items-center px-6 pt-8">
+          <TabEaseItem>
+            <Header user={user} />
+          </TabEaseItem>
+          <TabEaseItem className="items-center px-6 pt-8" delay={45}>
             <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
               {formatCurrency(accountEquity)}
             </Text>
@@ -1427,18 +1515,21 @@ function WalletTab({
                 </Text>
               </View>
             </View>
-          </View>
+          </TabEaseItem>
 
-          <View className="flex-row flex-wrap gap-3 pt-12 px-6">
+          <TabEaseItem
+            className="flex-row flex-wrap gap-3 px-6 pt-12"
+            delay={90}
+          >
             {accountStats.map((stat) => (
               <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
                 <InfoCard {...stat} />
               </View>
             ))}
-          </View>
+          </TabEaseItem>
         </View>
 
-        <View className="px-6 pt-6">
+        <TabEaseItem className="px-6 pt-6" delay={135}>
           <View className="mt-8 flex-row items-center justify-between">
             <Text className="text-[21px] font-black text-white">
               Live crypto values
@@ -1463,7 +1554,7 @@ function WalletTab({
               ))
             )}
           </View>
-        </View>
+        </TabEaseItem>
       </ScrollView>
 
       <MarketTradeBottomSheet
@@ -1910,7 +2001,7 @@ function TradesTab({
         }
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center justify-between">
+        <TabEaseItem className="flex-row items-center justify-between">
           <View>
             <Text className="text-[28px] font-black text-white">Trade</Text>
             <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
@@ -1922,9 +2013,12 @@ function TradesTab({
           <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-[#292C2B]">
             <Icon color="#A594F7" name={isOpen ? "swap" : "check"} size={31} />
           </View>
-        </View>
+        </TabEaseItem>
 
-        <View className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5">
+        <TabEaseItem
+          className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5"
+          delay={50}
+        >
           <PressableScaleMotion
             className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
               isOpen ? "bg-[#A594F7]" : ""
@@ -1953,9 +2047,13 @@ function TradesTab({
               Closed
             </Text>
           </PressableScaleMotion>
-        </View>
+        </TabEaseItem>
 
-        <View className="mt-6 flex-row gap-3">
+        <TabEaseItem
+          key={`trade-summary-${kind}`}
+          className="mt-6 flex-row gap-3"
+          delay={95}
+        >
           <InfoCard
             label={isOpen ? "Open Value" : "Realized"}
             tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
@@ -1970,9 +2068,13 @@ function TradesTab({
             tone="up"
             value={`${visibleTrades.length}`}
           />
-        </View>
+        </TabEaseItem>
 
-        <View className="mt-6 gap-4">
+        <TabEaseItem
+          key={`trade-list-${kind}`}
+          className="mt-6 gap-4"
+          delay={140}
+        >
           {visibleTrades.length === 0 ? (
             <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
               <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
@@ -2008,7 +2110,7 @@ function TradesTab({
               />
             ))
           )}
-        </View>
+        </TabEaseItem>
       </ScrollView>
 
       <TradeDetailsModal
@@ -2073,12 +2175,17 @@ function ProfileTab({
       }
       showsVerticalScrollIndicator={false}
     >
-      <Text className="text-[28px] font-black text-white">Profile</Text>
-      <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
-        Account identity, balance, and trades.
-      </Text>
+      <TabEaseItem>
+        <Text className="text-[28px] font-black text-white">Profile</Text>
+        <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
+          Account identity, balance, and trades.
+        </Text>
+      </TabEaseItem>
 
-      <View className="mt-8 items-center rounded-[24px] bg-[#292C2B] px-5 py-7">
+      <TabEaseItem
+        className="mt-8 items-center rounded-[24px] bg-[#292C2B] px-5 py-7"
+        delay={55}
+      >
         <Avatar user={user} />
         <Text className="mt-4 text-center text-[25px] font-black text-white">
           {user?.name || "Authenticated user"}
@@ -2091,9 +2198,12 @@ function ProfileTab({
             {user?.hasMobilePin ? "Mobile PIN enabled" : "Mobile PIN not set"}
           </Text>
         </View>
-      </View>
+      </TabEaseItem>
 
-      <View className="mt-5 rounded-[22px] bg-[#292C2B] px-5">
+      <TabEaseItem
+        className="mt-5 rounded-[22px] bg-[#292C2B] px-5"
+        delay={100}
+      >
         <ProfileRow label="Email" value={user?.email || "Unavailable"} />
         <ProfileRow label="Account Equity" value={formatCurrency(equity)} />
         <ProfileRow
@@ -2118,32 +2228,40 @@ function ProfileTab({
             {data.closedTrades.length}
           </Text>
         </View>
-      </View>
+      </TabEaseItem>
 
       {isLoading ? (
-        <View className="mt-5 flex-row items-center justify-center gap-2 rounded-[18px] bg-[#292C2B] px-5 py-4">
+        <TabEaseItem
+          className="mt-5 flex-row items-center justify-center gap-2 rounded-[18px] bg-[#292C2B] px-5 py-4"
+          delay={145}
+        >
           <ActivityIndicator color="#A594F7" />
           <Text className="text-[14px] font-bold text-[#9A9A9A]">
             Loading account data
           </Text>
-        </View>
+        </TabEaseItem>
       ) : null}
 
       {errorMessage ? (
-        <View className="mt-5 rounded-[18px] bg-[#3A2328] px-5 py-4">
+        <TabEaseItem
+          className="mt-5 rounded-[18px] bg-[#3A2328] px-5 py-4"
+          delay={145}
+        >
           <Text className="text-[14px] font-bold text-[#FF8C99]">
             {errorMessage}
           </Text>
-        </View>
+        </TabEaseItem>
       ) : null}
 
-      <PressableScaleMotion
-        accessibilityRole="button"
-        className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126]"
-        onPress={onLogout}
-      >
-        <Text className="text-[15px] font-black text-[#FF8C99]">Logout</Text>
-      </PressableScaleMotion>
+      <TabEaseItem delay={175}>
+        <PressableScaleMotion
+          accessibilityRole="button"
+          className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126]"
+          onPress={onLogout}
+        >
+          <Text className="text-[15px] font-black text-[#FF8C99]">Logout</Text>
+        </PressableScaleMotion>
+      </TabEaseItem>
     </ScrollView>
   );
 }

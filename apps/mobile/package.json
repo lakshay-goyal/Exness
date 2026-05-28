@@ -39,6 +39,7 @@
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
     "react-native-css-interop": "0.2.4",
+    "react-native-ease": "^0.7.2",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-gifted-charts": "^1.4.77",
     "react-native-reanimated": "4.2.1",

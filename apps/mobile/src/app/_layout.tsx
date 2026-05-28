@@ -1,4 +1,5 @@
 import "../global.css";
+import "react-native-ease/nativewind";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
