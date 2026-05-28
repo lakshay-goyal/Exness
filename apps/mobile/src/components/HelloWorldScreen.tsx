@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -24,6 +25,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useIsFocused } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { cssInterop } from "nativewind";
 import { LineChart } from "react-native-gifted-charts";
@@ -474,6 +476,7 @@ function Icon({
 const DashboardTabsContext = createContext<DashboardTabsContextValue | null>(
   null,
 );
+const TabFocusAnimationContext = createContext(0);
 
 function useDashboardTabsContext() {
   const context = useContext(DashboardTabsContext);
@@ -485,6 +488,36 @@ function useDashboardTabsContext() {
   }
 
   return context;
+}
+
+function useFocusedTabAnimationKey() {
+  const isFocused = useIsFocused();
+  const wasFocused = useRef(isFocused);
+  const [animationKey, setAnimationKey] = useState(() => (isFocused ? 1 : 0));
+
+  useEffect(() => {
+    if (isFocused && !wasFocused.current) {
+      setAnimationKey((key) => key + 1);
+    }
+
+    wasFocused.current = isFocused;
+  }, [isFocused]);
+
+  return animationKey;
+}
+
+function FocusedTabAnimationProvider({
+  children,
+  value,
+}: {
+  children: ReactNode;
+  value: number;
+}) {
+  return (
+    <TabFocusAnimationContext.Provider value={value}>
+      {children}
+    </TabFocusAnimationContext.Provider>
+  );
 }
 
 function DashboardTabFrame({ children }: { children: ReactNode }) {
@@ -518,6 +551,7 @@ function TabEaseItem({
   className?: string;
   delay?: number;
 }) {
+  const focusAnimationKey = useContext(TabFocusAnimationContext);
   const fallbackOpacity = useMemo(() => new Animated.Value(0), []);
   const fallbackTranslateY = useMemo(() => new Animated.Value(10), []);
   const transition = useMemo<EaseViewProps["transition"]>(
@@ -530,25 +564,32 @@ function TabEaseItem({
       return;
     }
 
+    fallbackOpacity.setValue(0);
+    fallbackTranslateY.setValue(10);
+
+    const animation = Animated.parallel([
+      Animated.timing(fallbackOpacity, {
+        duration: 260,
+        easing: Easing.in(Easing.ease),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fallbackTranslateY, {
+        duration: 260,
+        easing: Easing.in(Easing.ease),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]);
     const timeout = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fallbackOpacity, {
-          duration: 260,
-          easing: Easing.in(Easing.ease),
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fallbackTranslateY, {
-          duration: 260,
-          easing: Easing.in(Easing.ease),
-          toValue: 0,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      animation.start();
     }, delay);
 
-    return () => clearTimeout(timeout);
-  }, [delay, fallbackOpacity, fallbackTranslateY]);
+    return () => {
+      clearTimeout(timeout);
+      animation.stop();
+    };
+  }, [delay, fallbackOpacity, fallbackTranslateY, focusAnimationKey]);
 
   if (!hasNativeEaseView()) {
     return (
@@ -569,6 +610,7 @@ function TabEaseItem({
       animate={tabEnterAnimate}
       className={className}
       initialAnimate={tabEnterInitial}
+      key={`${focusAnimationKey}-${delay}`}
       transition={transition}
     >
       {children}
@@ -2508,35 +2550,41 @@ export function DashboardTabsProvider({
 export function WalletDashboardTabScreen() {
   const { data, isRefreshingData, livePrices, onRefresh, user } =
     useDashboardTabsContext();
+  const animationKey = useFocusedTabAnimationKey();
 
   return (
-    <DashboardTabFrame>
-      <WalletTab
-        data={data}
-        isRefreshing={isRefreshingData}
-        livePrices={livePrices}
-        onMarketTradeCreated={onRefresh}
-        onRefresh={onRefresh}
-        user={user}
-      />
-    </DashboardTabFrame>
+    <FocusedTabAnimationProvider value={animationKey}>
+      <DashboardTabFrame>
+        <WalletTab
+          data={data}
+          isRefreshing={isRefreshingData}
+          livePrices={livePrices}
+          onMarketTradeCreated={onRefresh}
+          onRefresh={onRefresh}
+          user={user}
+        />
+      </DashboardTabFrame>
+    </FocusedTabAnimationProvider>
   );
 }
 
 export function TradeDashboardTabScreen() {
   const { data, isClosingTrade, isRefreshingData, onCloseTrade, onRefresh } =
     useDashboardTabsContext();
+  const animationKey = useFocusedTabAnimationKey();
 
   return (
-    <DashboardTabFrame>
-      <TradesTab
-        data={data}
-        isClosingTrade={isClosingTrade}
-        isRefreshing={isRefreshingData}
-        onCloseTrade={onCloseTrade}
-        onRefresh={onRefresh}
-      />
-    </DashboardTabFrame>
+    <FocusedTabAnimationProvider value={animationKey}>
+      <DashboardTabFrame>
+        <TradesTab
+          data={data}
+          isClosingTrade={isClosingTrade}
+          isRefreshing={isRefreshingData}
+          onCloseTrade={onCloseTrade}
+          onRefresh={onRefresh}
+        />
+      </DashboardTabFrame>
+    </FocusedTabAnimationProvider>
   );
 }
 
@@ -2550,19 +2598,22 @@ export function ProfileDashboardTabScreen() {
     onRefresh,
     user,
   } = useDashboardTabsContext();
+  const animationKey = useFocusedTabAnimationKey();
 
   return (
-    <DashboardTabFrame>
-      <ProfileTab
-        data={data}
-        errorMessage={errorMessage}
-        isLoading={isLoadingData}
-        isRefreshing={isRefreshingData}
-        onLogout={onLogout}
-        onRefresh={onRefresh}
-        user={user}
-      />
-    </DashboardTabFrame>
+    <FocusedTabAnimationProvider value={animationKey}>
+      <DashboardTabFrame>
+        <ProfileTab
+          data={data}
+          errorMessage={errorMessage}
+          isLoading={isLoadingData}
+          isRefreshing={isRefreshingData}
+          onLogout={onLogout}
+          onRefresh={onRefresh}
+          user={user}
+        />
+      </DashboardTabFrame>
+    </FocusedTabAnimationProvider>
   );
 }
 
