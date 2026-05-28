@@ -1,4 +1,12 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -47,7 +55,6 @@ type HelloWorldScreenProps = {
   user: MobileSessionResponse["user"] | null;
 };
 
-type DashboardTab = "wallet" | "trade" | "profile";
 type IconName =
   | "apps"
   | "arrowDown"
@@ -76,6 +83,19 @@ type LiveMarketPrice = {
   change: number;
   changePercent: number;
   lastUpdated: number;
+};
+
+type DashboardTabsContextValue = {
+  data: DashboardData;
+  errorMessage: string | null;
+  isClosingTrade: boolean;
+  isLoadingData: boolean;
+  isRefreshingData: boolean;
+  livePrices: Record<string, LiveMarketPrice>;
+  onCloseTrade: (orderId: string) => void;
+  onLogout: () => void;
+  onRefresh: () => void;
+  user: MobileSessionResponse["user"] | null;
 };
 
 type ChartPoint = {
@@ -451,71 +471,40 @@ function Icon({
   );
 }
 
-function ScreenShell({
-  activeTab,
-  children,
-  onTabChange,
-}: {
-  activeTab: DashboardTab;
-  children: ReactNode;
-  onTabChange: (tab: DashboardTab) => void;
-}) {
+const DashboardTabsContext = createContext<DashboardTabsContextValue | null>(
+  null,
+);
+
+function useDashboardTabsContext() {
+  const context = useContext(DashboardTabsContext);
+
+  if (!context) {
+    throw new Error(
+      "Dashboard tab screens must be rendered inside DashboardTabsProvider.",
+    );
+  }
+
+  return context;
+}
+
+function DashboardTabFrame({ children }: { children: ReactNode }) {
+  const { width } = useWindowDimensions();
+
   return (
     <View className="flex-1 bg-[#171918]">
       <StatusBar style="light" />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1">
+      <SafeAreaView className="flex-1" edges={["top", "left", "right"]}>
+        <View
+          className="flex-1"
+          style={{
+            maxWidth: Math.min(width, 520),
+            width: "100%",
+            alignSelf: "center",
+          }}
+        >
           {children}
-          <BottomTabs activeTab={activeTab} onTabChange={onTabChange} />
         </View>
       </SafeAreaView>
-    </View>
-  );
-}
-
-function BottomTabs({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: DashboardTab;
-  onTabChange: (tab: DashboardTab) => void;
-}) {
-  const tabs: { icon: IconName; label: string; tab: DashboardTab }[] = [
-    { icon: "home", label: "Wallet", tab: "wallet" },
-    { icon: "swap", label: "Trade", tab: "trade" },
-    { icon: "profile", label: "Profile", tab: "profile" },
-  ];
-
-  return (
-    <View className="absolute bottom-0 left-0 right-0 border-t border-[#2B2E2C] bg-[#1C1D1E]/95 px-7 pb-3 pt-3">
-      <View className="flex-row items-center justify-between">
-        {tabs.map(({ icon, label, tab }) => {
-          const isActive = activeTab === tab;
-
-          return (
-            <PressableScaleMotion
-              key={tab}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              className="min-h-[54px] min-w-[80px] items-center justify-center gap-1"
-              onPress={() => onTabChange(tab)}
-            >
-              <Icon
-                color={isActive ? "#A594F7" : "#858585"}
-                name={icon}
-                size={27}
-              />
-              <Text
-                className={`text-[11px] font-extrabold tracking-normal ${
-                  isActive ? "text-[#A594F7]" : "text-[#8B8B8B]"
-                }`}
-              >
-                {label}
-              </Text>
-            </PressableScaleMotion>
-          );
-        })}
-      </View>
     </View>
   );
 }
@@ -2326,8 +2315,11 @@ function ProfileTab({
   );
 }
 
-export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>("wallet");
+export function DashboardTabsProvider({
+  children,
+  onLogout,
+  user,
+}: HelloWorldScreenProps & { children: ReactNode }) {
   const [dashboardData, setDashboardData] =
     useState<DashboardData>(emptyDashboardData);
   const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>(
@@ -2337,7 +2329,6 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [isClosingTrade, setIsClosingTrade] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
-  const { width } = useWindowDimensions();
   const enhancedDashboardData = useMemo<DashboardData>(
     () => ({
       ...dashboardData,
@@ -2480,47 +2471,105 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
     };
   }, [user]);
 
+  const contextValue = useMemo<DashboardTabsContextValue>(
+    () => ({
+      data: enhancedDashboardData,
+      errorMessage: dataError,
+      isClosingTrade,
+      isLoadingData,
+      isRefreshingData,
+      livePrices,
+      onCloseTrade: handleCloseTrade,
+      onLogout,
+      onRefresh: refreshDashboardData,
+      user,
+    }),
+    [
+      dataError,
+      enhancedDashboardData,
+      handleCloseTrade,
+      isClosingTrade,
+      isLoadingData,
+      isRefreshingData,
+      livePrices,
+      onLogout,
+      refreshDashboardData,
+      user,
+    ],
+  );
+
   return (
-    <ScreenShell activeTab={activeTab} onTabChange={setActiveTab}>
-      <View
-        className="flex-1"
-        style={{
-          maxWidth: Math.min(width, 520),
-          width: "100%",
-          alignSelf: "center",
-        }}
-      >
-        {activeTab === "wallet" ? (
-          <WalletTab
-            data={enhancedDashboardData}
-            isRefreshing={isRefreshingData}
-            livePrices={livePrices}
-            onMarketTradeCreated={refreshDashboardData}
-            onRefresh={refreshDashboardData}
-            user={user}
-          />
-        ) : null}
-        {activeTab === "trade" ? (
-          <TradesTab
-            data={enhancedDashboardData}
-            isClosingTrade={isClosingTrade}
-            isRefreshing={isRefreshingData}
-            onCloseTrade={handleCloseTrade}
-            onRefresh={refreshDashboardData}
-          />
-        ) : null}
-        {activeTab === "profile" ? (
-          <ProfileTab
-            data={enhancedDashboardData}
-            errorMessage={dataError}
-            isLoading={isLoadingData}
-            isRefreshing={isRefreshingData}
-            onLogout={onLogout}
-            onRefresh={refreshDashboardData}
-            user={user}
-          />
-        ) : null}
-      </View>
-    </ScreenShell>
+    <DashboardTabsContext.Provider value={contextValue}>
+      {children}
+    </DashboardTabsContext.Provider>
+  );
+}
+
+export function WalletDashboardTabScreen() {
+  const { data, isRefreshingData, livePrices, onRefresh, user } =
+    useDashboardTabsContext();
+
+  return (
+    <DashboardTabFrame>
+      <WalletTab
+        data={data}
+        isRefreshing={isRefreshingData}
+        livePrices={livePrices}
+        onMarketTradeCreated={onRefresh}
+        onRefresh={onRefresh}
+        user={user}
+      />
+    </DashboardTabFrame>
+  );
+}
+
+export function TradeDashboardTabScreen() {
+  const { data, isClosingTrade, isRefreshingData, onCloseTrade, onRefresh } =
+    useDashboardTabsContext();
+
+  return (
+    <DashboardTabFrame>
+      <TradesTab
+        data={data}
+        isClosingTrade={isClosingTrade}
+        isRefreshing={isRefreshingData}
+        onCloseTrade={onCloseTrade}
+        onRefresh={onRefresh}
+      />
+    </DashboardTabFrame>
+  );
+}
+
+export function ProfileDashboardTabScreen() {
+  const {
+    data,
+    errorMessage,
+    isLoadingData,
+    isRefreshingData,
+    onLogout,
+    onRefresh,
+    user,
+  } = useDashboardTabsContext();
+
+  return (
+    <DashboardTabFrame>
+      <ProfileTab
+        data={data}
+        errorMessage={errorMessage}
+        isLoading={isLoadingData}
+        isRefreshing={isRefreshingData}
+        onLogout={onLogout}
+        onRefresh={onRefresh}
+        user={user}
+      />
+    </DashboardTabFrame>
+  );
+}
+
+export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
+  return (
+    <DashboardTabsProvider onLogout={onLogout} user={user}>
+      <WalletDashboardTabScreen />
+    </DashboardTabsProvider>
   );
 }

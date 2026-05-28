@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -7,18 +8,13 @@ import { AuthBottomSheet } from "@/components/AuthBottomSheet";
 import { BiometricSetupScreen } from "@/components/BiometricSetupScreen";
 import { CreatePinScreen } from "@/components/CreatePinScreen";
 import { GoogleAuthSheet } from "@/components/GoogleAuthSheet";
-import { HelloWorldScreen } from "@/components/HelloWorldScreen";
 import { MoodCharacters } from "@/components/MoodCharacters";
 import { PressableScaleMotion } from "@/components/PressMotion";
 import { TradingSetupIllustration } from "@/components/TradingSetupIllustration";
 import { TradingValueIcon } from "@/components/TradingValueIcon";
 import { WalletLoadingScreen } from "@/components/WalletLoadingScreen";
 import { logAuthEvent } from "@/lib/auth-logger";
-import {
-  logoutMobileSession,
-  MobileSessionResponse,
-  restoreMobileSession,
-} from "@/lib/mobile-auth-api";
+import { restoreMobileSession } from "@/lib/mobile-auth-api";
 import { AnimatedSplash } from "@/components/AnimatedSplash";
 
 type AppScreen =
@@ -27,10 +23,10 @@ type AppScreen =
   | "setup"
   | "pin"
   | "walletLoading"
-  | "biometric"
-  | "hello";
+  | "biometric";
 
 export default function App() {
+  const router = useRouter();
   const [screen, setScreen] = useState<AppScreen>("booting");
   const [isAnimatedSplashVisible, setIsAnimatedSplashVisible] = useState(true);
   const [isAuthSheetVisible, setIsAuthSheetVisible] = useState(false);
@@ -39,23 +35,15 @@ export default function App() {
   );
   const [isGoogleAuthSheetVisible, setIsGoogleAuthSheetVisible] =
     useState(false);
-  const [authenticatedUser, setAuthenticatedUser] = useState<
-    MobileSessionResponse["user"] | null
-  >(null);
   const { height, width } = useWindowDimensions();
   const moodboardWidth = Math.min(width * 1.24, 470);
   const moodboardHeight = moodboardWidth * (430 / 390);
   const completeOnboarding = useCallback(() => {
     logAuthEvent("onboarding_completed");
-    setScreen("hello");
-  }, []);
+    router.replace("/wallet");
+  }, [router]);
   const hideAnimatedSplash = useCallback(() => {
     setIsAnimatedSplashVisible(false);
-  }, []);
-  const logout = useCallback(async () => {
-    await logoutMobileSession();
-    setAuthenticatedUser(null);
-    setScreen("onboarding");
   }, []);
   const animatedSplashOverlay = (
     <AnimatedSplash
@@ -74,8 +62,7 @@ export default function App() {
         }
 
         if (session) {
-          setAuthenticatedUser(session.user);
-          setScreen("hello");
+          router.replace("/wallet");
           return;
         }
 
@@ -98,7 +85,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
 
   if (screen === "booting") {
     return (
@@ -119,9 +106,6 @@ export default function App() {
           }}
           onComplete={() => {
             logAuthEvent("pin_flow_completed");
-            setAuthenticatedUser((user) =>
-              user ? { ...user, hasMobilePin: true } : user,
-            );
             setScreen("walletLoading");
           }}
         />
@@ -148,15 +132,6 @@ export default function App() {
     return (
       <View className="flex-1">
         <BiometricSetupScreen onComplete={completeOnboarding} />
-        {animatedSplashOverlay}
-      </View>
-    );
-  }
-
-  if (screen === "hello") {
-    return (
-      <View className="flex-1">
-        <HelloWorldScreen onLogout={logout} user={authenticatedUser} />
         {animatedSplashOverlay}
       </View>
     );
@@ -276,12 +251,11 @@ export default function App() {
             setIsGoogleAuthSheetVisible(false);
           }}
           onAuthenticated={(user) => {
-            setAuthenticatedUser(user);
             logAuthEvent("auth_flow_authenticated", {
               hasMobilePin: user.hasMobilePin,
-              nextScreen: "hello",
+              nextScreen: "wallet",
             });
-            setScreen("hello");
+            router.replace("/wallet");
           }}
         />
         {animatedSplashOverlay}
