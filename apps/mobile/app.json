@@ -3,6 +3,7 @@
     "name": "Exness Mobile",
     "slug": "exness-mobile",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "exness-mobile",
@@ -20,6 +21,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.VIBRATE",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
       ]

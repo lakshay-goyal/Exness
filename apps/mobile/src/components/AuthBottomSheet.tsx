@@ -2,6 +2,7 @@ import { Modal, Pressable, Text, View } from "react-native";
 
 import { PressableScaleMotion } from "@/components/PressMotion";
 import { logAuthEvent } from "@/lib/auth-logger";
+import { playSubtleTapHaptic } from "@/lib/trade-haptics";
 
 type AuthBottomSheetProps = {
   visible: boolean;
@@ -47,6 +48,7 @@ export function AuthBottomSheet({
               accessibilityRole="button"
               className="h-14 flex-row items-center justify-center rounded-full bg-white"
               onPress={() => {
+                playSubtleTapHaptic();
                 logAuthEvent("auth_option_selected", { mode: "login" });
                 onClose();
                 onGoogleSelected("login");
@@ -61,6 +63,7 @@ export function AuthBottomSheet({
               accessibilityRole="button"
               className="h-14 flex-row items-center justify-center gap-3 rounded-full border border-[#333333] bg-[#191919]"
               onPress={() => {
+                playSubtleTapHaptic();
                 logAuthEvent("auth_option_selected", { mode: "create" });
                 onClose();
                 onGoogleSelected("create");

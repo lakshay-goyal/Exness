@@ -27,6 +27,11 @@ import { EaseView, type EaseViewProps } from "react-native-ease";
 import { PressableScaleMotion } from "@/components/PressMotion";
 import { MobileSessionResponse } from "@/lib/mobile-auth-api";
 import {
+  playSubtleTapHaptic,
+  playTradeClosedHaptic,
+  playTradePlacedHaptic,
+} from "@/lib/trade-haptics";
+import {
   BackendClosedTrade,
   BackendOpenTrade,
   CandleInterval,
@@ -1011,6 +1016,7 @@ function MarketTradeBottomSheet({
         takeProfit: takeProfitValue,
         stopLoss: stopLossValue,
       });
+      void playTradePlacedHaptic();
       await onTradeCreated();
       Alert.alert(
         "Order created",
@@ -2257,7 +2263,10 @@ function ProfileTab({
         <PressableScaleMotion
           accessibilityRole="button"
           className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126]"
-          onPress={onLogout}
+          onPress={() => {
+            playSubtleTapHaptic();
+            onLogout();
+          }}
         >
           <Text className="text-[15px] font-black text-[#FF8C99]">Logout</Text>
         </PressableScaleMotion>
@@ -2336,6 +2345,7 @@ export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
       try {
         setIsClosingTrade(true);
         await closeTrade(orderId);
+        void playTradeClosedHaptic();
         await loadDashboardData(true);
       } catch (error) {
         Alert.alert(

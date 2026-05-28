@@ -8,6 +8,7 @@ import {
   MobileSessionResponse,
   syncMobileSession,
 } from "@/lib/mobile-auth-api";
+import { playSubtleTapHaptic } from "@/lib/trade-haptics";
 
 type GoogleAuthSheetProps = {
   mode: "login" | "create";
@@ -27,6 +28,7 @@ export function GoogleAuthSheet({
   const title = mode === "login" ? "Login with Google" : "Create with Google";
 
   async function handleContinue() {
+    playSubtleTapHaptic();
     setIsLoading(true);
     setError("");
     logAuthEvent("google_sheet_continue_pressed", { mode });
