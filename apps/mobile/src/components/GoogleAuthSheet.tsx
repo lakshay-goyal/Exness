@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 
+import { PressableScaleMotion } from "@/components/PressMotion";
 import { getAuthErrorMessage, logAuthEvent } from "@/lib/auth-logger";
 import { signInWithGoogleInBrowser } from "@/lib/google-auth-flow";
 import {
@@ -99,10 +100,10 @@ export function GoogleAuthSheet({
           ) : null}
 
           <View className="mt-8 gap-3">
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
               className={`h-14 flex-row items-center justify-center rounded-full ${
-                isLoading ? "bg-[#6C629F]" : "bg-[#A594F7] active:opacity-80"
+                isLoading ? "bg-[#6C629F]" : "bg-[#A594F7]"
               }`}
               disabled={isLoading}
               onPress={handleContinue}
@@ -110,18 +111,18 @@ export function GoogleAuthSheet({
               <Text className="text-[16px] font-extrabold tracking-normal text-[#151515]">
                 {isLoading ? "Opening Google..." : "Continue with Google"}
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
 
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
-              className="h-12 items-center justify-center rounded-full active:opacity-70"
+              className="h-12 items-center justify-center rounded-full"
               disabled={isLoading}
               onPress={onClose}
             >
               <Text className="text-[14px] font-bold text-[#A6A6A6]">
                 Choose another option
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
         </View>
       </View>

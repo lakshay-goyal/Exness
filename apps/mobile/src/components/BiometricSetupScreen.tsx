@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 
+import { PressableScaleMotion } from "@/components/PressMotion";
 import {
   BiometricAvailability,
   enableBiometricAuthentication,
@@ -208,15 +209,15 @@ export function BiometricSetupScreen({
       <SafeAreaView className="flex-1">
         <View className="flex-1 px-7 pb-8 pt-5">
           <View className="h-10 flex-row items-center justify-end">
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
-              className="h-10 items-center justify-center px-1 active:opacity-70"
+              className="h-10 items-center justify-center px-1"
               onPress={onComplete}
             >
               <Text className="text-[16px] font-extrabold text-white">
                 Next
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
           <View className="mt-10 items-center">
@@ -231,7 +232,7 @@ export function BiometricSetupScreen({
           </View>
 
           <View className="mt-8 rounded-lg bg-[#2B2B2B] px-4 py-4">
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="switch"
               accessibilityState={{
                 checked: isEnabled,
@@ -258,7 +259,7 @@ export function BiometricSetupScreen({
               >
                 <View className="h-7 w-7 rounded-full bg-[#EDEDED]" />
               </View>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
           {message ? (
@@ -269,15 +270,15 @@ export function BiometricSetupScreen({
 
           <View className="flex-1" />
 
-          <Pressable
+          <PressableScaleMotion
             accessibilityRole="button"
-            className="h-[54px] items-center justify-center rounded-full bg-[#8E7EDD] active:opacity-80"
+            className="h-[54px] items-center justify-center rounded-full bg-[#8E7EDD]"
             onPress={onComplete}
           >
             <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">
               Next
             </Text>
-          </Pressable>
+          </PressableScaleMotion>
         </View>
       </SafeAreaView>
     </View>

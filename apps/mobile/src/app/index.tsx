@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,6 +9,7 @@ import { CreatePinScreen } from "@/components/CreatePinScreen";
 import { GoogleAuthSheet } from "@/components/GoogleAuthSheet";
 import { HelloWorldScreen } from "@/components/HelloWorldScreen";
 import { MoodCharacters } from "@/components/MoodCharacters";
+import { PressableScaleMotion } from "@/components/PressMotion";
 import { TradingSetupIllustration } from "@/components/TradingSetupIllustration";
 import { TradingValueIcon } from "@/components/TradingValueIcon";
 import { WalletLoadingScreen } from "@/components/WalletLoadingScreen";
@@ -174,26 +169,26 @@ export default function App() {
         <SafeAreaView className="flex-1">
           <View className="flex-1 px-7 pb-8 pt-5">
             <View className="h-10 flex-row items-center justify-between">
-              <Pressable
+              <PressableScaleMotion
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
-                className="h-10 w-10 items-start justify-center active:opacity-70"
+                className="h-10 w-10 items-start justify-center"
                 onPress={() => {
                   logAuthEvent("setup_back_pressed");
                   setScreen("onboarding");
                 }}
               >
                 <Text className="text-[32px] leading-9 text-white">‹</Text>
-              </Pressable>
-              <Pressable
+              </PressableScaleMotion>
+              <PressableScaleMotion
                 accessibilityRole="button"
                 accessibilityLabel="Help"
-                className="h-10 w-10 items-end justify-center active:opacity-70"
+                className="h-10 w-10 items-end justify-center"
               >
                 <Text className="text-[26px] font-bold leading-8 text-white">
                   ?
                 </Text>
-              </Pressable>
+              </PressableScaleMotion>
             </View>
 
             <View className="mt-8 items-center">
@@ -250,9 +245,9 @@ export default function App() {
 
             <View className="flex-1" />
 
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
-              className="h-[54px] items-center justify-center rounded-full bg-[#A594F7] active:opacity-80"
+              className="h-[54px] items-center justify-center rounded-full bg-[#A594F7]"
               onPress={() => {
                 logAuthEvent("auth_options_sheet_opened");
                 setIsAuthSheetVisible(true);
@@ -261,7 +256,7 @@ export default function App() {
               <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">
                 Login
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
         </SafeAreaView>
         <AuthBottomSheet
@@ -312,10 +307,10 @@ export default function App() {
               Not Sure{"\n"}About Your{"\n"}Mood?
             </Text>
 
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
               accessibilityLabel="Let us help"
-              className="mt-7 min-h-[58px] flex-row items-center gap-3.5 self-center rounded-full border border-[#E4E4E4] bg-[#F1F1F1] py-0 pl-7 pr-2 shadow-sm active:scale-[0.99] active:opacity-70"
+              className="mt-7 min-h-[58px] flex-row items-center gap-3.5 self-center rounded-full border border-[#E4E4E4] bg-[#F1F1F1] py-0 pl-7 pr-2 shadow-sm"
               onPress={() => {
                 logAuthEvent("onboarding_help_pressed");
                 setScreen("setup");
@@ -332,7 +327,7 @@ export default function App() {
                   {">"}
                 </Text>
               </View>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
           <View

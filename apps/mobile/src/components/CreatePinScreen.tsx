@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PressableScaleMotion } from "@/components/PressMotion";
 import { getAuthErrorMessage, logAuthEvent } from "@/lib/auth-logger";
 import { setMobilePin } from "@/lib/mobile-auth-api";
 
@@ -61,14 +62,14 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
       <SafeAreaView className="flex-1">
         <View className="flex-1 px-7 pb-6 pt-5">
           <View className="h-10 flex-row items-center justify-between">
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              className="h-10 w-10 items-start justify-center active:opacity-70"
+              className="h-10 w-10 items-start justify-center"
               onPress={onBack}
             >
               <Text className="text-[32px] leading-9 text-white">‹</Text>
-            </Pressable>
+            </PressableScaleMotion>
 
             <View className="flex-row gap-1.5">
               <View className="h-1 w-4 rounded-full bg-[#A594F7]" />
@@ -113,10 +114,10 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
 
           <View className="flex-1" />
 
-          <Pressable
+          <PressableScaleMotion
             accessibilityRole="button"
             className={`h-[54px] items-center justify-center rounded-full ${
-              canContinue ? "bg-[#A594F7] active:opacity-80" : "bg-[#5F5A83]"
+              canContinue ? "bg-[#A594F7]" : "bg-[#5F5A83]"
             }`}
             disabled={!canContinue}
             onPress={handleContinue}
@@ -124,7 +125,7 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
             <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">
               {isSaving ? "Saving..." : "Continue"}
             </Text>
-          </Pressable>
+          </PressableScaleMotion>
         </View>
       </SafeAreaView>
     </View>

@@ -1,5 +1,6 @@
 import { Modal, Pressable, Text, View } from "react-native";
 
+import { PressableScaleMotion } from "@/components/PressMotion";
 import { logAuthEvent } from "@/lib/auth-logger";
 
 type AuthBottomSheetProps = {
@@ -42,9 +43,9 @@ export function AuthBottomSheet({
           </Text>
 
           <View className="mt-8 gap-3">
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
-              className="h-14 flex-row items-center justify-center rounded-full bg-white active:opacity-80"
+              className="h-14 flex-row items-center justify-center rounded-full bg-white"
               onPress={() => {
                 logAuthEvent("auth_option_selected", { mode: "login" });
                 onClose();
@@ -54,11 +55,11 @@ export function AuthBottomSheet({
               <Text className="text-[16px] font-extrabold tracking-normal text-black">
                 Login with Google
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
 
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
-              className="h-14 flex-row items-center justify-center gap-3 rounded-full border border-[#333333] bg-[#191919] active:opacity-80"
+              className="h-14 flex-row items-center justify-center gap-3 rounded-full border border-[#333333] bg-[#191919]"
               onPress={() => {
                 logAuthEvent("auth_option_selected", { mode: "create" });
                 onClose();
@@ -71,12 +72,12 @@ export function AuthBottomSheet({
               <Text className="text-[16px] font-extrabold tracking-normal text-white">
                 Create account with Google
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
-          <Pressable
+          <PressableScaleMotion
             accessibilityRole="button"
-            className="mt-6 items-center py-2 active:opacity-70"
+            className="mt-6 items-center py-2"
             onPress={() => {
               logAuthEvent("auth_options_sheet_closed", { source: "not_now" });
               onClose();
@@ -85,7 +86,7 @@ export function AuthBottomSheet({
             <Text className="text-[14px] font-bold text-[#A6A6A6]">
               Not now
             </Text>
-          </Pressable>
+          </PressableScaleMotion>
         </View>
       </View>
     </Modal>

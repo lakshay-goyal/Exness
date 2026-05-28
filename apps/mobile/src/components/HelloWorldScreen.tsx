@@ -19,6 +19,7 @@ import { LineChart } from "react-native-gifted-charts";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PressableScaleMotion } from "@/components/PressMotion";
 import { MobileSessionResponse } from "@/lib/mobile-auth-api";
 import {
   BackendClosedTrade,
@@ -453,11 +454,11 @@ function BottomTabs({
           const isActive = activeTab === tab;
 
           return (
-            <Pressable
+            <PressableScaleMotion
               key={tab}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              className="min-h-[54px] min-w-[80px] items-center justify-center gap-1 active:opacity-70"
+              className="min-h-[54px] min-w-[80px] items-center justify-center gap-1"
               onPress={() => onTabChange(tab)}
             >
               <Icon
@@ -472,7 +473,7 @@ function BottomTabs({
               >
                 {label}
               </Text>
-            </Pressable>
+            </PressableScaleMotion>
           );
         })}
       </View>
@@ -537,12 +538,12 @@ function Header({
 
 function ActionButton({ icon, label }: { icon: IconName; label: string }) {
   return (
-    <Pressable className="h-[76px] flex-1 items-center justify-center rounded-[18px] bg-[#2C2E2E] active:opacity-75">
+    <PressableScaleMotion className="h-[76px] flex-1 items-center justify-center rounded-[18px] bg-[#2C2E2E]">
       <Icon color="#A594F7" name={icon} size={30} />
       <Text className="mt-1.5 text-[13px] font-black text-[#9B9B9B]">
         {label}
       </Text>
-    </Pressable>
+    </PressableScaleMotion>
   );
 }
 
@@ -600,9 +601,9 @@ function LiveCryptoRow({
   const spread = Math.max(market.ask - market.bid, 0);
 
   return (
-    <Pressable
+    <PressableScaleMotion
       accessibilityRole="button"
-      className="rounded-[18px] bg-[#292C2B] px-4 py-4 active:opacity-80"
+      className="rounded-[18px] bg-[#292C2B] px-4 py-4"
       onPress={onPress}
     >
       <View className="flex-row items-center">
@@ -655,7 +656,7 @@ function LiveCryptoRow({
           </Text>
         </View>
       </View>
-    </Pressable>
+    </PressableScaleMotion>
   );
 }
 
@@ -959,13 +960,13 @@ function MarketTradeBottomSheet({
                 | Ask {formatCurrency(market.ask, priceDigits)}
               </Text>
             </View>
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
               className="h-10 w-10 items-center justify-center rounded-full bg-[#292C2B]"
               onPress={onDismiss}
             >
               <Text className="text-[18px] font-black text-white">x</Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
           <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
@@ -997,7 +998,7 @@ function MarketTradeBottomSheet({
                 {candleIntervals.map((interval) => {
                   const isActive = selectedInterval === interval.value;
                   return (
-                    <Pressable
+                    <PressableScaleMotion
                       key={interval.value}
                       className={`h-9 flex-1 items-center justify-center rounded-[11px] ${
                         isActive ? "bg-[#A594F7]" : ""
@@ -1011,7 +1012,7 @@ function MarketTradeBottomSheet({
                       >
                         {interval.label}
                       </Text>
-                    </Pressable>
+                    </PressableScaleMotion>
                   );
                 })}
               </View>
@@ -1029,14 +1030,14 @@ function MarketTradeBottomSheet({
                     <Text className="text-center text-[14px] font-bold text-[#FF8C99]">
                       {chartError}
                     </Text>
-                    <Pressable
+                    <PressableScaleMotion
                       className="mt-4 rounded-full bg-[#A594F7] px-5 py-2"
                       onPress={() => setChartRetry((value) => value + 1)}
                     >
                       <Text className="text-[13px] font-black text-[#151515]">
                         Retry
                       </Text>
-                    </Pressable>
+                    </PressableScaleMotion>
                   </View>
                 ) : chartData.length === 0 ? (
                   <View className="items-center justify-center py-16">
@@ -1213,9 +1214,9 @@ function MarketTradeBottomSheet({
               </View>
 
               <View className="mt-4 flex-row gap-3">
-                <Pressable
+                <PressableScaleMotion
                   accessibilityRole="button"
-                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#EF233C] active:opacity-75"
+                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#EF233C]"
                   disabled={submitSide !== null}
                   onPress={() => submitOrder("sell")}
                 >
@@ -1225,10 +1226,10 @@ function MarketTradeBottomSheet({
                   <Text className="mt-1 text-[11px] font-black text-white">
                     {formatCurrency(market.bid, priceDigits)}
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScaleMotion>
+                <PressableScaleMotion
                   accessibilityRole="button"
-                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#009B72] active:opacity-75"
+                  className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#009B72]"
                   disabled={submitSide !== null}
                   onPress={() => submitOrder("buy")}
                 >
@@ -1238,7 +1239,7 @@ function MarketTradeBottomSheet({
                   <Text className="mt-1 text-[11px] font-black text-white">
                     {formatCurrency(market.ask, priceDigits)}
                   </Text>
-                </Pressable>
+                </PressableScaleMotion>
               </View>
             </View>
           </ScrollView>
@@ -1301,14 +1302,14 @@ function StepperButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScaleMotion
       accessibilityRole="button"
-      className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#1C1F1E] active:opacity-75"
+      className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#1C1F1E]"
       disabled={disabled}
       onPress={onPress}
     >
       <Text className="text-[20px] font-black text-white">{label}</Text>
-    </Pressable>
+    </PressableScaleMotion>
   );
 }
 
@@ -1497,9 +1498,9 @@ function TradeCard({
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
-    <Pressable
+    <PressableScaleMotion
       accessibilityRole="button"
-      className="rounded-[22px] bg-[#292C2B] px-5 py-5 active:opacity-80"
+      className="rounded-[22px] bg-[#292C2B] px-5 py-5"
       onPress={onPress}
     >
       <View className="flex-row items-start justify-between">
@@ -1564,7 +1565,7 @@ function TradeCard({
         <TradeMetric label="Bid" value={formatCurrency(bidPrice)} />
         <TradeMetric alignRight label="Ask" value={formatCurrency(askPrice)} />
       </View>
-    </Pressable>
+    </PressableScaleMotion>
   );
 }
 
@@ -1580,9 +1581,9 @@ function ClosedTradeCard({
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
-    <Pressable
+    <PressableScaleMotion
       accessibilityRole="button"
-      className="rounded-[22px] bg-[#292C2B] px-5 py-5 active:opacity-80"
+      className="rounded-[22px] bg-[#292C2B] px-5 py-5"
       onPress={onPress}
     >
       <View className="flex-row items-start justify-between">
@@ -1622,7 +1623,7 @@ function ClosedTradeCard({
           value={formatCurrency(normalizeMarketPrice(trade.closePrice))}
         />
       </View>
-    </Pressable>
+    </PressableScaleMotion>
   );
 }
 
@@ -1735,13 +1736,13 @@ function TradeDetailsModal({
                 {leverage}x
               </Text>
             </View>
-            <Pressable
+            <PressableScaleMotion
               accessibilityRole="button"
               className="h-10 w-10 items-center justify-center rounded-full bg-[#292C2B]"
               onPress={onDismiss}
             >
               <Text className="text-[18px] font-black text-white">x</Text>
-            </Pressable>
+            </PressableScaleMotion>
           </View>
 
           <View className="mt-5 flex-row gap-3">
@@ -1830,16 +1831,16 @@ function TradeDetailsModal({
             </View>
 
             {isOpen ? (
-              <Pressable
+              <PressableScaleMotion
                 accessibilityRole="button"
-                className="mt-5 h-14 items-center justify-center rounded-[18px] bg-[#4A242B] active:opacity-75"
+                className="mt-5 h-14 items-center justify-center rounded-[18px] bg-[#4A242B]"
                 disabled={isClosing}
                 onPress={() => onCloseTrade(trade.orderId)}
               >
                 <Text className="text-[15px] font-black text-[#FF8C99]">
                   {isClosing ? "Closing trade..." : "Close trade"}
                 </Text>
-              </Pressable>
+              </PressableScaleMotion>
             ) : null}
           </ScrollView>
         </View>
@@ -1924,7 +1925,7 @@ function TradesTab({
         </View>
 
         <View className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5">
-          <Pressable
+          <PressableScaleMotion
             className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
               isOpen ? "bg-[#A594F7]" : ""
             }`}
@@ -1937,8 +1938,8 @@ function TradesTab({
             >
               Open
             </Text>
-          </Pressable>
-          <Pressable
+          </PressableScaleMotion>
+          <PressableScaleMotion
             className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
               !isOpen ? "bg-[#A594F7]" : ""
             }`}
@@ -1951,7 +1952,7 @@ function TradesTab({
             >
               Closed
             </Text>
-          </Pressable>
+          </PressableScaleMotion>
         </View>
 
         <View className="mt-6 flex-row gap-3">
@@ -2136,13 +2137,13 @@ function ProfileTab({
         </View>
       ) : null}
 
-      <Pressable
+      <PressableScaleMotion
         accessibilityRole="button"
-        className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126] active:opacity-75"
+        className="mt-5 h-[52px] items-center justify-center rounded-[18px] border border-[#5A2D35] bg-[#392126]"
         onPress={onLogout}
       >
         <Text className="text-[15px] font-black text-[#FF8C99]">Logout</Text>
-      </Pressable>
+      </PressableScaleMotion>
     </ScrollView>
   );
 }
