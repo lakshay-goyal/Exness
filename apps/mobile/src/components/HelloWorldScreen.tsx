@@ -116,6 +116,8 @@ type SelectedTrade =
   | { status: "open"; orderId: string }
   | { status: "closed"; orderId: string };
 
+type TradeKind = "open" | "closed";
+
 const candleIntervals: { label: string; value: CandleInterval }[] = [
   { label: "1m", value: "1m" },
   { label: "5m", value: "5m" },
@@ -149,6 +151,8 @@ const tradeKeyboardToolbarTheme = {
 
 const tabEnterInitial = { opacity: 0, translateY: 10 };
 const tabEnterAnimate = { opacity: 1, translateY: 0 };
+const tradeTabIndicatorPadding = 6;
+const chartIntervalTabIndicatorPadding = 4;
 const StyledAnimatedView = cssInterop(Animated.View, {
   className: "style",
 });
@@ -825,6 +829,98 @@ function InfoCard({
   );
 }
 
+function ChartIntervalTabs({
+  selectedInterval,
+  onChange,
+}: {
+  selectedInterval: CandleInterval;
+  onChange: (interval: CandleInterval) => void;
+}) {
+  const [tabsWidth, setTabsWidth] = useState(0);
+  const selectedIndex = Math.max(
+    candleIntervals.findIndex(
+      (interval) => interval.value === selectedInterval,
+    ),
+    0,
+  );
+  const maxIndex = candleIntervals.length - 1;
+  const indicatorProgress = useRef(new Animated.Value(selectedIndex)).current;
+  const indicatorWidth = Math.max(
+    (tabsWidth - chartIntervalTabIndicatorPadding * 2) / candleIntervals.length,
+    0,
+  );
+  const indicatorTranslateX = indicatorProgress.interpolate({
+    inputRange: [0, maxIndex],
+    outputRange: [0, indicatorWidth * maxIndex],
+  });
+  const indicatorScaleX = indicatorProgress.interpolate({
+    inputRange: [0, maxIndex / 2, maxIndex],
+    outputRange: [1, 1.045, 1],
+  });
+
+  useEffect(() => {
+    const animation = Animated.spring(indicatorProgress, {
+      damping: 20,
+      mass: 0.8,
+      stiffness: 190,
+      toValue: selectedIndex,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [indicatorProgress, selectedIndex]);
+
+  return (
+    <View
+      className="mt-4 h-[44px] flex-row overflow-hidden rounded-[14px] bg-[#222524] p-1"
+      onLayout={(event) => setTabsWidth(event.nativeEvent.layout.width)}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          backgroundColor: "#A594F7",
+          borderRadius: 11,
+          bottom: chartIntervalTabIndicatorPadding,
+          left: chartIntervalTabIndicatorPadding,
+          opacity: indicatorWidth > 0 ? 1 : 0,
+          position: "absolute",
+          top: chartIntervalTabIndicatorPadding,
+          transform: [
+            { translateX: indicatorTranslateX },
+            { scaleX: indicatorScaleX },
+          ],
+          width: indicatorWidth,
+        }}
+      />
+      {candleIntervals.map((interval) => {
+        const isActive = selectedInterval === interval.value;
+
+        return (
+          <PressableScaleMotion
+            key={interval.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            className="h-9 flex-1 items-center justify-center rounded-[11px]"
+            onPress={() => onChange(interval.value)}
+          >
+            <Text
+              className={`text-[12px] font-black ${
+                isActive ? "text-[#151515]" : "text-[#9A9A9A]"
+              }`}
+            >
+              {interval.label}
+            </Text>
+          </PressableScaleMotion>
+        );
+      })}
+    </View>
+  );
+}
+
 function MarketTradeBottomSheet({
   data,
   market,
@@ -883,6 +979,16 @@ function MarketTradeBottomSheet({
   const chartPadding = Math.max((dataMax - dataMin) * 0.15, dataMax * 0.002, 1);
   const yAxisOffset = Math.max(dataMin - chartPadding, 0);
   const chartMaxValue = Math.max(dataMax - yAxisOffset + chartPadding, 1);
+
+  const switchChartInterval = useCallback(
+    (nextInterval: CandleInterval) => {
+      if (nextInterval === selectedInterval) return;
+
+      setSelectedInterval(nextInterval);
+      playSubtleTapHaptic();
+    },
+    [selectedInterval],
+  );
 
   useEffect(() => {
     if (!marketSymbol) return;
@@ -1129,28 +1235,10 @@ function MarketTradeBottomSheet({
                 </View>
               </View>
 
-              <View className="mt-4 flex-row rounded-[14px] bg-[#222524] p-1">
-                {candleIntervals.map((interval) => {
-                  const isActive = selectedInterval === interval.value;
-                  return (
-                    <PressableScaleMotion
-                      key={interval.value}
-                      className={`h-9 flex-1 items-center justify-center rounded-[11px] ${
-                        isActive ? "bg-[#A594F7]" : ""
-                      }`}
-                      onPress={() => setSelectedInterval(interval.value)}
-                    >
-                      <Text
-                        className={`text-[12px] font-black ${
-                          isActive ? "text-[#151515]" : "text-[#9A9A9A]"
-                        }`}
-                      >
-                        {interval.label}
-                      </Text>
-                    </PressableScaleMotion>
-                  );
-                })}
-              </View>
+              <ChartIntervalTabs
+                onChange={switchChartInterval}
+                selectedInterval={selectedInterval}
+              />
 
               <View className="mt-4 min-h-[286px] justify-center overflow-hidden rounded-[18px] bg-[#111827] px-2 py-4">
                 {chartLoading ? (
@@ -2028,6 +2116,95 @@ function TradeDetailsModal({
   );
 }
 
+function TradeKindTabs({
+  kind,
+  onChange,
+}: {
+  kind: TradeKind;
+  onChange: (kind: TradeKind) => void;
+}) {
+  const [tabsWidth, setTabsWidth] = useState(0);
+  const indicatorProgress = useRef(
+    new Animated.Value(kind === "open" ? 0 : 1),
+  ).current;
+  const indicatorWidth = Math.max(
+    (tabsWidth - tradeTabIndicatorPadding * 2) / 2,
+    0,
+  );
+  const indicatorTranslateX = indicatorProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, indicatorWidth],
+  });
+  const indicatorScaleX = indicatorProgress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.045, 1],
+  });
+
+  useEffect(() => {
+    const animation = Animated.spring(indicatorProgress, {
+      damping: 20,
+      mass: 0.8,
+      stiffness: 190,
+      toValue: kind === "open" ? 0 : 1,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [indicatorProgress, kind]);
+
+  return (
+    <TabEaseItem delay={50}>
+      <View
+        className="mt-7 h-[56px] flex-row overflow-hidden rounded-[18px] bg-[#292C2B] p-1.5"
+        onLayout={(event) => setTabsWidth(event.nativeEvent.layout.width)}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            backgroundColor: "#A594F7",
+            borderRadius: 14,
+            bottom: tradeTabIndicatorPadding,
+            left: tradeTabIndicatorPadding,
+            opacity: indicatorWidth > 0 ? 1 : 0,
+            position: "absolute",
+            top: tradeTabIndicatorPadding,
+            transform: [
+              { translateX: indicatorTranslateX },
+              { scaleX: indicatorScaleX },
+            ],
+            width: indicatorWidth,
+          }}
+        />
+        {(["open", "closed"] as const).map((tabKind) => {
+          const isActive = kind === tabKind;
+
+          return (
+            <PressableScaleMotion
+              key={tabKind}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              className="h-11 flex-1 items-center justify-center rounded-[14px]"
+              onPress={() => onChange(tabKind)}
+            >
+              <Text
+                className={`text-[15px] font-black ${
+                  isActive ? "text-[#151515]" : "text-[#9A9A9A]"
+                }`}
+              >
+                {tabKind === "open" ? "Open" : "Closed"}
+              </Text>
+            </PressableScaleMotion>
+          );
+        })}
+      </View>
+    </TabEaseItem>
+  );
+}
+
 function TradesTab({
   data,
   isClosingTrade,
@@ -2041,10 +2218,13 @@ function TradesTab({
   onCloseTrade: (orderId: string) => void;
   onRefresh: () => void;
 }) {
-  const [kind, setKind] = useState<"open" | "closed">("open");
+  const [kind, setKind] = useState<TradeKind>("open");
   const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(
     null,
   );
+  const contentTransition = useRef(new Animated.Value(1)).current;
+  const contentDirection = useRef(1);
+  const scrollViewRef = useRef<ScrollView>(null);
   const isOpen = kind === "open";
   const openPnl = data.openTrades.reduce(
     (total, trade) => total + getTradePnl(trade),
@@ -2078,10 +2258,47 @@ function TradesTab({
     },
     [onCloseTrade],
   );
+  const switchTradeKind = useCallback(
+    (nextKind: TradeKind) => {
+      if (nextKind === kind) return;
+
+      contentDirection.current = nextKind === "closed" ? 1 : -1;
+      contentTransition.stopAnimation();
+      contentTransition.setValue(0);
+      scrollViewRef.current?.scrollTo({ animated: true, y: 0 });
+      setKind(nextKind);
+      playSubtleTapHaptic();
+    },
+    [contentTransition, kind],
+  );
+  const contentTranslateX = contentTransition.interpolate({
+    inputRange: [0, 1],
+    outputRange: [contentDirection.current * 26, 0],
+  });
+  const contentScale = contentTransition.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.985, 1],
+  });
+
+  useEffect(() => {
+    const animation = Animated.timing(contentTransition, {
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      toValue: 1,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [contentTransition, kind]);
 
   return (
     <>
       <ScrollView
+        ref={scrollViewRef}
         className="flex-1"
         contentContainerClassName="px-6 pb-28 pt-5"
         refreshControl={
@@ -2098,106 +2315,75 @@ function TradesTab({
                 : "Completed positions and realized returns."}
             </Text>
           </View>
-          <View className="h-[54px] w-[54px] items-center justify-center rounded-full bg-[#292C2B]">
-            <Icon color="#A594F7" name={isOpen ? "swap" : "check"} size={31} />
-          </View>
         </TabEaseItem>
 
-        <TabEaseItem
-          className="mt-7 flex-row rounded-[18px] bg-[#292C2B] p-1.5"
-          delay={50}
-        >
-          <PressableScaleMotion
-            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
-              isOpen ? "bg-[#A594F7]" : ""
-            }`}
-            onPress={() => setKind("open")}
+        <TradeKindTabs kind={kind} onChange={switchTradeKind} />
+
+        <TabEaseItem delay={95}>
+          <StyledAnimatedView
+            style={{
+              opacity: contentTransition,
+              transform: [
+                { translateX: contentTranslateX },
+                { scale: contentScale },
+              ],
+            }}
           >
-            <Text
-              className={`text-[15px] font-black ${
-                isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-              }`}
-            >
-              Open
-            </Text>
-          </PressableScaleMotion>
-          <PressableScaleMotion
-            className={`h-11 flex-1 items-center justify-center rounded-[14px] ${
-              !isOpen ? "bg-[#A594F7]" : ""
-            }`}
-            onPress={() => setKind("closed")}
-          >
-            <Text
-              className={`text-[15px] font-black ${
-                !isOpen ? "text-[#151515]" : "text-[#9A9A9A]"
-              }`}
-            >
-              Closed
-            </Text>
-          </PressableScaleMotion>
-        </TabEaseItem>
-
-        <TabEaseItem
-          key={`trade-summary-${kind}`}
-          className="mt-6 flex-row gap-3"
-          delay={95}
-        >
-          <InfoCard
-            label={isOpen ? "Open Value" : "Realized"}
-            tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
-            value={
-              isOpen
-                ? formatSignedCurrency(openPnl)
-                : formatSignedCurrency(closedPnl)
-            }
-          />
-          <InfoCard
-            label={isOpen ? "Open Count" : "Closed Count"}
-            tone="up"
-            value={`${visibleTrades.length}`}
-          />
-        </TabEaseItem>
-
-        <TabEaseItem
-          key={`trade-list-${kind}`}
-          className="mt-6 gap-4"
-          delay={140}
-        >
-          {visibleTrades.length === 0 ? (
-            <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
-              <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
-                {isOpen ? "No open trades." : "No closed trades."}
-              </Text>
+            <View className="mt-6 flex-row gap-3">
+              <InfoCard
+                label={isOpen ? "Open Value" : "Realized"}
+                tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
+                value={
+                  isOpen
+                    ? formatSignedCurrency(openPnl)
+                    : formatSignedCurrency(closedPnl)
+                }
+              />
+              <InfoCard
+                label={isOpen ? "Open Count" : "Closed Count"}
+                tone="up"
+                value={`${visibleTrades.length}`}
+              />
             </View>
-          ) : isOpen ? (
-            data.openTrades.map((trade) => (
-              <TradeCard
-                key={trade.orderId}
-                isClosing={isClosingTrade}
-                onClose={() => onCloseTrade(trade.orderId)}
-                onPress={() =>
-                  setSelectedTrade({
-                    status: "open",
-                    orderId: trade.orderId,
-                  })
-                }
-                trade={trade}
-              />
-            ))
-          ) : (
-            data.closedTrades.map((trade) => (
-              <ClosedTradeCard
-                key={trade.orderId}
-                onPress={() =>
-                  setSelectedTrade({
-                    status: "closed",
-                    orderId: trade.orderId,
-                  })
-                }
-                trade={trade}
-              />
-            ))
-          )}
+
+            <View className="mt-6 gap-4">
+              {visibleTrades.length === 0 ? (
+                <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
+                  <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
+                    {isOpen ? "No open trades." : "No closed trades."}
+                  </Text>
+                </View>
+              ) : isOpen ? (
+                data.openTrades.map((trade) => (
+                  <TradeCard
+                    key={trade.orderId}
+                    isClosing={isClosingTrade}
+                    onClose={() => onCloseTrade(trade.orderId)}
+                    onPress={() =>
+                      setSelectedTrade({
+                        status: "open",
+                        orderId: trade.orderId,
+                      })
+                    }
+                    trade={trade}
+                  />
+                ))
+              ) : (
+                data.closedTrades.map((trade) => (
+                  <ClosedTradeCard
+                    key={trade.orderId}
+                    onPress={() =>
+                      setSelectedTrade({
+                        status: "closed",
+                        orderId: trade.orderId,
+                      })
+                    }
+                    trade={trade}
+                  />
+                ))
+              )}
+            </View>
+          </StyledAnimatedView>
         </TabEaseItem>
       </ScrollView>
 
