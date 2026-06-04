@@ -39,6 +39,7 @@ import authRouter from "./routes/auth.routes.js";
 import balanceRouter from "./routes/balance.routes.js";
 import assetRouter from "./routes/assets.routes.js";
 import candleRouter from "./routes/candles.routes.js";
+import pricesRouter from "./routes/prices.routes.js";
 import tradeRouter from "./routes/trade.routes.js";
 
 // Initialize a single Redis Streams client and share via app.locals
@@ -49,6 +50,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/balance", balanceRouter);
 app.use("/api/v1/supportedAssets", assetRouter);
 app.use("/api/v1/candles", candleRouter);
+app.use("/api/v1/prices", pricesRouter);
 app.use("/api/v1/trade", tradeRouter);
 
 app.get("/", (req, res) => {

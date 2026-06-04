@@ -57,6 +57,14 @@ export type BackendCandle = {
   trade_count?: string | number;
 };
 
+export type BackendLatestPrice = {
+  asset: string;
+  price: number;
+  bid: number;
+  ask: number;
+  decimal?: number;
+};
+
 export type CreateTradePayload = {
   symbol: string;
   type: "buy" | "sell";
@@ -82,6 +90,10 @@ type ClosedTradesResponse = {
 
 type CandlesResponse = {
   data?: BackendCandle[];
+};
+
+type LatestPricesResponse = {
+  data?: BackendLatestPrice[];
 };
 
 async function backendRequest<T>(path: string, token: string) {
@@ -217,6 +229,14 @@ export async function fetchCandles(
 ): Promise<BackendCandle[]> {
   const response = await publicBackendRequest<CandlesResponse>(
     `/api/v1/candles?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`,
+  );
+
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function fetchLatestPrices(): Promise<BackendLatestPrice[]> {
+  const response = await publicBackendRequest<LatestPricesResponse>(
+    "/api/v1/prices/latest",
   );
 
   return Array.isArray(response.data) ? response.data : [];

@@ -48,6 +48,7 @@ import {
   closeTrade,
   createTrade,
   fetchCandles,
+  fetchLatestPrices,
   fetchTradingProfileData,
 } from "@/lib/trading-api";
 import { BACKEND_URL } from "@/lib/auth-client";
@@ -87,6 +88,14 @@ type LiveMarketPrice = {
   lastUpdated: number;
 };
 
+type LivePricePayload = {
+  asset?: string;
+  symbol?: string;
+  price?: number | string;
+  bid?: number | string;
+  ask?: number | string;
+};
+
 type DashboardTabsContextValue = {
   data: DashboardData;
   errorMessage: string | null;
@@ -94,9 +103,10 @@ type DashboardTabsContextValue = {
   isLoadingData: boolean;
   isRefreshingData: boolean;
   livePrices: Record<string, LiveMarketPrice>;
-  onCloseTrade: (orderId: string) => void;
+  onCloseTrade: (orderId: string) => Promise<void>;
+  onTradeCreated: (orderId?: string) => Promise<void>;
   onLogout: () => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<DashboardData | null>;
   user: MobileSessionResponse["user"] | null;
 };
 
@@ -156,6 +166,7 @@ const chartIntervalTabIndicatorPadding = 4;
 const StyledAnimatedView = cssInterop(Animated.View, {
   className: "style",
 });
+const requiredCryptoMarketCodes = ["BTC", "ETH", "SOL"] as const;
 
 const hasNativeEaseView = () => {
   if (Platform.OS === "web") {
@@ -167,6 +178,10 @@ const hasNativeEaseView = () => {
 
 const getWebSocketUrl = () => {
   const configuredUrl = process.env.EXPO_PUBLIC_WEBSOCKET_URL;
+
+  if (configuredUrl?.toLowerCase() === "disabled") {
+    return null;
+  }
 
   if (configuredUrl) {
     return configuredUrl;
@@ -181,7 +196,7 @@ const getWebSocketUrl = () => {
   }
 };
 
-const normalizeMarketPrice = (value?: number | null) => {
+const normalizeMarketPrice = (value?: number | string | null) => {
   if (value === null || value === undefined) return null;
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return null;
@@ -195,6 +210,11 @@ const getMarketCode = (symbol: string) => {
   if (symbolUpper.includes("ETH")) return "ETH";
   if (symbolUpper.includes("SOL")) return "SOL";
   return symbolUpper.replace(/[^A-Z0-9]/g, "");
+};
+
+const getCanonicalLiveAssetSymbol = (symbol: string) => {
+  const marketCode = getMarketCode(symbol);
+  return `${marketCode}_USDC_PERP`;
 };
 
 const getMarketName = (symbol: string) => {
@@ -219,6 +239,64 @@ const getLiveAssetCandidates = (symbol: string) => {
   ];
 };
 
+const hasAllRequiredCryptoPrices = (
+  livePrices: Record<string, LiveMarketPrice>,
+) => {
+  return requiredCryptoMarketCodes.every((marketCode) =>
+    getLiveAssetCandidates(marketCode).some(
+      (candidate) => livePrices[candidate],
+    ),
+  );
+};
+
+const mergeLivePricePayloads = (
+  previousPrices: Record<string, LiveMarketPrice>,
+  payloads: LivePricePayload[],
+) => {
+  let nextPrices = previousPrices;
+
+  payloads.forEach((payload) => {
+    const asset = payload.asset ?? payload.symbol;
+
+    if (!asset || payload.bid === undefined || payload.ask === undefined) {
+      return;
+    }
+
+    const bid = normalizeMarketPrice(payload.bid);
+    const ask = normalizeMarketPrice(payload.ask);
+
+    if (bid === null || ask === null) {
+      return;
+    }
+
+    const payloadPrice = normalizeMarketPrice(payload.price);
+    const marketPrice = payloadPrice ?? (bid + ask) / 2;
+    const symbol = getCanonicalLiveAssetSymbol(String(asset));
+    const previousPrice = nextPrices[symbol];
+    const change = previousPrice ? marketPrice - previousPrice.marketPrice : 0;
+    const changePercent =
+      previousPrice && previousPrice.marketPrice !== 0
+        ? (change / previousPrice.marketPrice) * 100
+        : 0;
+
+    if (nextPrices === previousPrices) {
+      nextPrices = { ...previousPrices };
+    }
+
+    nextPrices[symbol] = {
+      symbol,
+      bid,
+      ask,
+      marketPrice,
+      change,
+      changePercent,
+      lastUpdated: Date.now(),
+    };
+  });
+
+  return nextPrices;
+};
+
 const findLivePriceForTrade = (
   trade: BackendOpenTrade,
   livePrices: Record<string, LiveMarketPrice>,
@@ -239,6 +317,11 @@ const formatCurrency = (value?: number | null, digits = 2) => {
     maximumFractionDigits: digits,
   }).format(value);
 };
+
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 const getPriceDigits = (value: number) => {
   if (value >= 100) return 2;
@@ -930,7 +1013,7 @@ function MarketTradeBottomSheet({
   data: DashboardData;
   market: LiveMarketPrice | null;
   onDismiss: () => void;
-  onTradeCreated: () => void | Promise<void>;
+  onTradeCreated: (orderId?: string) => void | Promise<void>;
 }) {
   const { width } = useWindowDimensions();
   const [selectedInterval, setSelectedInterval] =
@@ -1159,7 +1242,7 @@ function MarketTradeBottomSheet({
 
     try {
       setSubmitSide(type);
-      await createTrade({
+      const result = await createTrade({
         symbol: market.symbol,
         type,
         quantity: orderVolumeNumber,
@@ -1169,7 +1252,7 @@ function MarketTradeBottomSheet({
         stopLoss: stopLossValue,
       });
       void playTradePlacedHaptic();
-      await onTradeCreated();
+      await onTradeCreated(result.orderId);
       Alert.alert(
         "Order created",
         `${type === "buy" ? "Buy" : "Sell"} order created successfully.`,
@@ -1610,8 +1693,8 @@ function WalletTab({
   data: DashboardData;
   isRefreshing: boolean;
   livePrices: Record<string, LiveMarketPrice>;
-  onMarketTradeCreated: () => void | Promise<void>;
-  onRefresh: () => void;
+  onMarketTradeCreated: (orderId?: string) => void | Promise<void>;
+  onRefresh: () => Promise<DashboardData | null>;
   user: MobileSessionResponse["user"] | null;
 }) {
   const [selectedMarketSymbol, setSelectedMarketSymbol] = useState<
@@ -2215,8 +2298,8 @@ function TradesTab({
   data: DashboardData;
   isClosingTrade: boolean;
   isRefreshing: boolean;
-  onCloseTrade: (orderId: string) => void;
-  onRefresh: () => void;
+  onCloseTrade: (orderId: string) => void | Promise<void>;
+  onRefresh: () => Promise<DashboardData | null>;
 }) {
   const [kind, setKind] = useState<TradeKind>("open");
   const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(
@@ -2422,7 +2505,7 @@ function ProfileTab({
   isLoading: boolean;
   isRefreshing: boolean;
   onLogout: () => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<DashboardData | null>;
   user: MobileSessionResponse["user"] | null;
 }) {
   const openPnl = data.openTrades.reduce(
@@ -2553,6 +2636,10 @@ export function DashboardTabsProvider({
   const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>(
     {},
   );
+  const livePricesRef = useRef(livePrices);
+  const pricePollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [isClosingTrade, setIsClosingTrade] = useState(false);
@@ -2596,10 +2683,16 @@ export function DashboardTabsProvider({
         closedTrades: data.closedTrades,
       });
       setDataError(null);
+      return {
+        balance: data.balance,
+        openTrades: data.openTrades,
+        closedTrades: data.closedTrades,
+      };
     } catch (error) {
       setDataError(
         error instanceof Error ? error.message : "Unable to load account data",
       );
+      return null;
     } finally {
       setIsLoadingData(false);
       setIsRefreshingData(false);
@@ -2608,6 +2701,44 @@ export function DashboardTabsProvider({
   const refreshDashboardData = useCallback(() => {
     return loadDashboardData(true);
   }, [loadDashboardData]);
+  const refreshDashboardDataUntil = useCallback(
+    async (
+      isComplete: (data: DashboardData) => boolean,
+      options?: { maxAttempts?: number; delayMs?: number },
+    ) => {
+      const maxAttempts = options?.maxAttempts ?? 6;
+      const delayMs = options?.delayMs ?? 350;
+      let latestData: DashboardData | null = null;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        if (attempt > 0) {
+          await wait(delayMs);
+        }
+
+        latestData = await loadDashboardData(true);
+
+        if (latestData && isComplete(latestData)) {
+          return latestData;
+        }
+      }
+
+      return latestData;
+    },
+    [loadDashboardData],
+  );
+  const handleTradeCreated = useCallback(
+    async (orderId?: string) => {
+      if (!orderId) {
+        await loadDashboardData(true);
+        return;
+      }
+
+      await refreshDashboardDataUntil((data) =>
+        data.openTrades.some((trade) => trade.orderId === orderId),
+      );
+    },
+    [loadDashboardData, refreshDashboardDataUntil],
+  );
   const handleCloseTrade = useCallback(
     async (orderId: string) => {
       if (isClosingTrade) return;
@@ -2616,7 +2747,12 @@ export function DashboardTabsProvider({
         setIsClosingTrade(true);
         await closeTrade(orderId);
         void playTradeClosedHaptic();
-        await loadDashboardData(true);
+        await refreshDashboardDataUntil(
+          (data) =>
+            !data.openTrades.some((trade) => trade.orderId === orderId) &&
+            data.closedTrades.some((trade) => trade.orderId === orderId),
+          { maxAttempts: 8, delayMs: 400 },
+        );
       } catch (error) {
         Alert.alert(
           "Unable to close trade",
@@ -2626,7 +2762,7 @@ export function DashboardTabsProvider({
         setIsClosingTrade(false);
       }
     },
-    [isClosingTrade, loadDashboardData],
+    [isClosingTrade, refreshDashboardDataUntil],
   );
 
   useEffect(() => {
@@ -2636,9 +2772,24 @@ export function DashboardTabsProvider({
   }, [loadDashboardData, user]);
 
   useEffect(() => {
+    livePricesRef.current = livePrices;
+
+    if (
+      hasAllRequiredCryptoPrices(livePrices) &&
+      pricePollingIntervalRef.current
+    ) {
+      clearInterval(pricePollingIntervalRef.current);
+      pricePollingIntervalRef.current = null;
+    }
+  }, [livePrices]);
+
+  useEffect(() => {
     if (!user) return;
 
-    const socket = new WebSocket(getWebSocketUrl());
+    const webSocketUrl = getWebSocketUrl();
+    if (!webSocketUrl) return;
+
+    const socket = new WebSocket(webSocketUrl);
 
     socket.onmessage = (event) => {
       try {
@@ -2648,42 +2799,10 @@ export function DashboardTabsProvider({
             ? JSON.parse(parsedMessage)
             : parsedMessage;
 
-        if (!data.asset || data.bid === undefined || data.ask === undefined) {
-          return;
-        }
-
-        const bid = normalizeMarketPrice(data.bid);
-        const ask = normalizeMarketPrice(data.ask);
-
-        if (bid === null || ask === null) {
-          return;
-        }
-
-        const marketPrice = (bid + ask) / 2;
-        const symbol = String(data.asset).toUpperCase();
-
         setLivePrices((previousPrices) => {
-          const previousPrice = previousPrices[symbol];
-          const change = previousPrice
-            ? marketPrice - previousPrice.marketPrice
-            : 0;
-          const changePercent =
-            previousPrice && previousPrice.marketPrice !== 0
-              ? (change / previousPrice.marketPrice) * 100
-              : 0;
-
-          return {
-            ...previousPrices,
-            [symbol]: {
-              symbol,
-              bid,
-              ask,
-              marketPrice,
-              change,
-              changePercent,
-              lastUpdated: Date.now(),
-            },
-          };
+          const nextPrices = mergeLivePricePayloads(previousPrices, [data]);
+          livePricesRef.current = nextPrices;
+          return nextPrices;
         });
       } catch (error) {
         console.warn("Unable to parse live price update", error);
@@ -2699,6 +2818,59 @@ export function DashboardTabsProvider({
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    let isCancelled = false;
+    let requestInFlight = false;
+
+    const stopPollingIfComplete = () => {
+      if (
+        hasAllRequiredCryptoPrices(livePricesRef.current) &&
+        pricePollingIntervalRef.current
+      ) {
+        clearInterval(pricePollingIntervalRef.current);
+        pricePollingIntervalRef.current = null;
+      }
+    };
+
+    const pollLatestPrices = async () => {
+      if (isCancelled || requestInFlight) return;
+
+      requestInFlight = true;
+
+      try {
+        const latestPrices = await fetchLatestPrices();
+        if (isCancelled || latestPrices.length === 0) return;
+
+        const nextPrices = mergeLivePricePayloads(
+          livePricesRef.current,
+          latestPrices,
+        );
+        livePricesRef.current = nextPrices;
+        setLivePrices(nextPrices);
+        stopPollingIfComplete();
+      } catch (error) {
+        console.warn("Unable to poll latest crypto prices", error);
+      } finally {
+        requestInFlight = false;
+      }
+    };
+
+    if (!hasAllRequiredCryptoPrices(livePricesRef.current)) {
+      void pollLatestPrices();
+      pricePollingIntervalRef.current = setInterval(pollLatestPrices, 1000);
+    }
+
+    return () => {
+      isCancelled = true;
+      if (pricePollingIntervalRef.current) {
+        clearInterval(pricePollingIntervalRef.current);
+        pricePollingIntervalRef.current = null;
+      }
+    };
+  }, [user]);
+
   const contextValue = useMemo<DashboardTabsContextValue>(
     () => ({
       data: enhancedDashboardData,
@@ -2708,6 +2880,7 @@ export function DashboardTabsProvider({
       isRefreshingData,
       livePrices,
       onCloseTrade: handleCloseTrade,
+      onTradeCreated: handleTradeCreated,
       onLogout,
       onRefresh: refreshDashboardData,
       user,
@@ -2716,6 +2889,7 @@ export function DashboardTabsProvider({
       dataError,
       enhancedDashboardData,
       handleCloseTrade,
+      handleTradeCreated,
       isClosingTrade,
       isLoadingData,
       isRefreshingData,
@@ -2734,8 +2908,14 @@ export function DashboardTabsProvider({
 }
 
 export function WalletDashboardTabScreen() {
-  const { data, isRefreshingData, livePrices, onRefresh, user } =
-    useDashboardTabsContext();
+  const {
+    data,
+    isRefreshingData,
+    livePrices,
+    onRefresh,
+    onTradeCreated,
+    user,
+  } = useDashboardTabsContext();
   const animationKey = useFocusedTabAnimationKey();
 
   return (
@@ -2745,7 +2925,7 @@ export function WalletDashboardTabScreen() {
           data={data}
           isRefreshing={isRefreshingData}
           livePrices={livePrices}
-          onMarketTradeCreated={onRefresh}
+          onMarketTradeCreated={onTradeCreated}
           onRefresh={onRefresh}
           user={user}
         />

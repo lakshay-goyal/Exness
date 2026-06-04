@@ -319,6 +319,63 @@ class RedisStreams {
     }
   }
 
+  async readLatestFromRedisStream(
+    streamName: string,
+    count: number = 1,
+  ): Promise<any[]> {
+    try {
+      if (!this.client.isOpen) {
+        throw new Error("Redis client is not connected");
+      }
+
+      const response = await (this.client as any).sendCommand([
+        "XREVRANGE",
+        streamName,
+        "+",
+        "-",
+        "COUNT",
+        String(count),
+      ]);
+
+      if (!Array.isArray(response)) {
+        return [];
+      }
+
+      return response
+        .map((entry) => {
+          const rawFields = Array.isArray(entry) ? entry[1] : entry?.message;
+          const payload: Record<string, any> = {};
+
+          if (Array.isArray(rawFields)) {
+            for (let index = 0; index < rawFields.length; index += 2) {
+              const key = rawFields[index];
+              const value = rawFields[index + 1];
+              if (key !== undefined && value !== undefined) {
+                payload[String(key)] = String(value);
+              }
+            }
+          } else if (rawFields && typeof rawFields === "object") {
+            for (const key in rawFields) {
+              payload[key] = rawFields[key];
+            }
+          }
+
+          const jsonString = Object.values(payload).join("");
+          if (!jsonString) return null;
+
+          try {
+            return JSON.parse(jsonString);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
+    } catch (e) {
+      console.error("Error reading latest messages from Redis stream:", e);
+      throw e;
+    }
+  }
+
   async disconnect() {
     if (this.client.isOpen) {
       try {
