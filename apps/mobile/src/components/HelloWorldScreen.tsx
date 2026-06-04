@@ -25,7 +25,13 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useIsFocused } from "expo-router";
+import {
+  Link,
+  Stack,
+  router,
+  useIsFocused,
+  useLocalSearchParams,
+} from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { cssInterop } from "nativewind";
 import { LineChart } from "react-native-gifted-charts";
@@ -607,13 +613,22 @@ function FocusedTabAnimationProvider({
   );
 }
 
-function DashboardTabFrame({ children }: { children: ReactNode }) {
+function DashboardTabFrame({
+  children,
+  includeTopSafeArea = true,
+}: {
+  children: ReactNode;
+  includeTopSafeArea?: boolean;
+}) {
   const { width } = useWindowDimensions();
+  const safeAreaEdges = includeTopSafeArea
+    ? (["top", "left", "right"] as const)
+    : (["left", "right"] as const);
 
   return (
     <View className="flex-1 bg-[#171918]">
       <StatusBar style="light" />
-      <SafeAreaView className="flex-1" edges={["top", "left", "right"]}>
+      <SafeAreaView className="flex-1" edges={safeAreaEdges}>
         <View
           className="flex-1"
           style={{
@@ -815,72 +830,78 @@ function MarketLogo({ symbol }: { symbol: string }) {
 
 function LiveCryptoRow({
   market,
-  onPress,
 }: {
   market: LiveMarketPrice;
-  onPress: () => void;
 }) {
   const isUp = market.change >= 0;
   const priceDigits = getPriceDigits(market.marketPrice);
   const spread = Math.max(market.ask - market.bid, 0);
+  const href = {
+    pathname: "/crypto/[symbol]",
+    params: { symbol: market.symbol },
+  } as const;
 
   return (
-    <PressableScaleMotion
-      accessibilityRole="button"
-      className="rounded-[18px] bg-[#292C2B] px-4 py-4"
-      onPress={onPress}
-    >
-      <View className="flex-row items-center">
-        <MarketLogo symbol={market.symbol} />
-        <View className="ml-4 flex-1">
-          <Text className="text-[18px] font-black text-white">
-            {getMarketName(market.symbol)}
-          </Text>
-          <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
-            {market.symbol}
-          </Text>
-        </View>
-        <View className="items-end">
-          <Text className="text-[18px] font-black text-white">
-            {formatCurrency(market.marketPrice, priceDigits)}
-          </Text>
-          <Text
-            className={`mt-1 text-[14px] font-black ${
-              isUp ? "text-[#28E978]" : "text-[#FF5366]"
-            }`}
-          >
-            {`${formatSignedCurrency(market.change)} (${formatPercent(market.changePercent)})`}
-          </Text>
-        </View>
-      </View>
+    <Link asChild href={href}>
+      <Link.AppleZoom>
+        <Pressable
+          accessibilityRole="button"
+          className="rounded-[18px] bg-[#292C2B] px-4 py-4"
+          collapsable={false}
+        >
+          <View className="flex-row items-center">
+            <MarketLogo symbol={market.symbol} />
+            <View className="ml-4 flex-1">
+              <Text className="text-[18px] font-black text-white">
+                {getMarketName(market.symbol)}
+              </Text>
+              <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
+                {market.symbol}
+              </Text>
+            </View>
+            <View className="items-end">
+              <Text className="text-[18px] font-black text-white">
+                {formatCurrency(market.marketPrice, priceDigits)}
+              </Text>
+              <Text
+                className={`mt-1 text-[14px] font-black ${
+                  isUp ? "text-[#28E978]" : "text-[#FF5366]"
+                }`}
+              >
+                {`${formatSignedCurrency(market.change)} (${formatPercent(market.changePercent)})`}
+              </Text>
+            </View>
+          </View>
 
-      <View className="mt-4 flex-row gap-3">
-        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-            Bid
-          </Text>
-          <Text className="mt-1 text-[14px] font-black text-white">
-            {formatCurrency(market.bid, priceDigits)}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-            Ask
-          </Text>
-          <Text className="mt-1 text-[14px] font-black text-white">
-            {formatCurrency(market.ask, priceDigits)}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-          <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-            Spread
-          </Text>
-          <Text className="mt-1 text-[14px] font-black text-white">
-            {formatCurrency(spread, priceDigits)}
-          </Text>
-        </View>
-      </View>
-    </PressableScaleMotion>
+          <View className="mt-4 flex-row gap-3">
+            <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+                Bid
+              </Text>
+              <Text className="mt-1 text-[14px] font-black text-white">
+                {formatCurrency(market.bid, priceDigits)}
+              </Text>
+            </View>
+            <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+                Ask
+              </Text>
+              <Text className="mt-1 text-[14px] font-black text-white">
+                {formatCurrency(market.ask, priceDigits)}
+              </Text>
+            </View>
+            <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
+                Spread
+              </Text>
+              <Text className="mt-1 text-[14px] font-black text-white">
+                {formatCurrency(spread, priceDigits)}
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      </Link.AppleZoom>
+    </Link>
   );
 }
 
@@ -1004,15 +1025,15 @@ function ChartIntervalTabs({
   );
 }
 
-function MarketTradeBottomSheet({
+function MarketTradeDetailsView({
   data,
   market,
-  onDismiss,
+  onClose,
   onTradeCreated,
 }: {
   data: DashboardData;
   market: LiveMarketPrice | null;
-  onDismiss: () => void;
+  onClose: () => void;
   onTradeCreated: (orderId?: string) => void | Promise<void>;
 }) {
   const { width } = useWindowDimensions();
@@ -1257,7 +1278,7 @@ function MarketTradeBottomSheet({
         "Order created",
         `${type === "buy" ? "Buy" : "Sell"} order created successfully.`,
       );
-      onDismiss();
+      onClose();
     } catch (error) {
       Alert.alert(
         "Unable to create order",
@@ -1269,144 +1290,130 @@ function MarketTradeBottomSheet({
   };
 
   return (
-    <Modal animationType="slide" transparent visible onRequestClose={onDismiss}>
-      <View className="flex-1 justify-end bg-black/70">
-        <Pressable className="flex-1" onPress={onDismiss} />
-        <View className="max-h-[92%] rounded-t-[30px] bg-[#1F2221] px-5 pb-7 pt-4">
-          <View className="mb-4 h-1.5 w-14 self-center rounded-full bg-[#444846]" />
-          <View className="flex-row items-start justify-between gap-4">
-            <View className="flex-1">
-              <Text className="text-[25px] font-black text-white">
-                {getMarketName(market.symbol)}
-              </Text>
-              <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
-                {market.symbol} | Bid {formatCurrency(market.bid, priceDigits)}{" "}
-                | Ask {formatCurrency(market.ask, priceDigits)}
-              </Text>
-            </View>
-            <PressableScaleMotion
-              accessibilityRole="button"
-              className="h-10 w-10 items-center justify-center rounded-full bg-[#292C2B]"
-              onPress={onDismiss}
-            >
-              <Text className="text-[18px] font-black text-white">x</Text>
-            </PressableScaleMotion>
-          </View>
-
-          <TradeEntryScroll>
-            <View className="rounded-[22px] bg-[#292C2B] px-4 py-4">
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
-                    Market price
-                  </Text>
-                  <Text className="mt-1 text-[24px] font-black text-white">
-                    {formatCurrency(market.marketPrice, priceDigits)}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text
-                    className={`text-[16px] font-black ${
-                      market.change >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-                    }`}
-                  >
-                    {formatPercent(market.changePercent)}
-                  </Text>
-                  <Text className="mt-1 text-[12px] font-bold text-[#9A9A9A]">
-                    Spread {formatCurrency(spread, priceDigits)}
-                  </Text>
-                </View>
-              </View>
-
-              <ChartIntervalTabs
-                onChange={switchChartInterval}
-                selectedInterval={selectedInterval}
-              />
-
-              <View className="mt-4 min-h-[286px] justify-center overflow-hidden rounded-[18px] bg-[#111827] px-2 py-4">
-                {chartLoading ? (
-                  <View className="items-center justify-center py-16">
-                    <ActivityIndicator color="#A594F7" />
-                    <Text className="mt-3 text-[13px] font-bold text-[#9A9A9A]">
-                      Loading chart
+    <DashboardTabFrame includeTopSafeArea={false}>
+      <View className="flex-1">
+        <TradeEntryScroll>
+          <View className="px-5">
+            <Link.AppleZoomTarget>
+              <View
+                collapsable={false}
+                className="rounded-[22px] bg-[#292C2B] px-4 py-4"
+              >
+                <View className="flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
+                      Market price
+                    </Text>
+                    <Text className="mt-1 text-[24px] font-black text-white">
+                      {formatCurrency(market.marketPrice, priceDigits)}
                     </Text>
                   </View>
-                ) : chartError ? (
-                  <View className="items-center justify-center px-4 py-12">
-                    <Text className="text-center text-[14px] font-bold text-[#FF8C99]">
-                      {chartError}
-                    </Text>
-                    <PressableScaleMotion
-                      className="mt-4 rounded-full bg-[#A594F7] px-5 py-2"
-                      onPress={() => setChartRetry((value) => value + 1)}
+                  <View className="items-end">
+                    <Text
+                      className={`text-[16px] font-black ${
+                        market.change >= 0
+                          ? "text-[#28E978]"
+                          : "text-[#FF5366]"
+                      }`}
                     >
-                      <Text className="text-[13px] font-black text-[#151515]">
-                        Retry
-                      </Text>
-                    </PressableScaleMotion>
-                  </View>
-                ) : chartData.length === 0 ? (
-                  <View className="items-center justify-center py-16">
-                    <Text className="text-center text-[14px] font-bold text-[#9A9A9A]">
-                      No candle history available for this market.
+                      {formatPercent(market.changePercent)}
+                    </Text>
+                    <Text className="mt-1 text-[12px] font-bold text-[#9A9A9A]">
+                      Spread {formatCurrency(spread, priceDigits)}
                     </Text>
                   </View>
-                ) : (
-                  <LineChart
-                    areaChart
-                    data={chartData}
-                    width={chartWidth}
-                    height={210}
-                    hideDataPoints
-                    spacing={Math.max(
-                      5,
-                      Math.min(
-                        13,
-                        chartWidth / Math.max(chartData.length - 1, 1),
-                      ),
-                    )}
-                    color="#A594F7"
-                    thickness={2}
-                    startFillColor="rgba(165,148,247,0.32)"
-                    endFillColor="rgba(165,148,247,0.03)"
-                    startOpacity={0.9}
-                    endOpacity={0.2}
-                    initialSpacing={0}
-                    endSpacing={8}
-                    noOfSections={4}
-                    maxValue={chartMaxValue}
-                    yAxisOffset={yAxisOffset}
-                    yAxisColor="rgba(148,163,184,0.35)"
-                    yAxisThickness={1}
-                    yAxisLabelWidth={54}
-                    rulesType="dotted"
-                    rulesColor="rgba(148,163,184,0.22)"
-                    yAxisTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
-                    xAxisColor="rgba(148,163,184,0.35)"
-                    xAxisLabelTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
-                    pointerConfig={{
-                      pointerStripHeight: 210,
-                      pointerStripColor: "rgba(148,163,184,0.5)",
-                      pointerStripWidth: 1,
-                      pointerColor: "#A594F7",
-                      radius: 4,
-                      activatePointersOnLongPress: true,
-                      autoAdjustPointerLabelPosition: true,
-                      pointerLabelComponent: (items: ChartPoint[]) => (
-                        <View className="items-center rounded-lg bg-[#A594F7] px-2 py-1">
-                          <Text className="text-[10px] font-bold text-[#151515]">
-                            {items[0]?.date || "--"}
-                          </Text>
-                          <Text className="text-[11px] font-black text-[#151515]">
-                            {formatCurrency(items[0]?.value, priceDigits)}
-                          </Text>
-                        </View>
-                      ),
-                    }}
-                  />
-                )}
+                </View>
+
+                <ChartIntervalTabs
+                  onChange={switchChartInterval}
+                  selectedInterval={selectedInterval}
+                />
+
+                <View className="mt-4 min-h-[286px] justify-center overflow-hidden rounded-[18px] bg-[#111827] px-2 py-4">
+                  {chartLoading ? (
+                    <View className="items-center justify-center py-16">
+                      <ActivityIndicator color="#A594F7" />
+                      <Text className="mt-3 text-[13px] font-bold text-[#9A9A9A]">
+                        Loading chart
+                      </Text>
+                    </View>
+                  ) : chartError ? (
+                    <View className="items-center justify-center px-4 py-12">
+                      <Text className="text-center text-[14px] font-bold text-[#FF8C99]">
+                        {chartError}
+                      </Text>
+                      <PressableScaleMotion
+                        className="mt-4 rounded-full bg-[#A594F7] px-5 py-2"
+                        onPress={() => setChartRetry((value) => value + 1)}
+                      >
+                        <Text className="text-[13px] font-black text-[#151515]">
+                          Retry
+                        </Text>
+                      </PressableScaleMotion>
+                    </View>
+                  ) : chartData.length === 0 ? (
+                    <View className="items-center justify-center py-16">
+                      <Text className="text-center text-[14px] font-bold text-[#9A9A9A]">
+                        No candle history available for this market.
+                      </Text>
+                    </View>
+                  ) : (
+                    <LineChart
+                      areaChart
+                      data={chartData}
+                      width={chartWidth}
+                      height={210}
+                      hideDataPoints
+                      spacing={Math.max(
+                        5,
+                        Math.min(
+                          13,
+                          chartWidth / Math.max(chartData.length - 1, 1),
+                        ),
+                      )}
+                      color="#A594F7"
+                      thickness={2}
+                      startFillColor="rgba(165,148,247,0.32)"
+                      endFillColor="rgba(165,148,247,0.03)"
+                      startOpacity={0.9}
+                      endOpacity={0.2}
+                      initialSpacing={0}
+                      endSpacing={8}
+                      noOfSections={4}
+                      maxValue={chartMaxValue}
+                      yAxisOffset={yAxisOffset}
+                      yAxisColor="rgba(148,163,184,0.35)"
+                      yAxisThickness={1}
+                      yAxisLabelWidth={54}
+                      rulesType="dotted"
+                      rulesColor="rgba(148,163,184,0.22)"
+                      yAxisTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                      xAxisColor="rgba(148,163,184,0.35)"
+                      xAxisLabelTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                      pointerConfig={{
+                        pointerStripHeight: 210,
+                        pointerStripColor: "rgba(148,163,184,0.5)",
+                        pointerStripWidth: 1,
+                        pointerColor: "#A594F7",
+                        radius: 4,
+                        activatePointersOnLongPress: true,
+                        autoAdjustPointerLabelPosition: true,
+                        pointerLabelComponent: (items: ChartPoint[]) => (
+                          <View className="items-center rounded-lg bg-[#A594F7] px-2 py-1">
+                            <Text className="text-[10px] font-bold text-[#151515]">
+                              {items[0]?.date || "--"}
+                            </Text>
+                            <Text className="text-[11px] font-black text-[#151515]">
+                              {formatCurrency(items[0]?.value, priceDigits)}
+                            </Text>
+                          </View>
+                        ),
+                      }}
+                    />
+                  )}
+                </View>
               </View>
-            </View>
+            </Link.AppleZoomTarget>
 
             <View className="mt-5 rounded-[22px] bg-[#292C2B] px-4 py-4">
               <Text className="text-[18px] font-black text-white">
@@ -1548,11 +1555,11 @@ function MarketTradeBottomSheet({
                 </PressableScaleMotion>
               </View>
             </View>
-          </TradeEntryScroll>
-        </View>
+          </View>
+        </TradeEntryScroll>
         <TradeKeyboardToolbar />
       </View>
-    </Modal>
+    </DashboardTabFrame>
   );
 }
 
@@ -1686,23 +1693,15 @@ function WalletTab({
   data,
   isRefreshing,
   livePrices,
-  onMarketTradeCreated,
   onRefresh,
   user,
 }: {
   data: DashboardData;
   isRefreshing: boolean;
   livePrices: Record<string, LiveMarketPrice>;
-  onMarketTradeCreated: (orderId?: string) => void | Promise<void>;
   onRefresh: () => Promise<DashboardData | null>;
   user: MobileSessionResponse["user"] | null;
 }) {
-  const [selectedMarketSymbol, setSelectedMarketSymbol] = useState<
-    string | null
-  >(null);
-  const selectedMarket = selectedMarketSymbol
-    ? (livePrices[selectedMarketSymbol] ?? null)
-    : null;
   const openPnl = data.openTrades.reduce(
     (total, trade) => total + getTradePnl(trade),
     0,
@@ -1739,90 +1738,77 @@ function WalletTab({
   );
 
   return (
-    <>
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="pb-28"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="bg-[#173120] pb-6">
-          <TabEaseItem>
-            <Header user={user} />
-          </TabEaseItem>
-          <TabEaseItem className="items-center px-6 pt-8" delay={45}>
-            <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
-              {formatCurrency(accountEquity)}
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="pb-28"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
+      showsVerticalScrollIndicator={false}
+    >
+      <View className="bg-[#173120] pb-6">
+        <TabEaseItem>
+          <Header user={user} />
+        </TabEaseItem>
+        <TabEaseItem className="items-center px-6 pt-8" delay={45}>
+          <Text className="text-[48px] font-black leading-[54px] tracking-normal text-white">
+            {formatCurrency(accountEquity)}
+          </Text>
+          <View className="mt-1 flex-row items-center gap-3">
+            <Text
+              className={`text-[18px] font-black ${
+                openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+              }`}
+            >
+              {formatSignedCurrency(openPnl)}
             </Text>
-            <View className="mt-1 flex-row items-center gap-3">
+            <View className="rounded-lg bg-[#255F3C] px-3 py-1">
               <Text
-                className={`text-[18px] font-black ${
+                className={`text-[16px] font-black ${
                   openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
                 }`}
               >
-                {formatSignedCurrency(openPnl)}
+                {formatPercent(openPct)}
               </Text>
-              <View className="rounded-lg bg-[#255F3C] px-3 py-1">
-                <Text
-                  className={`text-[16px] font-black ${
-                    openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-                  }`}
-                >
-                  {formatPercent(openPct)}
-                </Text>
-              </View>
             </View>
-          </TabEaseItem>
-
-          <TabEaseItem
-            className="flex-row flex-wrap gap-3 px-6 pt-12"
-            delay={90}
-          >
-            {accountStats.map((stat) => (
-              <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
-                <InfoCard {...stat} />
-              </View>
-            ))}
-          </TabEaseItem>
-        </View>
-
-        <TabEaseItem className="px-6 pt-6" delay={135}>
-          <View className="mt-8 flex-row items-center justify-between">
-            <Text className="text-[21px] font-black text-white">
-              Live crypto values
-            </Text>
-          </View>
-
-          <View className="mt-4 gap-4">
-            {liveCryptoMarkets.length === 0 ? (
-              <View className="min-h-[110px] items-center justify-center rounded-[18px] bg-[#292C2B] px-5 py-5">
-                <ActivityIndicator color="#A594F7" />
-                <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
-                  Waiting for live crypto prices
-                </Text>
-              </View>
-            ) : (
-              liveCryptoMarkets.map((market) => (
-                <LiveCryptoRow
-                  key={market.symbol}
-                  market={market}
-                  onPress={() => setSelectedMarketSymbol(market.symbol)}
-                />
-              ))
-            )}
           </View>
         </TabEaseItem>
-      </ScrollView>
 
-      <MarketTradeBottomSheet
-        data={data}
-        market={selectedMarket}
-        onDismiss={() => setSelectedMarketSymbol(null)}
-        onTradeCreated={onMarketTradeCreated}
-      />
-    </>
+        <TabEaseItem
+          className="flex-row flex-wrap gap-3 px-6 pt-12"
+          delay={90}
+        >
+          {accountStats.map((stat) => (
+            <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
+              <InfoCard {...stat} />
+            </View>
+          ))}
+        </TabEaseItem>
+      </View>
+
+      <TabEaseItem className="px-6 pt-6" delay={135}>
+        <View className="mt-8 flex-row items-center justify-between">
+          <Text className="text-[21px] font-black text-white">
+            Live crypto values
+          </Text>
+        </View>
+
+        <View className="mt-4 gap-4">
+          {liveCryptoMarkets.length === 0 ? (
+            <View className="min-h-[110px] items-center justify-center rounded-[18px] bg-[#292C2B] px-5 py-5">
+              <ActivityIndicator color="#A594F7" />
+              <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
+                Waiting for live crypto prices
+              </Text>
+            </View>
+          ) : (
+            liveCryptoMarkets.map((market) => (
+              <LiveCryptoRow key={market.symbol} market={market} />
+            ))
+          )}
+        </View>
+      </TabEaseItem>
+    </ScrollView>
   );
 }
 
@@ -2907,13 +2893,78 @@ export function DashboardTabsProvider({
   );
 }
 
+export function CryptoDetailsScreen() {
+  const params = useLocalSearchParams();
+  const symbolParam = params.symbol;
+  const symbol = useMemo(() => {
+    const rawSymbol = Array.isArray(symbolParam) ? symbolParam[0] : symbolParam;
+    return rawSymbol ? decodeURIComponent(String(rawSymbol)) : "";
+  }, [symbolParam]);
+  const { data, livePrices, onTradeCreated } = useDashboardTabsContext();
+  const market = useMemo(() => {
+    if (!symbol) return null;
+
+    return (
+      getLiveAssetCandidates(symbol)
+        .map((candidate) => livePrices[candidate])
+        .find(Boolean) ??
+      Object.values(livePrices).find(
+        (price) => price.symbol.toUpperCase() === symbol.toUpperCase(),
+      ) ??
+      null
+    );
+  }, [livePrices, symbol]);
+  const closeDetails = useCallback(() => {
+    playSubtleTapHaptic();
+
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/wallet");
+  }, []);
+  const screenTitle = market ? getMarketName(market.symbol) : "Market";
+
+  if (!market) {
+    const isWaitingForPrices = Object.keys(livePrices).length === 0;
+
+    return (
+      <>
+        <Stack.Screen options={{ title: screenTitle }} />
+        <DashboardTabFrame includeTopSafeArea={false}>
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color="#A594F7" />
+            <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
+              {isWaitingForPrices
+                ? "Waiting for live crypto prices"
+                : "Market details are unavailable"}
+            </Text>
+          </View>
+        </DashboardTabFrame>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Stack.Screen options={{ title: screenTitle }} />
+      <MarketTradeDetailsView
+        data={data}
+        market={market}
+        onClose={closeDetails}
+        onTradeCreated={onTradeCreated}
+      />
+    </>
+  );
+}
+
 export function WalletDashboardTabScreen() {
   const {
     data,
     isRefreshingData,
     livePrices,
     onRefresh,
-    onTradeCreated,
     user,
   } = useDashboardTabsContext();
   const animationKey = useFocusedTabAnimationKey();
@@ -2925,7 +2976,6 @@ export function WalletDashboardTabScreen() {
           data={data}
           isRefreshing={isRefreshingData}
           livePrices={livePrices}
-          onMarketTradeCreated={onTradeCreated}
           onRefresh={onRefresh}
           user={user}
         />
