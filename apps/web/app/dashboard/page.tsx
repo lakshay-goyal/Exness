@@ -24,7 +24,7 @@ import type {
   ISeriesApi,
   UTCTimestamp,
 } from "lightweight-charts";
-import type { BackendClosedTrade, BackendOpenTrade, Candle } from "@repo/contracts";
+import type { BackendClosedTrade, BackendOpenTrade, Candle } from "@repo/types";
 import { marketSymbolMapper, priceNormalizer } from "@repo/trading-core";
 import axios from "axios";
 import { useRouter } from "next/navigation";

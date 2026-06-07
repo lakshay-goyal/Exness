@@ -40,7 +40,6 @@
         "@better-auth/expo": "^1.6.11",
         "@better-auth/prisma-adapter": "^1.6.11",
         "@repo/config": "workspace:*",
-        "@repo/contracts": "workspace:*",
         "@repo/db": "workspace:*",
         "@repo/timescaledb": "workspace:*",
         "@repo/trading-core": "workspace:*",
@@ -49,6 +48,7 @@
         "redis": "^5.8.2",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -63,6 +63,7 @@
         "@repo/timescaledb": "workspace:*",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -77,6 +78,7 @@
         "@repo/db": "workspace:*",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -88,11 +90,12 @@
       "name": "engine",
       "dependencies": {
         "@repo/config": "workspace:*",
-        "@repo/contracts": "workspace:*",
         "@repo/db": "workspace:*",
         "@repo/trading-core": "workspace:*",
+        "@repo/types": "workspace:*",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -104,10 +107,10 @@
       "name": "price_poller",
       "dependencies": {
         "@repo/config": "workspace:*",
-        "@repo/contracts": "workspace:*",
         "@repo/types": "workspace:*",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -121,6 +124,7 @@
         "@repo/config": "workspace:*",
       },
       "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5.9.2",
       },
@@ -162,8 +166,8 @@
         "@react-navigation/elements": "^2.9.10",
         "@react-navigation/native": "^7.1.33",
         "@repo/api-client": "workspace:*",
-        "@repo/contracts": "workspace:*",
         "@repo/trading-core": "workspace:*",
+        "@repo/types": "workspace:*",
         "better-auth": "^1.6.11",
         "expo": "~55.0.26",
         "expo-constants": "~55.0.16",
@@ -203,6 +207,7 @@
       },
       "devDependencies": {
         "@babel/plugin-transform-react-jsx": "^7.28.6",
+        "@repo/typescript-config": "workspace:*",
         "@types/react": "~19.2.10",
         "babel-preset-expo": "^55.0.22",
         "prettier-plugin-tailwindcss": "^0.5.11",
@@ -217,9 +222,9 @@
         "@radix-ui/react-slot": "^1.2.3",
         "@radix-ui/react-tabs": "^1.1.13",
         "@repo/api-client": "workspace:*",
-        "@repo/contracts": "workspace:*",
         "@repo/db": "workspace:*",
         "@repo/trading-core": "workspace:*",
+        "@repo/types": "workspace:*",
         "@repo/ui": "workspace:*",
         "axios": "^1.7.2",
         "class-variance-authority": "^0.7.1",
@@ -253,7 +258,7 @@
     "packages/api-client": {
       "name": "@repo/api-client",
       "dependencies": {
-        "@repo/contracts": "workspace:*",
+        "@repo/types": "workspace:*",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
@@ -271,17 +276,6 @@
         "redis": "^5.8.2",
         "zod": "^4.1.5",
       },
-      "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
-        "@types/bun": "latest",
-        "typescript": "^5.9.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "packages/contracts": {
-      "name": "@repo/contracts",
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
@@ -361,7 +355,7 @@
     "packages/trading-core": {
       "name": "@repo/trading-core",
       "dependencies": {
-        "@repo/contracts": "workspace:*",
+        "@repo/types": "workspace:*",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
@@ -374,9 +368,6 @@
     },
     "packages/types": {
       "name": "@repo/types",
-      "dependencies": {
-        "@repo/contracts": "workspace:*",
-      },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
         "@types/bun": "latest",
@@ -1047,8 +1038,6 @@
     "@repo/api-client": ["@repo/api-client@workspace:packages/api-client"],
 
     "@repo/config": ["@repo/config@workspace:packages/config"],
-
-    "@repo/contracts": ["@repo/contracts@workspace:packages/contracts"],
 
     "@repo/db": ["@repo/db@workspace:packages/db"],
 

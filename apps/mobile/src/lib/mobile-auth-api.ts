@@ -3,7 +3,7 @@ import {
   getStoredAuthItem,
   setStoredAuthItem,
 } from "./auth-storage";
-import type { MobileSessionResponse } from "@repo/contracts";
+import type { MobileSessionResponse } from "@repo/types";
 import { authClient, BACKEND_URL } from "./auth-client";
 import { logAuthEvent } from "./auth-logger";
 

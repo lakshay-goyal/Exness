@@ -3,7 +3,7 @@ import { users } from "../state/users.js";
 import { closeOrders, openOrders } from "../state/orders.js";
 import { prices } from "../state/prices.js";
 import { prisma } from "@repo/db";
-import type { CloseReason } from "@repo/contracts";
+import type { CloseReason } from "@repo/types";
 import {
   marketSymbolMapper,
   orderCalculator,

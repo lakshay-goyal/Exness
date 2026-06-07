@@ -11,8 +11,8 @@ const SERVICES = [
 ];
 
 const PACKAGES = [
-  "@repo/contracts",
   "@repo/trading-core",
+  "@repo/types",
   "@repo/api-client",
   "@repo/config",
   "@repo/db",
@@ -33,7 +33,7 @@ export default function Page(): ReactElement {
         <p className="mt-4 max-w-3xl text-base text-muted-foreground">
           Source map for the Turboramper services, shared packages, and data
           flow. The runtime behavior remains split across focused workers and
-          package-owned contracts.
+          package-owned types.
         </p>
       </section>
 

@@ -1,11 +1,5 @@
 {
-  "extends": "@repo/typescript-config/base.json",
-  "compilerOptions": {
-    "module": "Preserve",
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  },
+  "extends": "@repo/typescript-config/bun-package.json",
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "generated"]
 }

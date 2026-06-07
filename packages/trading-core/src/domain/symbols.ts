@@ -2,7 +2,7 @@ import {
   supportedSymbols,
   type SupportedMarketAsset,
   type SupportedSymbol,
-} from "@repo/contracts";
+} from "@repo/types";
 
 export class MarketSymbolMapper {
   private readonly symbolToAsset: Record<SupportedSymbol, SupportedMarketAsset> = {

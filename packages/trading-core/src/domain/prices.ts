@@ -1,4 +1,4 @@
-import type { OpenOrder, PriceUpdate } from "@repo/contracts";
+import type { OpenOrder, PriceUpdate } from "@repo/types";
 import { marketSymbolMapper } from "./symbols";
 
 export class PriceNormalizer {

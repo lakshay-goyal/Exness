@@ -1,4 +1,4 @@
-import type { CloseReason, OpenOrder, PriceUpdate } from "@repo/contracts";
+import type { CloseReason, OpenOrder, PriceUpdate } from "@repo/types";
 import { priceNormalizer } from "./prices";
 
 export class OrderCalculator {

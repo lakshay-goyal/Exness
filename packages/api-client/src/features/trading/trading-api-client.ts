@@ -13,7 +13,7 @@ import type {
   LatestPricesResponse,
   OpenOrdersResponse,
   TradingProfileData,
-} from "@repo/contracts";
+} from "@repo/types";
 import { parseArray } from "../../shared/parsing/parse-array";
 
 export type AccessTokenProvider = () => string | null | Promise<string | null>;

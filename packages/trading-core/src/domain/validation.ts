@@ -1,4 +1,4 @@
-import type { OrderSide } from "@repo/contracts";
+import type { OrderSide } from "@repo/types";
 
 export class TradeInputValidator {
   parseOrderSide(value: unknown): OrderSide | null {

@@ -10,7 +10,6 @@
   "dependencies": {
     "@better-auth/expo": "^1.6.11",
     "@better-auth/prisma-adapter": "^1.6.11",
-    "@repo/contracts": "workspace:*",
     "@repo/config": "workspace:*",
     "@repo/utils":"workspace:*",
     "@repo/db":"workspace:*",
@@ -20,6 +19,7 @@
     "redis": "^5.8.2"
   },
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"
   },

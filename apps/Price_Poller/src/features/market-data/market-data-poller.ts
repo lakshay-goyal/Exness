@@ -1,7 +1,7 @@
 import "dotenv/config";
 import WebSocket from "ws";
 import { pubsubClient, config, redisClient, redisStreams, constant } from "@repo/config";
-import type { PriceUpdate } from "@repo/contracts";
+import type { PriceUpdate } from "@repo/types";
 
 export class MarketDataPoller {
   private readonly ws = new WebSocket(config.BINANCE_WS_URL);

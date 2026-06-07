@@ -8,11 +8,11 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies":{
-    "@repo/contracts": "workspace:*",
     "@repo/config":"workspace:*",
     "@repo/types":"workspace:*"
   },
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"
   },

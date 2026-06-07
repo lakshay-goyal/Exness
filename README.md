@@ -80,7 +80,7 @@ The platform follows a distributed microservices architecture with the following
   - Database configurations
   - Stream constants and keys
 
-- **`@repo/contracts`**: Shared public contracts
+- **`@repo/types`**: Shared TypeScript types and public API shapes
   - Trading DTOs and API response types
   - Redis stream command and response shapes
   - Supported symbols, order sides, close reasons, and candle intervals
@@ -106,10 +106,6 @@ The platform follows a distributed microservices architecture with the following
   - Hypertable management
   - Continuous aggregates for candles
   - Data compression and retention policies
-
-- **`@repo/types`**: Shared TypeScript types
-  - Compatibility re-export for shared contracts
-  - Prefer importing new code from `@repo/contracts`
 
 ### Utility Packages
 

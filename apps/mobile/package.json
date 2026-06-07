@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@repo/api-client": "workspace:*",
-    "@repo/contracts": "workspace:*",
     "@repo/trading-core": "workspace:*",
+    "@repo/types": "workspace:*",
     "@better-auth/expo": "^1.6.11",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "^7.28.6",
+    "@repo/typescript-config": "workspace:*",
     "@types/react": "~19.2.10",
     "babel-preset-expo": "^55.0.22",
     "prettier-plugin-tailwindcss": "^0.5.11",

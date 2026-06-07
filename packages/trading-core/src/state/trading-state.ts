@@ -1,4 +1,4 @@
-import type { ClosedOrder, OpenOrder, PriceUpdate, TradingUser } from "@repo/contracts";
+import type { ClosedOrder, OpenOrder, PriceUpdate, TradingUser } from "@repo/types";
 
 const initialUsers: TradingUser[] = [
   {

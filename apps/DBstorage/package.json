@@ -12,6 +12,7 @@
     "@repo/db":"workspace:*"
   },
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"
   },

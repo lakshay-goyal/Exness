@@ -7,7 +7,7 @@ import type {
   CreateTradePayload,
   LatestPrice as BackendLatestPrice,
   TradingProfileData,
-} from "@repo/contracts";
+} from "@repo/types";
 import { BACKEND_URL } from "./auth-client";
 import { getMobileAccessToken } from "./mobile-auth-api";
 
