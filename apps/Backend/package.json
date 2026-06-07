@@ -4,20 +4,24 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/expo": "^1.6.11",
     "@better-auth/prisma-adapter": "^1.6.11",
+    "@repo/contracts": "workspace:*",
     "@repo/config": "workspace:*",
     "@repo/utils":"workspace:*",
     "@repo/db":"workspace:*",
+    "@repo/trading-core": "workspace:*",
     "@repo/timescaledb":"workspace:*",
     "better-auth": "^1.6.11",
     "redis": "^5.8.2"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -11,6 +11,9 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/contracts": "workspace:*",
+    "@repo/trading-core": "workspace:*",
     "@repo/ui":"workspace:*",
     "@repo/db":"workspace:*",
     "@radix-ui/react-slot": "^1.2.3",

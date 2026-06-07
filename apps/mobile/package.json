@@ -7,9 +7,13 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/contracts": "workspace:*",
+    "@repo/trading-core": "workspace:*",
     "@better-auth/expo": "^1.6.11",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",

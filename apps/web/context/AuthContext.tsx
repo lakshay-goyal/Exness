@@ -116,7 +116,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   },
                 },
               );
-              console.log("User ensured in Engine and DBStorage");
             } catch (ensureError) {
               console.error("Error ensuring user:", ensureError);
             }
@@ -129,7 +128,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (verifyUserResponse.status === 404) {
-          console.log("User not found in database");
           localStorage.removeItem("token");
           setToken(null);
           setUser(null);
@@ -145,9 +143,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           error.response?.status === 403 ||
           error.response?.status === 404
         ) {
-          console.log(
-            "Token verification failed: Invalid token or user not found",
-          );
           localStorage.removeItem("token");
           setToken(null);
           setUser(null);
@@ -288,7 +283,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       () => {
         verifyToken().then((isValid) => {
           if (!isValid) {
-            console.log("Token expired, logging out");
             logout();
           }
         });

@@ -13,7 +13,6 @@ class ReadRedisStreams {
   async connect() {
     if (!this.client.isOpen) {
       await this.client.connect();
-      console.log("Redis connected at:", this.url);
     }
   }
 
@@ -48,7 +47,6 @@ class ReadRedisStreams {
               payload[key] = message[key];
             }
 
-            console.log("Received message:", id, JSON.stringify(payload));
             const jsonString = Object.values(payload).join("");
             const result = JSON.parse(jsonString);
             //  callbackFunction(result);
@@ -63,7 +61,6 @@ class ReadRedisStreams {
         // Removed unreachable conditions === false block
       }
 
-      console.log("Exited read loop");
       }
     } catch (e) {
       console.error("Error reading from Redis stream:", e);

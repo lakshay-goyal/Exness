@@ -13,7 +13,6 @@ class RedisClient {
   async connect() {
     if (!this.client.isOpen) {
       await this.client.connect();
-      console.log("Redis connected at: ", this.url);
     }
   }
 
@@ -26,7 +25,6 @@ class RedisClient {
   async popData(channel: string) {
     if (this.client.isOpen) {
       const msg = await this.client.lPop(channel);
-      console.log(JSON.stringify(msg))
       return msg;
     }
     return null;

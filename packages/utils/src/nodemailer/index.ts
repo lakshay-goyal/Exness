@@ -22,5 +22,4 @@ export async function nodemailerSender(email: string, token: string) {
            <a href="${verificationUrl}">${verificationUrl}</a>`,
   });
 
-  console.log("Message sent: %s", info.messageId);
 }

@@ -1,7 +1,6 @@
 import { MongoClient, Db, Collection } from "mongodb";
 import { config } from "@repo/config";
-import { users } from "../../apps/Engine/src/data/users.js";
-import { openOrders } from "../../apps/Engine/src/data/orders.js";
+import { openOrders, users } from "@repo/trading-core/state";
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
@@ -15,7 +14,6 @@ async function connectToMongoDB(): Promise<void> {
       client = new MongoClient(config.MONGODB_URL);
       await client.connect();
       db = client.db("exness_snapshots");
-      console.log("Connected to MongoDB");
     }
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);
@@ -42,7 +40,6 @@ async function clearMongoDBData(): Promise<void> {
       ordersCollection.deleteMany({}),
     ]);
     
-    console.log("Cleared all data from MongoDB collections");
   } catch (error) {
     console.error("Error clearing MongoDB data:", error);
     throw error;
@@ -77,19 +74,14 @@ async function dumpDataToMongoDB(): Promise<void> {
     
     if (usersData.length > 0) {
       await usersCollection.insertMany(usersData);
-      console.log(`Inserted ${usersData.length} users into MongoDB`);
     } else {
-      console.log("No users to insert");
     }
     
     if (ordersData.length > 0) {
       await ordersCollection.insertMany(ordersData);
-      console.log(`Inserted ${ordersData.length} orders into MongoDB`);
     } else {
-      console.log("No orders to insert");
     }
     
-    console.log(`Snapshot completed at ${new Date().toISOString()}`);
   } catch (error) {
     console.error("Error dumping data to MongoDB:", error);
     throw error;
@@ -98,13 +90,11 @@ async function dumpDataToMongoDB(): Promise<void> {
 
 async function performSnapshot(): Promise<void> {
   try {
-    console.log(`\nStarting snapshot at ${new Date().toISOString()}`);
     
     await clearMongoDBData();
     
     await dumpDataToMongoDB();
     
-    console.log("Snapshot completed successfully\n");
   } catch (error) {
     console.error("Error performing snapshot:", error);
   }
@@ -114,7 +104,6 @@ async function main() {
   try {
     await connectToMongoDB();
     
-    console.log("Starting snapshotting service...");
     await performSnapshot();
     
     const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -123,22 +112,17 @@ async function main() {
       await performSnapshot();
     }, SNAPSHOT_INTERVAL_MS);
     
-    console.log(`Snapshotting service running. Next snapshot in 10 minutes...`);
     
     process.on("SIGINT", async () => {
-      console.log("\nShutting down snapshotting service...");
       if (client) {
         await client.close();
-        console.log("MongoDB connection closed");
       }
       process.exit(0);
     });
     
     process.on("SIGTERM", async () => {
-      console.log("\nShutting down snapshotting service...");
       if (client) {
         await client.close();
-        console.log("MongoDB connection closed");
       }
       process.exit(0);
     });

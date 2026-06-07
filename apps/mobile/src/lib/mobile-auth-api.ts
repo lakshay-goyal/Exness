@@ -3,6 +3,7 @@ import {
   getStoredAuthItem,
   setStoredAuthItem,
 } from "./auth-storage";
+import type { MobileSessionResponse } from "@repo/contracts";
 import { authClient, BACKEND_URL } from "./auth-client";
 import { logAuthEvent } from "./auth-logger";
 
@@ -13,20 +14,7 @@ const MOBILE_USER_KEY = "exness_mobile_user";
 const AUTH_COOKIE_KEY = "exness_cookie";
 const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60 * 1000;
 
-export type MobileSessionResponse = {
-  token: string;
-  accessToken?: string;
-  refreshToken?: string;
-  accessTokenExpiresIn?: number;
-  refreshTokenExpiresIn?: number;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    image?: string | null;
-    hasMobilePin: boolean;
-  };
-};
+export type { MobileSessionResponse };
 
 function getAuthCookie() {
   return authClient.getCookie();

@@ -2,31 +2,19 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "@repo/config";
 import { prisma } from "@repo/db";
-
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-  };
-}
+import type { AuthenticatedRequest } from "../features/auth/types/auth-request.js";
 
 export const authMiddleware = async (
-  req: AuthRequest,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    console.log("Auth middleware - Request headers:", req.headers);
     const authHeader = req.header("Authorization");
-    console.log("Auth middleware - Authorization header:", authHeader);
 
     const token = authHeader?.replace("Bearer ", "");
-    console.log("Auth middleware - Extracted token:", token);
 
     if (!token) {
-      console.log("Auth middleware - No token found");
       return res
         .status(401)
         .json({ error: "Access denied. No token provided." });
@@ -58,10 +46,6 @@ export const authMiddleware = async (
     });
 
     if (!user) {
-      console.log("Auth middleware - User not found in database:", {
-        userId,
-        email: decoded.email,
-      });
       return res
         .status(401)
         .json({ error: "User not found in database. Please login again." });

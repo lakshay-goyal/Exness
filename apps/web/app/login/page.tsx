@@ -17,7 +17,6 @@ const Login: React.FC = () => {
     if (!email) return;
 
     setIsLoading(true);
-    console.log(process.env.NEXT_PUBLIC_BACKEND_URL);
 
     try {
       const response = await axios.post(
@@ -29,7 +28,6 @@ const Login: React.FC = () => {
           headers: backendRequestHeaders,
         },
       );
-      console.log("Login request submitted:", response.data);
       setIsSubmitted(true);
     } catch (error) {
       console.error("Login failed:", error);

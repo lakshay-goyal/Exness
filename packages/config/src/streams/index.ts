@@ -15,7 +15,6 @@ class RedisStreams {
   async connect() {
     if (!this.client.isOpen) {
       await this.client.connect();
-      console.log("Redis connected at:", this.url);
     }
   }
 
@@ -32,11 +31,9 @@ class RedisStreams {
         "0", // Start from beginning
         { MKSTREAM: true } // Create stream if it doesn't exist
       );
-      console.log(`Consumer group '${groupName}' created for stream '${streamName}'`);
     } catch (error: any) {
       // Group might already exist, which is fine
       if (error?.message?.includes("BUSYGROUP")) {
-        console.log(`Consumer group '${groupName}' already exists for stream '${streamName}'`);
       } else {
         console.error(`Error creating consumer group:`, error);
       }
@@ -56,9 +53,6 @@ class RedisStreams {
         streamName,
         "*", // Let Redis assign an ID automatically
         { message: JSON.stringify(data) }
-      );
-      console.log(
-        `Data Added: ${messageId}, ${streamName}, requestId: ${data.requestId || data.correlationId}`
       );
       return { messageId, requestId: data.requestId || data.correlationId };
     } catch (e) {
@@ -93,7 +87,6 @@ class RedisStreams {
               payload[key] = message[key];
             }
 
-            console.log("Received message:", id, JSON.stringify(payload));
             const jsonString = Object.values(payload).join("");
             const result = JSON.parse(jsonString);
             callbackFunction(result);
@@ -101,7 +94,6 @@ class RedisStreams {
           }
         }
         // Removed unreachable conditions === false block
-        console.log("Exited read loop");
       }
     } catch (e) {
       console.error("Error reading from Redis stream:", e);
@@ -383,7 +375,6 @@ class RedisStreams {
       } catch (e) {
         // Ignore errors during disconnect
       }
-      console.log("Redis stream disconnected");
     }
   }
 }

@@ -2,7 +2,7 @@ import express, { type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { nodemailerSender } from "@repo/utils";
 import { v4 as uuidv4 } from "uuid";
-import { config, constant } from "@repo/config";
+import { config } from "@repo/config";
 import { prisma } from "@repo/db";
 import {
   createLegacyJwt,
@@ -11,8 +11,9 @@ import {
   hashMobilePin,
   isValidPin,
   verifyMobileRefreshToken,
-} from "../lib/mobile-auth.js";
-import { ensureTradingUser } from "../lib/trading-user.js";
+} from "../features/auth/services/mobile-auth.js";
+import { ensureTradingUser } from "../features/auth/services/trading-user.js";
+import { engineUserService } from "../features/auth/services/engine-user.service.js";
 
 const authRouter = express.Router();
 
@@ -40,27 +41,7 @@ async function getTradingUserForEmail(email: string) {
 }
 
 async function ensureEngineUser(req: Request, userId: string, userEmail: string) {
-  const RedisStreams = req.app.locals.redisStreams as any;
-
-  const streamResult = await RedisStreams.addToRedisStream(
-    constant.redisStream,
-    {
-      function: "createUser",
-      userId,
-      userEmail,
-    },
-  );
-  const requestId = streamResult?.requestId;
-
-  if (!requestId) {
-    throw new Error("Failed to generate request ID");
-  }
-
-  return RedisStreams.readNextFromRedisStream(
-    constant.secondaryRedisStream,
-    5000,
-    { requestId },
-  );
+  return engineUserService.ensureEngineUser(req, userId, userEmail);
 }
 
 authRouter.get("/mobile/session-token", async (req: Request, res: Response) => {
@@ -216,22 +197,12 @@ authRouter.post("/login", async (req: Request, res: Response) => {
     if (process.env.NODE_ENV === "production") {
       try {
         await nodemailerSender(email, token);
-        console.log(`Verification email sent to ${email}`);
       } catch (emailError: any) {
         console.error(
           "Failed to send verification email:",
           emailError?.message || emailError,
         );
-        // Log the token in case email fails, so user can still verify
-        console.log(
-          `⚠️ Email sending failed. Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`,
-        );
       }
-    } else {
-      // In development, just log the verification link
-      console.log(
-        `🔗 Verification link: ${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`,
-      );
     }
 
     res.json({ message: "Verification link send", email });
@@ -244,7 +215,6 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 
 authRouter.get("/verify", async (req: Request, res: Response) => {
   const token = req.query;
-  console.log(token, "token from query");
 
   const realToken = typeof token.token === "string" ? token.token : "";
 
@@ -254,31 +224,9 @@ authRouter.get("/verify", async (req: Request, res: Response) => {
     if (verify) {
       const userEmail = (verify as jwt.JwtPayload).email;
       const userId = (verify as jwt.JwtPayload).userId;
-      console.log("Token Value: ", userEmail, userId);
-
-      const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
-
-      const streamResult = await RedisStreams.addToRedisStream(
-        constant.redisStream,
-        {
-          function: "createUser",
-          userId,
-          userEmail,
-        },
-      );
-      const requestId = streamResult?.requestId;
-
-      if (!requestId) {
-        return res.status(500).json({ error: "Failed to generate request ID" });
-      }
 
       try {
-        // Use 5 second timeout to prevent stuck requests on rapid refreshes
-        const result = await RedisStreams.readNextFromRedisStream(
-          constant.secondaryRedisStream,
-          5000, // 5 second timeout
-          { requestId: requestId },
-        );
+        const result = await ensureEngineUser(req, userId, userEmail);
         if (result && result.function === "createUser") {
           if (
             result.message === userId ||
@@ -341,33 +289,9 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
     }
 
     if (!user) {
-      console.log("User not found in database, creating user:", {
-        userId,
-        userEmail,
-      });
-
-      const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
-
-      const streamResult = await RedisStreams.addToRedisStream(
-        constant.redisStream,
-        {
-          function: "createUser",
-          userId,
-          userEmail,
-        },
-      );
-      const requestId = streamResult?.requestId;
-
-      if (!requestId) {
-        return res.status(500).json({ error: "Failed to generate request ID" });
-      }
 
       try {
-        const result = await RedisStreams.readNextFromRedisStream(
-          constant.secondaryRedisStream,
-          5000,
-          { requestId: requestId },
-        );
+        const result = await ensureEngineUser(req, userId, userEmail);
 
         if (result && result.function === "createUser") {
           const userAfterCreation = await prisma.user.findFirst({
@@ -439,34 +363,9 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
     });
     const canonicalUserId = existingUser?.userID || userId;
 
-    console.log("Ensuring user exists:", {
-      userId: canonicalUserId,
-      tokenUserId: userId,
-      userEmail,
-    });
-
-    const RedisStreams = req.app.locals.redisStreams as ReturnType<any>;
-
-    const streamResult = await RedisStreams.addToRedisStream(
-      constant.redisStream,
-      {
-        function: "createUser",
-        userId: canonicalUserId,
-        userEmail,
-      },
-    );
-    const requestId = streamResult?.requestId;
-
-    if (!requestId) {
-      return res.status(500).json({ error: "Failed to generate request ID" });
-    }
 
     try {
-      const result = await RedisStreams.readNextFromRedisStream(
-        constant.secondaryRedisStream,
-        5000,
-        { requestId: requestId },
-      );
+      const result = await ensureEngineUser(req, canonicalUserId, userEmail);
 
       if (result && result.function === "createUser") {
         return res.json({

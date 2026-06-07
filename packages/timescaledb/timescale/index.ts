@@ -18,7 +18,6 @@ class TimeScaleDB {
   async connect() {
     try {
       await this.client.connect();
-      console.log("✅ Connected to TimescaleDB");
     } catch (error) {
       console.error("❌ Failed to connect to TimescaleDB:", error);
       throw error;
@@ -130,15 +129,12 @@ class TimeScaleDB {
               schedule_interval => INTERVAL '${interval}'
             );
           `);
-          console.log(`✅ Added refresh policy for candles_${name}`);
         } else {
-          console.log(`ℹ️ Refresh policy for candles_${name} already exists`);
         }
       } catch (policyError: any) {
         // If adding policy fails, log but don't throw (policy might already exist)
         if (policyError?.message?.includes('already exists') || 
             policyError?.code === 'P0001') {
-          console.log(`ℹ️ Refresh policy for candles_${name} already exists`);
         } else {
           console.warn(`⚠️ Could not add refresh policy for candles_${name}:`, policyError?.message || policyError);
         }
@@ -152,8 +148,6 @@ class TimeScaleDB {
     if (tradeCount > 0) {
       const minTime = dataCheck.rows[0]?.min_time;
       const maxTime = dataCheck.rows[0]?.max_time;
-      console.log(`📊 Found ${tradeCount} trades in database (from ${minTime} to ${maxTime})`);
-      console.log(`🔄 Refreshing all continuous aggregates with existing data...`);
       
       // Refresh all aggregates with the available data range
       for (const { name } of intervals) {
@@ -162,16 +156,13 @@ class TimeScaleDB {
             `CALL refresh_continuous_aggregate('candles_${name}', $1::timestamptz, $2::timestamptz);`,
             [minTime, maxTime]
           );
-          console.log(`✅ Refreshed candles_${name}`);
         } catch (refreshError: any) {
           console.warn(`⚠️ Could not refresh candles_${name}:`, refreshError?.message || refreshError);
         }
       }
     } else {
-      console.log(`ℹ️ No trades found in database. Continuous aggregates will populate as data is inserted.`);
     }
 
-    console.log("✅ TimescaleDB setup completed!");
   } catch (error) {
     console.error("❌ Error setting up TimescaleDB:", error);
   }
@@ -192,7 +183,6 @@ class TimeScaleDB {
         );
         
         if (!timeRangeResult.rows[0]?.min_time || !timeRangeResult.rows[0]?.max_time) {
-          console.log("⚠️ No data in trades table to refresh aggregates");
           return { refreshed: [], errors: [] };
         }
         
@@ -211,7 +201,6 @@ class TimeScaleDB {
             [from, to]
           );
           refreshed.push(`candles_${name}`);
-          console.log(`✅ Refreshed candles_${name}`);
         } catch (error: any) {
           errors.push({ aggregate: `candles_${name}`, error: error?.message || String(error) });
           console.warn(`⚠️ Failed to refresh candles_${name}:`, error?.message || error);
@@ -227,7 +216,6 @@ class TimeScaleDB {
 
   async disconnect() {
     await this.client.end();
-    console.log("🔌 Disconnected from TimescaleDB");
   }
 }
 

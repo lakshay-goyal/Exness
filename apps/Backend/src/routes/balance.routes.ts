@@ -9,16 +9,12 @@ const jwtSecret = config.JWT_SECRET;
 
 balanceRouter.get("/", authMiddleware as any, async (req: Request, res: Response) => {
   try {
-    console.log("Entry Balance");
-    console.log("Request headers:", req.headers);
-    console.log("Authorization header:", req.header('Authorization'));
     
     const authReq = req as Request & { user?: { id: string } };
     const userId = authReq.user?.id;
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    console.log("Balance UserID: ", userId);
 
     try {
       // Fetch balance directly from database

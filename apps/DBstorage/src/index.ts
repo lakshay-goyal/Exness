@@ -1,8 +1,3 @@
-import { config, redisStreams, constant } from "@repo/config";
-import { dbStorageFunction } from "./functions/dbStorageFunction.js";
+import { DBStorageWorker } from "./db-storage-worker.js";
 
-// connect redis streams
-const RedisStreams = redisStreams(config.REDIS_URL);
-await RedisStreams.connect();
-
-await RedisStreams.readRedisStream(constant.dbStorageStream, dbStorageFunction);
+await new DBStorageWorker().start();

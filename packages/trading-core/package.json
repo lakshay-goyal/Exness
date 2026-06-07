@@ -1,0 +1,28 @@
+{
+  "name": "@repo/trading-core",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./orders": "./src/domain/orders.ts",
+    "./prices": "./src/domain/prices.ts",
+    "./state": "./src/state/trading-state.ts",
+    "./symbols": "./src/domain/symbols.ts",
+    "./validation": "./src/domain/validation.ts"
+  },
+  "dependencies": {
+    "@repo/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

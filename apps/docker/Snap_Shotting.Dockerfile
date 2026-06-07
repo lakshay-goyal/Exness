@@ -5,7 +5,6 @@ WORKDIR /app
 COPY package.json bun.lock turbo.json ./
 
 COPY packages ./packages
-COPY apps/Engine ./apps/Engine
 
 RUN bun install
 
@@ -15,4 +14,3 @@ RUN bun run db:generate
 WORKDIR /app/packages/snap-shotting
 
 CMD ["bun", "run", "index.ts"]
-

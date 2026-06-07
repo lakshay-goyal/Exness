@@ -13,7 +13,6 @@ class PubsubClient {
   async connect() {
     if (!this.client.isOpen) {
       await this.client.connect();
-      console.log("Redis connected at: ", this.url);
     }
   }
 

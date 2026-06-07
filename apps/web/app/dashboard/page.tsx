@@ -24,6 +24,8 @@ import type {
   ISeriesApi,
   UTCTimestamp,
 } from "lightweight-charts";
+import type { BackendClosedTrade, BackendOpenTrade, Candle } from "@repo/contracts";
+import { marketSymbolMapper, priceNormalizer } from "@repo/trading-core";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -58,39 +60,8 @@ interface OpenOrder {
   status: "open";
 }
 
-interface BackendOpenOrder {
-  orderId: string;
-  symbol: string;
-  type: "buy" | "sell";
-  quantity: number;
-  leverage?: number;
-  openPrice: number;
-  currentPrice: number;
-  openTime: string;
-  takeProfit?: number | null;
-  stopLoss?: number | null;
-  slippage?: number | null;
-  stippage?: number | null;
-  status: "open";
-}
-
-interface BackendClosedOrder {
-  orderId: string;
-  symbol: string;
-  type: "buy" | "sell";
-  quantity: number;
-  leverage?: number;
-  openPrice: number;
-  closePrice: number;
-  openTime: string;
-  closeTime: string;
-  profitLoss?: number;
-  takeProfit?: number | null;
-  stopLoss?: number | null;
-  slippage?: number | null;
-  stippage?: number | null;
-  closeReason?: string | null;
-}
+type BackendOpenOrder = BackendOpenTrade;
+type BackendClosedOrder = BackendClosedTrade;
 
 interface CloseOrder {
   id: string;
@@ -128,13 +99,7 @@ type CryptoAsset = {
 };
 
 type CandleResponse = {
-  data: Array<{
-    open: string;
-    high: string;
-    low: string;
-    close: string;
-    time: string;
-  }>;
+  data: Candle[];
 };
 
 type OpenOrdersResponse = {
@@ -206,13 +171,8 @@ const formatCloseReason = (value?: string | null) => {
     .join(" ");
 };
 
-const normalizeMarketPrice = (value?: number | null) => {
-  if (value === null || value === undefined) return null;
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) return null;
-
-  return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
-};
+const normalizeMarketPrice = (value?: number | string | null) =>
+  priceNormalizer.normalizeStreamPriceValue(value);
 
 const marketPriceDigits = (value?: number | null) => {
   if (value === null || value === undefined || Number.isNaN(value)) return 2;
@@ -226,33 +186,8 @@ const formatMarketPrice = (value?: number | null) => {
   return formatNumber(normalizedValue, marketPriceDigits(normalizedValue));
 };
 
-const getLiveAssetKeyForSymbol = (symbol: string) => {
-  const symbolUpper = symbol.toUpperCase();
-  if (symbolUpper.includes("_")) return symbolUpper;
-  if (symbolUpper.includes("BTC")) return "BTC_USDC_PERP";
-  if (symbolUpper.includes("ETH")) return "ETH_USDC_PERP";
-  if (symbolUpper.includes("SOL")) return "SOL_USDC_PERP";
-  return symbolUpper;
-};
-
-const getMarketCode = (symbol: string) => {
-  const symbolUpper = symbol.toUpperCase();
-  if (symbolUpper.includes("BTC")) return "BTC";
-  if (symbolUpper.includes("ETH")) return "ETH";
-  if (symbolUpper.includes("SOL")) return "SOL";
-  return symbolUpper.replace(/[^A-Z0-9]/g, "");
-};
-
-const getLiveAssetCandidates = (symbol: string) => {
-  const marketCode = getMarketCode(symbol);
-  return [
-    symbol.toUpperCase(),
-    getLiveAssetKeyForSymbol(symbol),
-    `${marketCode}_USDC_PERP`,
-    `${marketCode}USDT`,
-    marketCode,
-  ];
-};
+const getLiveAssetCandidates = (symbol: string) =>
+  marketSymbolMapper.getLiveAssetCandidates(symbol);
 
 const findLiveAssetForOrder = (
   order: OpenOrder,
@@ -414,10 +349,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       }
 
       return response.data.data.map((candle) => ({
-        open: Number.parseFloat(candle.open),
-        high: Number.parseFloat(candle.high),
-        low: Number.parseFloat(candle.low),
-        close: Number.parseFloat(candle.close),
+        open: Number(candle.open),
+        high: Number(candle.high),
+        low: Number(candle.low),
+        close: Number(candle.close),
         time: Math.floor(
           new Date(candle.time).getTime() / 1000,
         ) as UTCTimestamp,
@@ -767,7 +702,7 @@ const Dashboard = () => {
               leverage: Number(orderData.leverage) || 100,
               openPrice,
               currentPrice,
-              openTime: orderData.openTime,
+              openTime: orderData.openTime ?? "",
               takeProfit: normalizeMarketPrice(orderData.takeProfit),
               stopLoss: normalizeMarketPrice(orderData.stopLoss),
               slippage: orderData.slippage ?? orderData.stippage ?? null,
@@ -834,8 +769,8 @@ const Dashboard = () => {
             leverage: Number(orderData.leverage) || 100,
             openPrice: normalizeMarketPrice(orderData.openPrice) ?? 0,
             closePrice: normalizeMarketPrice(orderData.closePrice) ?? 0,
-            openTime: orderData.openTime,
-            closeTime: orderData.closeTime,
+            openTime: orderData.openTime ?? "",
+            closeTime: orderData.closeTime ?? "",
             takeProfit: normalizeMarketPrice(orderData.takeProfit),
             stopLoss: normalizeMarketPrice(orderData.stopLoss),
             slippage: orderData.slippage ?? orderData.stippage ?? null,

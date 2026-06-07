@@ -80,7 +80,23 @@ The platform follows a distributed microservices architecture with the following
   - Database configurations
   - Stream constants and keys
 
-- **`@repo/database`**: Database abstraction layer
+- **`@repo/contracts`**: Shared public contracts
+  - Trading DTOs and API response types
+  - Redis stream command and response shapes
+  - Supported symbols, order sides, close reasons, and candle intervals
+
+- **`@repo/trading-core`**: Shared trading domain logic
+  - In-memory trading state store
+  - Symbol mapping and price normalization
+  - Order margin, P/L, and TP/SL calculations
+  - Trade input validation helpers
+
+- **`@repo/api-client`**: Shared backend API client
+  - Platform-neutral trading requests for web and mobile
+  - Shared response parsing for stringified and array payloads
+  - Authenticated trade/profile calls and public market-data calls
+
+- **`@repo/db`**: Database abstraction layer
   - Prisma ORM integration
   - Database client management
   - Type-safe database operations
@@ -92,9 +108,8 @@ The platform follows a distributed microservices architecture with the following
   - Data compression and retention policies
 
 - **`@repo/types`**: Shared TypeScript types
-  - Price update interfaces
-  - Trading data structures
-  - API response types
+  - Compatibility re-export for shared contracts
+  - Prefer importing new code from `@repo/contracts`
 
 ### Utility Packages
 

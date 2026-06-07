@@ -4,13 +4,19 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "check-types": "tsc --noEmit"
   },
   "exports":{
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@repo/contracts": "workspace:*"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@repo/typescript-config": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "typescript": "^5"

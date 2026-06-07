@@ -18,7 +18,6 @@ const symbolMapping: Record<string, string> = {
 async function initDB() {
   try {
     await client.connect();
-    console.log("Connected to TimescaleDB");
     // Ensure schema, hypertable, views and policies exist
     await client.setupTimescale();
   } catch (err) {
@@ -106,7 +105,6 @@ async function retrieveDataFromTrades(
   const result = await client.getClient().query(query, [symbol, from, to]);
   
   if (result.rows.length === 0) {
-    console.log(`⚠️ No trades found with date filter, trying without date filter...`);
     const queryNoDate = `
       SELECT 
         time_bucket('${intervalFormat}', time) AS time,
@@ -124,7 +122,6 @@ async function retrieveDataFromTrades(
     `;
     const resultNoDate = await client.getClient().query(queryNoDate, [symbol]);
     if (resultNoDate.rows.length > 0) {
-      console.log(`✅ Found ${resultNoDate.rows.length} candles from trades (without date filter)`);
       return resultNoDate.rows.reverse();
     }
   }
@@ -147,7 +144,6 @@ async function retrieveData(
           `CALL refresh_continuous_aggregate('candles_${interval}', $1::timestamptz, $2::timestamptz);`,
           [from, to]
         );
-      console.log(`✅ Refreshed continuous aggregate: ${table}`);
     } catch (e: any) {
       console.warn(`⚠️ Refresh aggregate failed for ${table}:`, e?.message || e);
     }
@@ -222,10 +218,8 @@ export const getCandles = async (req: Request, res: Response) => {
     const inputSymbol = (symbol as string).toUpperCase();
     const dbSymbol = symbolMapping[inputSymbol] || inputSymbol;
     
-    console.log(`🔍 Querying candles: inputSymbol=${inputSymbol}, dbSymbol=${dbSymbol}, interval=${interval}`);
     
     const { from, to } = getTimeRange(interval as string);
-    console.log(`📅 Time range: ${from} to ${to}`);
     
     const data = await retrieveData(
       dbSymbol,
@@ -234,50 +228,6 @@ export const getCandles = async (req: Request, res: Response) => {
       to
     );
 
-
-    if (data.length === 0) {
-      const totalCountQuery = `SELECT COUNT(*) as total FROM trades;`;
-      const totalResult = await client.getClient().query(totalCountQuery);
-      console.log(`📊 Total trades in database:`, totalResult.rows[0]?.total || 0);
-      
-      const debugQuery = `
-        SELECT DISTINCT symbol, COUNT(*) as count, MIN(time) as earliest, MAX(time) as latest
-        FROM trades
-        GROUP BY symbol
-        ORDER BY symbol;
-      `;
-      const debugResult = await client.getClient().query(debugQuery);
-      console.log(`📊 Available symbols in database:`, debugResult.rows);
-      
-      const symbolCheckQuery = `
-        SELECT COUNT(*) as count, MIN(time) as earliest, MAX(time) as latest
-        FROM trades
-        WHERE symbol = $1;
-      `;
-      const symbolCheck = await client.getClient().query(symbolCheckQuery, [dbSymbol]);
-      console.log(`🔍 Data for symbol "${dbSymbol}" (exact):`, symbolCheck.rows[0]);
-      
-      const symbolCheckCaseInsensitive = await client.getClient().query(`
-        SELECT COUNT(*) as count, MIN(time) as earliest, MAX(time) as latest
-        FROM trades
-        WHERE UPPER(symbol) = UPPER($1);
-      `, [dbSymbol]);
-      console.log(`🔍 Data for symbol "${dbSymbol}" (case-insensitive):`, symbolCheckCaseInsensitive.rows[0]);
-      
-      const timeRangeQuery = `
-        SELECT COUNT(*) as count
-        FROM trades
-        WHERE symbol = $1
-          AND time BETWEEN $2::timestamptz AND $3::timestamptz;
-      `;
-      const timeRangeCheck = await client.getClient().query(timeRangeQuery, [dbSymbol, from, to]);
-      console.log(`⏰ Data in time range for "${dbSymbol}":`, timeRangeCheck.rows[0]);
-      
-      if (timeRangeCheck.rows[0]?.count === '0' && symbolCheckCaseInsensitive.rows[0]?.count !== '0') {
-        console.log(`💡 Symbol exists but no data in queried time range. Consider expanding the range.`);
-      }
-      console.log(`⚠️ No data found for symbol: ${dbSymbol}, interval: ${interval}, time range: ${from} to ${to}`);
-    }
 
     return res.json({
       symbol: inputSymbol,

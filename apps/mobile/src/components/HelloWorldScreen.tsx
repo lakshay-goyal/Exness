@@ -35,6 +35,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { cssInterop } from "nativewind";
 import { LineChart } from "react-native-gifted-charts";
+import { marketSymbolMapper, priceNormalizer } from "@repo/trading-core";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EaseView, type EaseViewProps } from "react-native-ease";
@@ -202,48 +203,18 @@ const getWebSocketUrl = () => {
   }
 };
 
-const normalizeMarketPrice = (value?: number | string | null) => {
-  if (value === null || value === undefined) return null;
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) return null;
+const normalizeMarketPrice = (value?: number | string | null) =>
+  priceNormalizer.normalizeStreamPriceValue(value);
 
-  return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
-};
+const getMarketCode = (symbol: string) => marketSymbolMapper.getMarketCode(symbol);
 
-const getMarketCode = (symbol: string) => {
-  const symbolUpper = symbol.toUpperCase();
-  if (symbolUpper.includes("BTC")) return "BTC";
-  if (symbolUpper.includes("ETH")) return "ETH";
-  if (symbolUpper.includes("SOL")) return "SOL";
-  return symbolUpper.replace(/[^A-Z0-9]/g, "");
-};
+const getCanonicalLiveAssetSymbol = (symbol: string) =>
+  marketSymbolMapper.getCanonicalLiveAssetSymbol(symbol);
 
-const getCanonicalLiveAssetSymbol = (symbol: string) => {
-  const marketCode = getMarketCode(symbol);
-  return `${marketCode}_USDC_PERP`;
-};
+const getMarketName = (symbol: string) => marketSymbolMapper.getMarketName(symbol);
 
-const getMarketName = (symbol: string) => {
-  const marketCode = getMarketCode(symbol);
-
-  if (marketCode === "BTC") return "Bitcoin";
-  if (marketCode === "ETH") return "Ethereum";
-  if (marketCode === "SOL") return "Solana";
-
-  return marketCode;
-};
-
-const getLiveAssetCandidates = (symbol: string) => {
-  const marketCode = getMarketCode(symbol);
-  return [
-    symbol.toUpperCase(),
-    `${marketCode}_USDC_PERP`,
-    `${marketCode}_USDT_PERP`,
-    `${marketCode}USDT`,
-    `${marketCode}USD`,
-    marketCode,
-  ];
-};
+const getLiveAssetCandidates = (symbol: string) =>
+  marketSymbolMapper.getLiveAssetCandidates(symbol);
 
 const hasAllRequiredCryptoPrices = (
   livePrices: Record<string, LiveMarketPrice>,
