@@ -3,8 +3,6 @@ import { pricesController } from "../features/prices/controllers/prices.controll
 
 const pricesRouter = express.Router();
 
-pricesRouter.get("/latest", (req, res) =>
-  pricesController.getLatestPrices(req, res),
-);
+pricesRouter.get("/latest", pricesController.getLatestPrices);
 
 export default pricesRouter;

@@ -1,30 +1,39 @@
 import express from "express";
 import { authController } from "../features/auth/controllers/auth.controller.js";
+import { validateBody, validateQuery } from "../validation/middleware.js";
+import {
+  RefreshMobileTokenSchema,
+  SetMobilePinSchema,
+  LoginSchema,
+  VerifyEmailLinkSchema,
+} from "../validation/schemas/auth.schemas.js";
 
 const authRouter = express.Router();
 
-authRouter.get("/mobile/session-token", (req, res) =>
-  authController.getMobileSessionToken(req, res),
+authRouter.get("/mobile/session-token", authController.getMobileSessionToken);
+
+authRouter.post(
+  "/mobile/refresh-token",
+  validateBody(RefreshMobileTokenSchema),
+  authController.refreshMobileToken,
 );
 
-authRouter.post("/mobile/refresh-token", (req, res) =>
-  authController.refreshMobileToken(req, res),
+authRouter.post(
+  "/mobile/pin",
+  validateBody(SetMobilePinSchema),
+  authController.setMobilePin,
 );
 
-authRouter.post("/mobile/pin", (req, res) =>
-  authController.setMobilePin(req, res),
+authRouter.post("/login", validateBody(LoginSchema), authController.login);
+
+authRouter.get(
+  "/verify",
+  validateQuery(VerifyEmailLinkSchema),
+  authController.verifyEmailLink,
 );
 
-authRouter.post("/login", (req, res) => authController.login(req, res));
+authRouter.post("/verify-user", authController.verifyUser);
 
-authRouter.get("/verify", (req, res) => authController.verifyEmailLink(req, res));
-
-authRouter.post("/verify-user", (req, res) =>
-  authController.verifyUser(req, res),
-);
-
-authRouter.post("/ensure-user", (req, res) =>
-  authController.ensureUser(req, res),
-);
+authRouter.post("/ensure-user", authController.ensureUser);
 
 export default authRouter;

@@ -276,7 +276,45 @@ class CandlesService {
     };
   }
 
-  async refreshAggregates() {
+  async refreshAggregates(
+    symbol?: string,
+    interval?: string,
+    force?: boolean,
+  ) {
+    // If specific symbol and interval provided, refresh just that aggregate
+    if (symbol && interval && allowedIntervals.includes(interval)) {
+      const dbSymbol = this.mapSymbol(symbol.toUpperCase());
+      const { from, to } = this.getTimeRange(interval);
+
+      try {
+        if (force) {
+          // Force refresh - may be more aggressive
+          await client
+            .getClient()
+            .query(
+              `CALL refresh_continuous_aggregate('candles_${interval}', $1::timestamptz, $2::timestamptz);`,
+              [from, to],
+            );
+        }
+
+        return {
+          success: true,
+          message: `Refreshed candles_${interval} for ${dbSymbol}`,
+          symbol: dbSymbol,
+          interval,
+          from,
+          to,
+        };
+      } catch (err: unknown) {
+        console.error(
+          `Failed to refresh aggregate for ${dbSymbol} ${interval}:`,
+          err instanceof Error ? err.message : err,
+        );
+        throw err;
+      }
+    }
+
+    // Refresh all aggregates
     const result = await client.refreshAllContinuousAggregates();
     return {
       success: true,

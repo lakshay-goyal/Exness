@@ -2,13 +2,14 @@ import type { Request, Response } from "express";
 import ResponseWriter from "../../../utils/response-writer.js";
 import RequestReader from "../../../utils/request-reader.js";
 import { tradeService } from "../services/trade.service.js";
+import { asyncHandler } from "../../../validation/error-handler.js";
 
 class TradeController {
   hello(_req: Request, res: Response) {
     return ResponseWriter.success(res, "Hello Trade");
   }
 
-  async createOrder(req: Request, res: Response) {
+  createOrder = asyncHandler(async (req: Request, res: Response) => {
     const userId = RequestReader.getAuthenticatedUser(req)?.id;
 
     if (!userId) {
@@ -16,6 +17,7 @@ class TradeController {
       return ResponseWriter.unauthorized(res, "Unauthorized");
     }
 
+    // Validation middleware ensures req.body is valid CreateOrderInput
     const result = await tradeService.createOrder(req, userId, req.body);
 
     if (!result.ok) {
@@ -36,9 +38,9 @@ class TradeController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async getOpenOrders(req: Request, res: Response) {
+  getOpenOrders = asyncHandler(async (req: Request, res: Response) => {
     const userId = RequestReader.getAuthenticatedUser(req)?.id;
 
     if (!userId) {
@@ -55,26 +57,18 @@ class TradeController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async closeOrder(req: Request, res: Response) {
-    const orderId = RequestReader.getBodyField<string>(req, "orderId");
+  closeOrder = asyncHandler(async (req: Request, res: Response) => {
     const userId = RequestReader.getAuthenticatedUser(req)?.id;
-
-    if (!orderId) {
-      console.error(
-        "Error: Missing required parameter orderId for close order.",
-      );
-      return ResponseWriter.badRequest(
-        res,
-        "Missing required parameters: orderId",
-      );
-    }
 
     if (!userId) {
       console.error("Error: Unauthorized - userId not found for close order.");
       return ResponseWriter.unauthorized(res, "Unauthorized");
     }
+
+    // Validation middleware ensures req.body.orderId exists and is valid
+    const { orderId } = req.body;
 
     const result = await tradeService.closeOrder(req, userId, orderId);
 
@@ -86,9 +80,9 @@ class TradeController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async getCloseOrders(req: Request, res: Response) {
+  getCloseOrders = asyncHandler(async (req: Request, res: Response) => {
     const userId = RequestReader.getAuthenticatedUser(req)?.id;
 
     if (!userId) {
@@ -105,7 +99,7 @@ class TradeController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 }
 
 export const tradeController = new TradeController();

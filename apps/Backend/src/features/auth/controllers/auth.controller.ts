@@ -2,9 +2,10 @@ import type { Request, Response } from "express";
 import ResponseWriter from "../../../utils/response-writer.js";
 import RequestReader from "../../../utils/request-reader.js";
 import { authService } from "../services/auth.service.js";
+import { asyncHandler } from "../../../validation/error-handler.js";
 
 class AuthController {
-  async getMobileSessionToken(req: Request, res: Response) {
+  getMobileSessionToken = asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.getMobileSessionToken(req);
 
     if (!result.ok) {
@@ -12,15 +13,11 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async refreshMobileToken(req: Request, res: Response) {
-    const refreshToken = RequestReader.getBodyField<string>(req, "refreshToken");
-
-    if (typeof refreshToken !== "string" || !refreshToken) {
-      return ResponseWriter.badRequest(res, "Refresh token is required");
-    }
-
+  refreshMobileToken = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.body.refreshToken exists and is valid
+    const { refreshToken } = req.body;
     const result = await authService.refreshMobileToken(req, refreshToken);
 
     if (!result.ok) {
@@ -28,10 +25,11 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async setMobilePin(req: Request, res: Response) {
-    const pin = RequestReader.getBodyField(req, "pin");
+  setMobilePin = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.body.pin exists and is valid
+    const { pin } = req.body;
     const result = await authService.setMobilePin(req, pin);
 
     if (!result.ok) {
@@ -42,11 +40,12 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async login(req: Request, res: Response) {
-    const email = RequestReader.getBodyField<string>(req, "email");
-    const result = await authService.login(email ?? "");
+  login = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.body.email exists and is valid
+    const { email } = req.body;
+    const result = await authService.login(email);
 
     if (!result.ok) {
       if (result.error === "Email is required") {
@@ -59,10 +58,11 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async verifyEmailLink(req: Request, res: Response) {
-    const token = RequestReader.getQueryParam(req, "token") ?? "";
+  verifyEmailLink = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.query.token exists and is valid
+    const { token } = req.query as { token: string };
     const result = await authService.verifyEmailLink(req, token);
 
     if (result.ok) {
@@ -82,9 +82,9 @@ class AuthController {
     }
 
     return ResponseWriter.text(res, 401, "Invalid token ❌");
-  }
+  });
 
-  async verifyUser(req: Request, res: Response) {
+  verifyUser = asyncHandler(async (req: Request, res: Response) => {
     const token = RequestReader.getBearerToken(req);
 
     if (!token) {
@@ -107,9 +107,9 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 
-  async ensureUser(req: Request, res: Response) {
+  ensureUser = asyncHandler(async (req: Request, res: Response) => {
     const token = RequestReader.getBearerToken(req);
 
     if (!token) {
@@ -129,7 +129,7 @@ class AuthController {
     }
 
     return ResponseWriter.success(res, result.data);
-  }
+  });
 }
 
 export const authController = new AuthController();

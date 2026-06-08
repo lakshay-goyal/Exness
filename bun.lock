@@ -45,6 +45,7 @@
         "@repo/trading-core": "workspace:*",
         "@repo/utils": "workspace:*",
         "better-auth": "^1.6.11",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",

@@ -1,65 +1,35 @@
 import type { Request, Response } from "express";
 import ResponseWriter from "../../../utils/response-writer.js";
-import RequestReader from "../../../utils/request-reader.js";
 import { candlesService } from "../services/candles.service.js";
+import { asyncHandler } from "../../../validation/error-handler.js";
 
 class CandlesController {
-  async getCandles(req: Request, res: Response) {
-    const symbol = RequestReader.getQueryParam(req, "symbol");
-    const interval = RequestReader.getQueryParam(req, "interval");
+  getCandles = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.query has valid symbol and interval
+    const { symbol, interval } = req.query as { symbol: string; interval: string };
 
-    if (!symbol || !interval) {
-      return ResponseWriter.badRequest(
-        res,
-        "Missing required query parameters: symbol and interval",
-      );
+    const result = await candlesService.getCandles(symbol, interval);
+
+    if (!result.ok) {
+      return ResponseWriter.badRequest(res, result.error);
     }
 
-    try {
-      const result = await candlesService.getCandles(symbol, interval);
+    return ResponseWriter.success(res, result.data);
+  });
 
-      if (!result.ok) {
-        return ResponseWriter.badRequest(res, result.error);
-      }
+  getDiagnostics = asyncHandler(async (_req: Request, res: Response) => {
+    const data = await candlesService.getDiagnostics();
+    return ResponseWriter.success(res, data);
+  });
 
-      return ResponseWriter.success(res, result.data);
-    } catch (err: unknown) {
-      console.error(
-        "Error in getCandles handler:",
-        err instanceof Error ? err.message : err,
-      );
-      return ResponseWriter.internalServerError(
-        res,
-        err instanceof Error ? err.message : "Unknown error",
-      );
-    }
-  }
+  refreshAggregates = asyncHandler(async (req: Request, res: Response) => {
+    // Validation middleware ensures req.body is valid if provided
+    // Refresh aggregates can accept optional symbol, interval, and force parameters
+    const { symbol, interval, force } = req.body || {};
 
-  async getDiagnostics(_req: Request, res: Response) {
-    try {
-      const data = await candlesService.getDiagnostics();
-      return ResponseWriter.success(res, data);
-    } catch (err: unknown) {
-      console.error("Error in diagnostics:", err);
-      return ResponseWriter.internalServerError(
-        res,
-        err instanceof Error ? err.message : "Unknown error",
-      );
-    }
-  }
-
-  async refreshAggregates(_req: Request, res: Response) {
-    try {
-      const data = await candlesService.refreshAggregates();
-      return ResponseWriter.success(res, data);
-    } catch (err: unknown) {
-      console.error("Error refreshing aggregates:", err);
-      return ResponseWriter.internalServerError(
-        res,
-        err instanceof Error ? err.message : "Unknown error",
-      );
-    }
-  }
+    const data = await candlesService.refreshAggregates(symbol, interval, force);
+    return ResponseWriter.success(res, data);
+  });
 }
 
 export const candlesController = new CandlesController();

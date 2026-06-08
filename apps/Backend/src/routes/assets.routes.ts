@@ -3,8 +3,6 @@ import { assetsController } from "../features/assets/controllers/assets.controll
 
 const assetRouter = express.Router();
 
-assetRouter.get("/", (req, res) =>
-  assetsController.getSupportedAssets(req, res),
-);
+assetRouter.get("/", assetsController.getSupportedAssets);
 
 export default assetRouter;

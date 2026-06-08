@@ -1,96 +1,41 @@
-import { tradeInputValidator } from "@repo/trading-core";
+import { CreateOrderSchema } from "../../../validation/schemas/trading.schemas.js";
+import type { CreateOrderInput } from "../../../validation/schemas/trading.schemas.js";
 
 type ValidatedCreateTradeInput =
   | {
       ok: true;
-      value: {
-        symbol: string;
-        type: "buy" | "sell";
-        quantity: number;
-        leverage: number;
-        slippage?: number;
-        takeProfit?: number;
-        stopLoss?: number;
-      };
+      value: CreateOrderInput;
     }
   | {
       ok: false;
       error: string;
     };
 
+/**
+ * Service for validating trade input parameters
+ * Now uses Zod schemas for type-safe validation
+ * This can be used for additional service-level validation if needed
+ */
 class TradeInputService {
-  validateCreateOrder(
-    body: Record<string, unknown>,
-  ): ValidatedCreateTradeInput {
-    const { symbol, type, quantity, leverage, slippage, takeProfit, stopLoss } =
-      body;
+  /**
+   * Validates and transforms create order input
+   * Uses Zod schema for validation to ensure type safety
+   * Returns a result object pattern for backward compatibility
+   */
+  validateCreateOrder(body: Record<string, unknown>): ValidatedCreateTradeInput {
+    const parseResult = CreateOrderSchema.safeParse(body);
 
-    if (!symbol || !type || !quantity || !leverage) {
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0];
       return {
         ok: false,
-        error: "Missing required parameters: symbol, type, quantity, leverage",
+        error: firstError?.message || "Invalid order parameters",
       };
-    }
-
-    const orderSide = tradeInputValidator.parseOrderSide(type);
-    if (!orderSide) {
-      return { ok: false, error: "Type must be 'buy' or 'sell'" };
-    }
-
-    const quantityValue = tradeInputValidator.parsePositiveNumber(quantity);
-    if (quantityValue === null) {
-      return { ok: false, error: "Quantity must be greater than 0" };
-    }
-
-    const leverageValue = tradeInputValidator.parsePositiveInteger(leverage);
-    if (leverageValue === null) {
-      return { ok: false, error: "Leverage must be a positive whole number" };
-    }
-
-    const slippageValue =
-      tradeInputValidator.parseOptionalNonNegativeNumber(slippage);
-    if (
-      slippage !== undefined &&
-      slippage !== null &&
-      slippage !== "" &&
-      slippageValue === null
-    ) {
-      return { ok: false, error: "Slippage must be zero or a positive number" };
-    }
-
-    const takeProfitValue =
-      tradeInputValidator.parseOptionalPositiveNumber(takeProfit);
-    if (
-      takeProfit !== undefined &&
-      takeProfit !== null &&
-      takeProfit !== "" &&
-      takeProfitValue === null
-    ) {
-      return { ok: false, error: "Take profit must be greater than 0" };
-    }
-
-    const stopLossValue =
-      tradeInputValidator.parseOptionalPositiveNumber(stopLoss);
-    if (
-      stopLoss !== undefined &&
-      stopLoss !== null &&
-      stopLoss !== "" &&
-      stopLossValue === null
-    ) {
-      return { ok: false, error: "Stop loss must be greater than 0" };
     }
 
     return {
       ok: true,
-      value: {
-        symbol: String(symbol),
-        type: orderSide,
-        quantity: quantityValue,
-        leverage: leverageValue,
-        slippage: slippageValue ?? undefined,
-        takeProfit: takeProfitValue ?? undefined,
-        stopLoss: stopLossValue ?? undefined,
-      },
+      value: parseResult.data,
     };
   }
 }

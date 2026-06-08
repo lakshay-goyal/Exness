@@ -15,6 +15,7 @@ import candleRouter from "../routes/candles.routes.js";
 import pricesRouter from "../routes/prices.routes.js";
 import tradeRouter from "../features/trading/trade.routes.js";
 import ResponseWriter from "../utils/response-writer.js";
+import { globalErrorHandler, notFoundHandler } from "../validation/error-handler.js";
 
 export class BackendApplication {
   readonly app: Express;
@@ -30,6 +31,7 @@ export class BackendApplication {
     await this.configureRedisStreams();
     await this.configureDatabases();
     this.configureRoutes();
+    this.configureErrorHandling();
     return this;
   }
 
@@ -88,5 +90,17 @@ export class BackendApplication {
     this.app.get("/", (_req, res) => {
       ResponseWriter.success(res, "Server Running");
     });
+  }
+
+  /**
+   * Configure global error handling
+   * Must be called after all routes are configured
+   */
+  private configureErrorHandling() {
+    // Handle 404 for undefined routes
+    this.app.use(notFoundHandler);
+
+    // Global error handler - must be last
+    this.app.use(globalErrorHandler);
   }
 }
