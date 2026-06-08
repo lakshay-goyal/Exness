@@ -1,6 +1,6 @@
 import { tradeInputValidator } from "@repo/trading-core";
 
-export type ValidatedCreateTradeInput =
+type ValidatedCreateTradeInput =
   | {
       ok: true;
       value: {
@@ -18,7 +18,7 @@ export type ValidatedCreateTradeInput =
       error: string;
     };
 
-export class TradeInputService {
+class TradeInputService {
   validateCreateOrder(
     body: Record<string, unknown>,
   ): ValidatedCreateTradeInput {

@@ -2992,7 +2992,7 @@ export function ProfileDashboardTabScreen() {
   );
 }
 
-export function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
+function HelloWorldScreen({ onLogout, user }: HelloWorldScreenProps) {
   return (
     <DashboardTabsProvider onLogout={onLogout} user={user}>
       <WalletDashboardTabScreen />

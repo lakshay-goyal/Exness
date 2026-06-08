@@ -38,7 +38,7 @@ const envSchema = z.object({
 
 const env = envSchema.parse(process.env);
 
-export const config = {
+const config = {
   REDIS_URL: env.REDIS_URL,
   BINANCE_WS_URL: env.BINANCE_WS_URL,
   TIMESCALE_DB_USER: env.TIMESCALE_DB_USER,
@@ -61,4 +61,4 @@ export const config = {
   GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
 };
 
-export default config;
+export { config };

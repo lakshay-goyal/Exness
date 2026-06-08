@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac } from "crypto";
 import jwt from "jsonwebtoken";
 import { fromNodeHeaders } from "better-auth/node";
 import type { Request } from "express";
@@ -92,9 +92,3 @@ export function isValidPin(pin: unknown) {
   return typeof pin === "string" && /^\d{4,6}$/.test(pin);
 }
 
-export function verifyPin(pin: string, pinHash: string) {
-  const expected = Buffer.from(hashMobilePin(pin), "hex");
-  const actual = Buffer.from(pinHash, "hex");
-
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}

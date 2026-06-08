@@ -3,7 +3,7 @@ import { logAuthEvent } from "./auth-logger";
 
 declare const require: (moduleName: string) => unknown;
 
-export type BiometricKind = "face" | "fingerprint" | "iris" | "biometric";
+type BiometricKind = "face" | "fingerprint" | "iris" | "biometric";
 
 export type BiometricAvailability = {
   isAvailable: boolean;

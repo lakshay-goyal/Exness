@@ -1,6 +1,6 @@
 import { constant } from "@repo/config";
 
-export class EngineStreamClient {
+class EngineStreamClient {
   constructor(private readonly redisStreams: any) {}
 
   async sendToEngine(command: Record<string, unknown>) {

@@ -11,6 +11,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md,css}\""
   },
   "devDependencies": {
+    "knip": "^6.16.1",
     "prettier": "^3.6.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.5.8"
@@ -39,7 +40,6 @@
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "jwt-decode": "^4.0.0",
     "lightweight-charts": "^5.0.9",
     "lucide-react": "^0.544.0",
     "nodemailer": "^7.0.6",

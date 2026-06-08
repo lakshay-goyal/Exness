@@ -211,7 +211,7 @@ async function retrieveData(
   }
 }
 
-export const getCandles = async (req: Request, res: Response) => {
+const getCandles = async (req: Request, res: Response) => {
   const { symbol, interval } = req.query;
 
   if (!symbol || !interval) {
@@ -253,7 +253,7 @@ export const getCandles = async (req: Request, res: Response) => {
   }
 };
 
-export const getDiagnostics = async (req: Request, res: Response) => {
+const getDiagnostics = async (req: Request, res: Response) => {
   try {
     const totalResult = await client
       .getClient()
@@ -292,7 +292,7 @@ export const getDiagnostics = async (req: Request, res: Response) => {
   }
 };
 
-export const refreshAggregates = async (req: Request, res: Response) => {
+const refreshAggregates = async (req: Request, res: Response) => {
   try {
     const result = await client.refreshAllContinuousAggregates();
     return res.json({

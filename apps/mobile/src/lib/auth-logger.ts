@@ -48,32 +48,3 @@ export function getAuthErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-export function getAuthClientErrorDetails(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return {
-      error: typeof error === "string" ? error : undefined,
-    };
-  }
-
-  const authError = error as Record<string, unknown>;
-
-  return {
-    error:
-      typeof authError.message === "string"
-        ? authError.message
-        : typeof authError.error === "string"
-          ? authError.error
-          : undefined,
-    code: typeof authError.code === "string" ? authError.code : undefined,
-    status:
-      typeof authError.status === "number"
-        ? authError.status
-        : typeof authError.statusCode === "number"
-          ? authError.statusCode
-          : undefined,
-    statusText:
-      typeof authError.statusText === "string"
-        ? authError.statusText
-        : undefined,
-  };
-}

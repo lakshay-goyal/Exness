@@ -19,7 +19,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@types/dotenv": "^8.2.3",
     "dotenv": "^17.2.2",
     "redis": "^5.8.2",
     "zod": "^4.1.5"

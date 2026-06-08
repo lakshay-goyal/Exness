@@ -126,7 +126,7 @@ export async function syncMobileSession() {
   return data;
 }
 
-export async function refreshMobileSession(refreshToken: string) {
+async function refreshMobileSession(refreshToken: string) {
   const url = `${BACKEND_URL}/api/v1/auth/mobile/refresh-token`;
 
   logAuthEvent("session_refresh_requested", {

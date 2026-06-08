@@ -15,8 +15,7 @@
     "@repo/db":"workspace:*",
     "@repo/trading-core": "workspace:*",
     "@repo/timescaledb":"workspace:*",
-    "better-auth": "^1.6.11",
-    "redis": "^5.8.2"
+    "better-auth": "^1.6.11"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
