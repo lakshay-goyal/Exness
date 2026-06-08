@@ -1,2 +1,2 @@
-export * from "./features/trading/trading-api-client";
-export * from "./shared/parsing/parse-array";
+export * from './features/trading/trading-api-client';
+export * from './shared/parsing/parse-array';

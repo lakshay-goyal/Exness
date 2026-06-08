@@ -1,4 +1,4 @@
-import { prisma } from "@repo/db";
+import { prisma } from '@repo/db';
 
 export async function ensureTradingUser(userId: string, email: string) {
   const existingByEmail = await prisma.user.findUnique({

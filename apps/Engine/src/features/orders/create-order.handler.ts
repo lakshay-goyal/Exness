@@ -1,27 +1,24 @@
-import { redisStreams, config, constant } from "@repo/config";
-import { v4 as uuid } from "uuid";
-import { users } from "../state/users.js";
-import { openOrders } from "../state/orders.js";
-import { prices } from "../state/prices.js";
-import { prisma } from "@repo/db";
+import { redisStreams, config, constant } from '@repo/config';
+import { v4 as uuid } from 'uuid';
+import { users } from '../state/users.js';
+import { openOrders } from '../state/orders.js';
+import { prices } from '../state/prices.js';
+import { prisma } from '@repo/db';
 import {
   marketSymbolMapper,
   orderCalculator,
   priceNormalizer,
   tradeInputValidator,
-} from "@repo/trading-core";
+} from '@repo/trading-core';
 
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
-async function sendCreateOrderResponse(
-  result: any,
-  message: Record<string, unknown>,
-) {
+async function sendCreateOrderResponse(result: any, message: Record<string, unknown>) {
   const requestId = result.requestId || result.correlationId;
   await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
-    function: "createOrder",
+    function: 'createOrder',
     message: JSON.stringify(message),
     requestId,
     correlationId: requestId,
@@ -41,9 +38,9 @@ export async function createOrderFunction(result: any) {
     const user = users.find((user: any) => user.userId === result.userId);
 
     if (!user) {
-      console.error("User not found:", result.userId);
+      console.error('User not found:', result.userId);
       await sendCreateOrderResponse(result, {
-        error: "User not found",
+        error: 'User not found',
         success: false,
       });
       return;
@@ -51,8 +48,7 @@ export async function createOrderFunction(result: any) {
 
     // Normalize symbol (convert BTCUSDT to btc, etc.)
     const normalizedSymbol = marketSymbolMapper.normalizeSymbol(result.symbol);
-    const priceAssetName =
-      marketSymbolMapper.getPriceAssetName(normalizedSymbol);
+    const priceAssetName = marketSymbolMapper.getPriceAssetName(normalizedSymbol);
 
     const priceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
 
@@ -101,17 +97,13 @@ export async function createOrderFunction(result: any) {
     if (leverage === null) {
       console.error(`Invalid leverage: ${result.leverage}`);
       await sendCreateOrderResponse(result, {
-        error: "Leverage must be a positive whole number",
+        error: 'Leverage must be a positive whole number',
         success: false,
       });
       return;
     }
 
-    const marginRequired = orderCalculator.getMargin(
-      quantity,
-      expectedPrice,
-      leverage,
-    );
+    const marginRequired = orderCalculator.getMargin(quantity, expectedPrice, leverage);
 
     // Fetch user balance from database
     let dbUser;
@@ -121,18 +113,18 @@ export async function createOrderFunction(result: any) {
         select: { balance: true },
       });
     } catch (dbError) {
-      console.error("Error fetching user balance from database:", dbError);
+      console.error('Error fetching user balance from database:', dbError);
       await sendCreateOrderResponse(result, {
-        error: "Failed to fetch user balance from database",
+        error: 'Failed to fetch user balance from database',
         success: false,
       });
       return;
     }
 
     if (!dbUser) {
-      console.error("User not found in database:", result.userId);
+      console.error('User not found in database:', result.userId);
       await sendCreateOrderResponse(result, {
-        error: "User not found in database",
+        error: 'User not found in database',
         success: false,
       });
       return;
@@ -150,28 +142,22 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
-    const parsedTakeProfit = tradeInputValidator.parseOptionalPositiveNumber(
-      result.takeProfit,
-    );
-    const parsedStopLoss = tradeInputValidator.parseOptionalPositiveNumber(
-      result.stopLoss,
-    );
-    const parsedSlippage = tradeInputValidator.parseOptionalNonNegativeNumber(
-      result.slippage,
-    );
+    const parsedTakeProfit = tradeInputValidator.parseOptionalPositiveNumber(result.takeProfit);
+    const parsedStopLoss = tradeInputValidator.parseOptionalPositiveNumber(result.stopLoss);
+    const parsedSlippage = tradeInputValidator.parseOptionalNonNegativeNumber(result.slippage);
 
     if (
       (result.takeProfit !== undefined &&
         result.takeProfit !== null &&
-        result.takeProfit !== "" &&
+        result.takeProfit !== '' &&
         parsedTakeProfit === null) ||
       (result.stopLoss !== undefined &&
         result.stopLoss !== null &&
-        result.stopLoss !== "" &&
+        result.stopLoss !== '' &&
         parsedStopLoss === null)
     ) {
       await sendCreateOrderResponse(result, {
-        error: "Take profit and stop loss must be positive numbers",
+        error: 'Take profit and stop loss must be positive numbers',
         success: false,
       });
       return;
@@ -180,11 +166,11 @@ export async function createOrderFunction(result: any) {
     if (
       result.slippage !== undefined &&
       result.slippage !== null &&
-      result.slippage !== "" &&
+      result.slippage !== '' &&
       parsedSlippage === null
     ) {
       await sendCreateOrderResponse(result, {
-        error: "Slippage must be zero or a positive number",
+        error: 'Slippage must be zero or a positive number',
         success: false,
       });
       return;
@@ -199,8 +185,8 @@ export async function createOrderFunction(result: any) {
     const newOrder = {
       userId: result.userId,
       orderId: orderId,
-      symbol: normalizedSymbol as "btc" | "sol" | "eth",
-      type: orderType as "buy" | "sell",
+      symbol: normalizedSymbol as 'btc' | 'sol' | 'eth',
+      type: orderType as 'buy' | 'sell',
       quantity: quantity,
       leverage,
       openPrice: expectedPrice,
@@ -214,35 +200,29 @@ export async function createOrderFunction(result: any) {
 
     // Check slippage after order creation
     // Re-fetch current price to check if it has moved beyond slippage tolerance
-    const currentPriceData = priceNormalizer.findPriceForSymbol(
-      prices,
-      result.symbol,
-    );
+    const currentPriceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
 
     if (!currentPriceData) {
-      console.error("Price data not found during slippage check");
+      console.error('Price data not found during slippage check');
       removeOpenOrder(orderId);
       await sendCreateOrderResponse(result, {
-        error: "Price data not found during slippage check",
+        error: 'Price data not found during slippage check',
         success: false,
       });
       return;
     }
 
     // Get current execution price
-    const currentExecutionPrice = priceNormalizer.getEntryPrice(
-      orderType,
-      currentPriceData,
-    );
+    const currentExecutionPrice = priceNormalizer.getEntryPrice(orderType, currentPriceData);
 
     const invalidTakeProfit =
       takeProfitValue !== undefined &&
-      (orderType === "buy"
+      (orderType === 'buy'
         ? takeProfitValue <= currentExecutionPrice
         : takeProfitValue >= currentExecutionPrice);
     const invalidStopLoss =
       stopLossValue !== undefined &&
-      (orderType === "buy"
+      (orderType === 'buy'
         ? stopLossValue >= currentExecutionPrice
         : stopLossValue <= currentExecutionPrice);
 
@@ -250,9 +230,9 @@ export async function createOrderFunction(result: any) {
       removeOpenOrder(orderId);
 
       const expectedDirection =
-        orderType === "buy"
-          ? "For buy orders, take profit must be above the open price and stop loss must be below it."
-          : "For sell orders, take profit must be below the open price and stop loss must be above it.";
+        orderType === 'buy'
+          ? 'For buy orders, take profit must be above the open price and stop loss must be below it.'
+          : 'For sell orders, take profit must be below the open price and stop loss must be above it.';
 
       await sendCreateOrderResponse(result, {
         error: `${expectedDirection} Current execution price: $${currentExecutionPrice.toFixed(2)}`,
@@ -305,20 +285,20 @@ export async function createOrderFunction(result: any) {
         select: { balance: true },
       });
     } catch (dbError) {
-      console.error("Error re-fetching user balance:", dbError);
+      console.error('Error re-fetching user balance:', dbError);
       removeOpenOrder(orderId);
       await sendCreateOrderResponse(result, {
-        error: "Failed to verify balance for actual execution price",
+        error: 'Failed to verify balance for actual execution price',
         success: false,
       });
       return;
     }
 
     if (!updatedDbUser) {
-      console.error("User not found when re-checking balance");
+      console.error('User not found when re-checking balance');
       removeOpenOrder(orderId);
       await sendCreateOrderResponse(result, {
-        error: "User not found when verifying balance",
+        error: 'User not found when verifying balance',
         success: false,
       });
       return;
@@ -351,7 +331,7 @@ export async function createOrderFunction(result: any) {
       if (balanceUpdate.count !== 1) {
         removeOpenOrder(orderId);
         await sendCreateOrderResponse(result, {
-          error: "Insufficient balance while reserving margin",
+          error: 'Insufficient balance while reserving margin',
           success: false,
         });
         return;
@@ -361,8 +341,7 @@ export async function createOrderFunction(result: any) {
         where: { userID: result.userId },
         select: { balance: true },
       });
-      const newBalance =
-        refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
+      const newBalance = refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
 
       // Also update in-memory user balance
       const inMemoryUser = users.find((u: any) => u.userId === result.userId);
@@ -370,10 +349,10 @@ export async function createOrderFunction(result: any) {
         inMemoryUser.balance = newBalance;
       }
     } catch (balanceUpdateError) {
-      console.error("Error updating balance in database:", balanceUpdateError);
+      console.error('Error updating balance in database:', balanceUpdateError);
       removeOpenOrder(orderId);
       await sendCreateOrderResponse(result, {
-        error: "Failed to update balance in database",
+        error: 'Failed to update balance in database',
         success: false,
       });
       return;
@@ -384,12 +363,12 @@ export async function createOrderFunction(result: any) {
       success: true,
       orderId,
       userId: result.userId,
-      message: "Order created successfully",
+      message: 'Order created successfully',
     });
   } catch (error: any) {
-    console.error("Error in createOrderFunction:", error);
+    console.error('Error in createOrderFunction:', error);
     await sendCreateOrderResponse(result, {
-      error: error?.message || "Failed to create order",
+      error: error?.message || 'Failed to create order',
       success: false,
     });
   }

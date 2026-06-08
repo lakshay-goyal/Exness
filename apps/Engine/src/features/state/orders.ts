@@ -1,1 +1,1 @@
-export { closeOrders, openOrders } from "@repo/trading-core/state";
+export { closeOrders, openOrders } from '@repo/trading-core/state';

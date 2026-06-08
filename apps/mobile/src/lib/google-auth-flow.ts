@@ -1,14 +1,14 @@
-import { getCookie, getSetCookie } from "@better-auth/expo/client";
-import * as Linking from "expo-linking";
-import * as WebBrowser from "expo-web-browser";
-import { Platform } from "react-native";
+import { getCookie, getSetCookie } from '@better-auth/expo/client';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
-import { authStorage } from "./auth-storage";
-import { BACKEND_URL } from "./auth-client";
-import { logAuthEvent } from "./auth-logger";
+import { authStorage } from './auth-storage';
+import { BACKEND_URL } from './auth-client';
+import { logAuthEvent } from './auth-logger';
 
-const AUTH_COOKIE_KEY = "exness_cookie";
-const COOKIE_PREFIX = "better-auth";
+const AUTH_COOKIE_KEY = 'exness_cookie';
+const COOKIE_PREFIX = 'better-auth';
 
 type SocialSignInResponse = {
   redirect?: boolean;
@@ -24,7 +24,7 @@ type StoredCookie = Record<
 >;
 
 function getStoredCookieJson() {
-  return authStorage.getItem(AUTH_COOKIE_KEY) || "{}";
+  return authStorage.getItem(AUTH_COOKIE_KEY) || '{}';
 }
 
 function getAuthCookieHeader() {
@@ -45,10 +45,7 @@ function getOAuthStateValue() {
 
   try {
     const cookies = JSON.parse(rawCookie) as StoredCookie;
-    const names = [
-      `__Secure-${COOKIE_PREFIX}.oauth_state`,
-      `${COOKIE_PREFIX}.oauth_state`,
-    ];
+    const names = [`__Secure-${COOKIE_PREFIX}.oauth_state`, `${COOKIE_PREFIX}.oauth_state`];
 
     for (const name of names) {
       const value = cookies[name]?.value;
@@ -65,10 +62,10 @@ function getOAuthStateValue() {
 }
 
 async function readErrorBody(response: Response) {
-  const body = await response.text().catch(() => "");
+  const body = await response.text().catch(() => '');
 
   if (!body) {
-    return response.statusText || "Google authentication failed.";
+    return response.statusText || 'Google authentication failed.';
   }
 
   try {
@@ -80,43 +77,43 @@ async function readErrorBody(response: Response) {
 }
 
 export async function signInWithGoogleInBrowser() {
-  const callbackURL = Linking.createURL("/", { scheme: "mobile" });
-  const expoOrigin = Linking.createURL("", { scheme: "mobile" });
+  const callbackURL = Linking.createURL('/', { scheme: 'mobile' });
+  const expoOrigin = Linking.createURL('', { scheme: 'mobile' });
 
-  logAuthEvent("google_browser_auth_requested", {
+  logAuthEvent('google_browser_auth_requested', {
     callbackURL,
     expoOrigin,
     backendURL: BACKEND_URL,
   });
 
   const response = await fetch(`${BACKEND_URL}/api/auth/sign-in/social`, {
-    method: "POST",
-    credentials: "omit",
+    method: 'POST',
+    credentials: 'omit',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       Cookie: getAuthCookieHeader(),
-      "expo-origin": expoOrigin,
-      "x-skip-oauth-proxy": "true",
+      'expo-origin': expoOrigin,
+      'x-skip-oauth-proxy': 'true',
     },
     body: JSON.stringify({
-      provider: "google",
+      provider: 'google',
       callbackURL,
     }),
   });
 
-  saveSetCookieHeader(response.headers.get("set-cookie"));
+  saveSetCookieHeader(response.headers.get('set-cookie'));
 
   if (!response.ok) {
     const message = await readErrorBody(response);
 
     logAuthEvent(
-      "google_browser_auth_url_failed",
+      'google_browser_auth_url_failed',
       {
         status: response.status,
         statusText: response.statusText,
         error: message,
       },
-      "error",
+      'error',
     );
 
     throw new Error(message);
@@ -126,24 +123,24 @@ export async function signInWithGoogleInBrowser() {
 
   if (!data.redirect || !data.url) {
     logAuthEvent(
-      "google_browser_auth_url_missing",
+      'google_browser_auth_url_missing',
       {
         redirect: Boolean(data.redirect),
         hasURL: Boolean(data.url),
       },
-      "error",
+      'error',
     );
 
-    throw new Error("Google did not return an authorization URL.");
+    throw new Error('Google did not return an authorization URL.');
   }
 
-  if (typeof WebBrowser.openAuthSessionAsync !== "function") {
+  if (typeof WebBrowser.openAuthSessionAsync !== 'function') {
     throw new Error(
-      "Expo WebBrowser is unavailable in this dev build. Rebuild the iOS dev client with `bun run ios`.",
+      'Expo WebBrowser is unavailable in this dev build. Rebuild the iOS dev client with `bun run ios`.',
     );
   }
 
-  if (Platform.OS === "android") {
+  if (Platform.OS === 'android') {
     WebBrowser.dismissAuthSession();
   }
 
@@ -153,37 +150,37 @@ export async function signInWithGoogleInBrowser() {
   const oauthState = getOAuthStateValue();
 
   if (oauthState) {
-    params.append("oauthState", oauthState);
+    params.append('oauthState', oauthState);
   }
 
   const proxyURL = `${BACKEND_URL}/api/auth/expo-authorization-proxy?${params.toString()}`;
 
-  logAuthEvent("google_browser_auth_opened", {
+  logAuthEvent('google_browser_auth_opened', {
     callbackURL,
     hasOAuthState: Boolean(oauthState),
   });
 
   const result = await WebBrowser.openAuthSessionAsync(proxyURL, callbackURL);
 
-  if (result.type !== "success") {
+  if (result.type !== 'success') {
     logAuthEvent(
-      "google_browser_auth_cancelled",
+      'google_browser_auth_cancelled',
       {
         type: result.type,
       },
-      "warn",
+      'warn',
     );
 
-    throw new Error("Google authentication was cancelled.");
+    throw new Error('Google authentication was cancelled.');
   }
 
-  const cookie = new URL(result.url).searchParams.get("cookie");
+  const cookie = new URL(result.url).searchParams.get('cookie');
 
   if (!cookie) {
-    logAuthEvent("google_browser_auth_cookie_missing", undefined, "error");
-    throw new Error("Google authentication did not return a session cookie.");
+    logAuthEvent('google_browser_auth_cookie_missing', undefined, 'error');
+    throw new Error('Google authentication did not return a session cookie.');
   }
 
   saveSetCookieHeader(cookie);
-  logAuthEvent("google_browser_auth_cookie_saved");
+  logAuthEvent('google_browser_auth_cookie_saved');
 }

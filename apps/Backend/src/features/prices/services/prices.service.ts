@@ -1,5 +1,5 @@
-import type { Request } from "express";
-import { constant } from "@repo/config";
+import type { Request } from 'express';
+import { constant } from '@repo/config';
 
 type StreamPriceUpdate = {
   asset?: string;
@@ -24,7 +24,7 @@ class PricesService {
       return message as StreamPriceUpdate[];
     }
 
-    if (typeof message !== "string" || !message.trim()) {
+    if (typeof message !== 'string' || !message.trim()) {
       return [];
     }
 
@@ -40,15 +40,12 @@ class PricesService {
     const redisStreams = req.app.locals.redisStreams;
 
     if (!redisStreams?.readLatestFromRedisStream) {
-      return { ok: false as const, error: "Price stream is not available" };
+      return { ok: false as const, error: 'Price stream is not available' };
     }
 
-    const latestMessages = await redisStreams.readLatestFromRedisStream(
-      constant.redisStream,
-      50,
-    );
+    const latestMessages = await redisStreams.readLatestFromRedisStream(constant.redisStream, 50);
     const priceMessage = latestMessages.find(
-      (message: { function?: string }) => message?.function === "pricePoller",
+      (message: { function?: string }) => message?.function === 'pricePoller',
     );
 
     if (!priceMessage) {

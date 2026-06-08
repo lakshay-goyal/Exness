@@ -1,15 +1,9 @@
-import Link from "next/link";
-import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Navbar } from "@/components/Navbar";
+import Link from 'next/link';
+import type { ReactElement } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Navbar } from '@/components/Navbar';
 
 export default function Page(): ReactElement {
   return (
@@ -28,9 +22,9 @@ export default function Page(): ReactElement {
           </div>
           <div className="animate-slide-up">
             <p className="text-muted-foreground mx-auto mb-12 max-w-4xl text-xl font-medium leading-relaxed md:text-2xl">
-              Access the world's largest cryptocurrency markets through CFDs.
-              Trade on price differences without owning the underlying assets.
-              Leverage up to 1:100 with institutional-grade execution.
+              Access the world's largest cryptocurrency markets through CFDs. Trade on price
+              differences without owning the underlying assets. Leverage up to 1:100 with
+              institutional-grade execution.
             </p>
           </div>
           <div className="animate-scale-in flex flex-col items-center justify-center gap-6 sm:flex-row">
@@ -55,33 +49,25 @@ export default function Page(): ReactElement {
               <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 $2.4B+
               </div>
-              <div className="text-muted-foreground mt-2 font-medium">
-                Daily Volume
-              </div>
+              <div className="text-muted-foreground mt-2 font-medium">Daily Volume</div>
             </div>
             <div className="text-center">
               <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 50K+
               </div>
-              <div className="text-muted-foreground mt-2 font-medium">
-                Active Traders
-              </div>
+              <div className="text-muted-foreground mt-2 font-medium">Active Traders</div>
             </div>
             <div className="text-center">
               <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 100+
               </div>
-              <div className="text-muted-foreground mt-2 font-medium">
-                Crypto Pairs
-              </div>
+              <div className="text-muted-foreground mt-2 font-medium">Crypto Pairs</div>
             </div>
             <div className="text-center">
               <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 0.01s
               </div>
-              <div className="text-muted-foreground mt-2 font-medium">
-                Execution Speed
-              </div>
+              <div className="text-muted-foreground mt-2 font-medium">Execution Speed</div>
             </div>
           </div>
         </div>
@@ -97,8 +83,7 @@ export default function Page(): ReactElement {
               Advanced Trading Features
             </h2>
             <p className="text-muted-foreground mx-auto max-w-4xl text-xl font-medium leading-relaxed">
-              Professional-grade tools and features designed for serious crypto
-              traders
+              Professional-grade tools and features designed for serious crypto traders
             </p>
           </div>
 
@@ -120,15 +105,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  High Leverage
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">High Leverage</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Trade with up to 1:100 leverage on major cryptocurrencies.
-                  Amplify your positions while managing risk with our advanced
-                  tools.
+                  Trade with up to 1:100 leverage on major cryptocurrencies. Amplify your positions
+                  while managing risk with our advanced tools.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -150,14 +132,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  Instant Execution
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">Instant Execution</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Lightning-fast order execution with sub-millisecond latency.
-                  Never miss a trading opportunity in volatile markets.
+                  Lightning-fast order execution with sub-millisecond latency. Never miss a trading
+                  opportunity in volatile markets.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -179,14 +159,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  Advanced Analytics
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">Advanced Analytics</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Comprehensive market analysis, real-time charts, and
-                  AI-powered insights to make informed trading decisions.
+                  Comprehensive market analysis, real-time charts, and AI-powered insights to make
+                  informed trading decisions.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -208,14 +186,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  Risk Management
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">Risk Management</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Sophisticated risk management tools including stop-loss,
-                  take-profit, and position sizing calculators.
+                  Sophisticated risk management tools including stop-loss, take-profit, and position
+                  sizing calculators.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -237,14 +213,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  No Hidden Fees
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">No Hidden Fees</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Transparent pricing with competitive spreads. No hidden fees,
-                  no surprises. What you see is what you pay.
+                  Transparent pricing with competitive spreads. No hidden fees, no surprises. What
+                  you see is what you pay.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -266,14 +240,12 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  24/7 Support
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold">24/7 Support</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base leading-relaxed">
-                  Round-the-clock customer support from trading experts. Get
-                  help when you need it, markets never sleep.
+                  Round-the-clock customer support from trading experts. Get help when you need it,
+                  markets never sleep.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -284,12 +256,9 @@ export default function Page(): ReactElement {
       <section id="how-it-works" className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-6 text-4xl font-bold md:text-5xl">
-              How CFD Trading Works
-            </h2>
+            <h2 className="mb-6 text-4xl font-bold md:text-5xl">How CFD Trading Works</h2>
             <p className="text-muted-foreground mx-auto max-w-3xl text-xl">
-              Simple steps to start trading cryptocurrency CFDs and profit from
-              market movements
+              Simple steps to start trading cryptocurrency CFDs and profit from market movements
             </p>
           </div>
 
@@ -300,8 +269,8 @@ export default function Page(): ReactElement {
               </div>
               <h3 className="mb-4 text-2xl font-semibold">Choose Your Asset</h3>
               <p className="text-muted-foreground">
-                Select from 100+ cryptocurrency pairs including Bitcoin,
-                Ethereum, and emerging altcoins.
+                Select from 100+ cryptocurrency pairs including Bitcoin, Ethereum, and emerging
+                altcoins.
               </p>
             </div>
 
@@ -311,8 +280,8 @@ export default function Page(): ReactElement {
               </div>
               <h3 className="mb-4 text-2xl font-semibold">Predict Direction</h3>
               <p className="text-muted-foreground">
-                Go long if you think the price will rise, or go short if you
-                expect it to fall. No need to own the crypto.
+                Go long if you think the price will rise, or go short if you expect it to fall. No
+                need to own the crypto.
               </p>
             </div>
 
@@ -320,25 +289,19 @@ export default function Page(): ReactElement {
               <div className="bg-primary text-primary-foreground mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold">
                 3
               </div>
-              <h3 className="mb-4 text-2xl font-semibold">
-                Profit from Difference
-              </h3>
+              <h3 className="mb-4 text-2xl font-semibold">Profit from Difference</h3>
               <p className="text-muted-foreground">
-                Your profit or loss is determined by the difference between
-                opening and closing prices.
+                Your profit or loss is determined by the difference between opening and closing
+                prices.
               </p>
             </div>
           </div>
 
           <div className="bg-accent/20 border-border mt-16 rounded-2xl border p-8">
-            <h3 className="mb-4 text-center text-2xl font-bold">
-              CFD vs Direct Crypto Purchase
-            </h3>
+            <h3 className="mb-4 text-center text-2xl font-bold">CFD vs Direct Crypto Purchase</h3>
             <div className="grid gap-8 md:grid-cols-2">
               <div>
-                <h4 className="text-foreground mb-3 text-lg font-semibold">
-                  CFD Trading
-                </h4>
+                <h4 className="text-foreground mb-3 text-lg font-semibold">CFD Trading</h4>
                 <ul className="text-muted-foreground space-y-2">
                   <li>• No need to own the underlying crypto</li>
                   <li>• Trade with leverage up to 1:100</li>
@@ -348,9 +311,7 @@ export default function Page(): ReactElement {
                 </ul>
               </div>
               <div>
-                <h4 className="text-foreground mb-3 text-lg font-semibold">
-                  Direct Purchase
-                </h4>
+                <h4 className="text-foreground mb-3 text-lg font-semibold">Direct Purchase</h4>
                 <ul className="text-muted-foreground space-y-2">
                   <li>• You own the actual cryptocurrency</li>
                   <li>• No leverage available</li>
@@ -367,71 +328,68 @@ export default function Page(): ReactElement {
       <section id="markets" className="bg-accent/20 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-6 text-4xl font-bold md:text-5xl">
-              Available Markets
-            </h2>
+            <h2 className="mb-6 text-4xl font-bold md:text-5xl">Available Markets</h2>
             <p className="text-muted-foreground mx-auto max-w-3xl text-xl">
-              Trade the most popular cryptocurrencies with competitive spreads
-              and deep liquidity
+              Trade the most popular cryptocurrencies with competitive spreads and deep liquidity
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                name: "Bitcoin",
-                symbol: "BTC",
-                price: "$43,250",
-                change: "+2.45%",
+                name: 'Bitcoin',
+                symbol: 'BTC',
+                price: '$43,250',
+                change: '+2.45%',
                 positive: true,
               },
               {
-                name: "Ethereum",
-                symbol: "ETH",
-                price: "$2,680",
-                change: "+1.82%",
+                name: 'Ethereum',
+                symbol: 'ETH',
+                price: '$2,680',
+                change: '+1.82%',
                 positive: true,
               },
               {
-                name: "Cardano",
-                symbol: "ADA",
-                price: "$0.48",
-                change: "-0.95%",
+                name: 'Cardano',
+                symbol: 'ADA',
+                price: '$0.48',
+                change: '-0.95%',
                 positive: false,
               },
               {
-                name: "Solana",
-                symbol: "SOL",
-                price: "$98.50",
-                change: "+4.21%",
+                name: 'Solana',
+                symbol: 'SOL',
+                price: '$98.50',
+                change: '+4.21%',
                 positive: true,
               },
               {
-                name: "Polkadot",
-                symbol: "DOT",
-                price: "$7.85",
-                change: "+1.55%",
+                name: 'Polkadot',
+                symbol: 'DOT',
+                price: '$7.85',
+                change: '+1.55%',
                 positive: true,
               },
               {
-                name: "Chainlink",
-                symbol: "LINK",
-                price: "$15.40",
-                change: "-2.10%",
+                name: 'Chainlink',
+                symbol: 'LINK',
+                price: '$15.40',
+                change: '-2.10%',
                 positive: false,
               },
               {
-                name: "Litecoin",
-                symbol: "LTC",
-                price: "$72.30",
-                change: "+0.75%",
+                name: 'Litecoin',
+                symbol: 'LTC',
+                price: '$72.30',
+                change: '+0.75%',
                 positive: true,
               },
               {
-                name: "Avalanche",
-                symbol: "AVAX",
-                price: "$38.90",
-                change: "+3.15%",
+                name: 'Avalanche',
+                symbol: 'AVAX',
+                price: '$38.90',
+                change: '+3.15%',
                 positive: true,
               },
             ].map((crypto, index) => (
@@ -442,12 +400,8 @@ export default function Page(): ReactElement {
                 <CardContent className="p-6">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg font-bold">
-                        {crypto.name}
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {crypto.symbol}
-                      </CardDescription>
+                      <CardTitle className="text-lg font-bold">{crypto.name}</CardTitle>
+                      <CardDescription className="text-sm">{crypto.symbol}</CardDescription>
                     </div>
                     <div className="from-primary/10 to-primary/5 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                       <span className="text-primary text-sm font-bold">
@@ -457,10 +411,7 @@ export default function Page(): ReactElement {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold">{crypto.price}</div>
-                    <Badge
-                      variant={crypto.positive ? "default" : "destructive"}
-                      className="mt-1"
-                    >
+                    <Badge variant={crypto.positive ? 'default' : 'destructive'} className="mt-1">
                       {crypto.change}
                     </Badge>
                   </div>
@@ -481,13 +432,10 @@ export default function Page(): ReactElement {
         <div className="mx-auto max-w-7xl">
           <div className="grid items-center gap-16 lg:grid-cols-2">
             <div>
-              <h2 className="mb-8 text-4xl font-bold md:text-5xl">
-                Bank-Grade Security
-              </h2>
+              <h2 className="mb-8 text-4xl font-bold md:text-5xl">Bank-Grade Security</h2>
               <p className="text-muted-foreground mb-8 text-xl leading-relaxed">
-                Your funds and data are protected by military-grade encryption
-                and multi-layer security protocols. We're regulated by top-tier
-                financial authorities worldwide.
+                Your funds and data are protected by military-grade encryption and multi-layer
+                security protocols. We're regulated by top-tier financial authorities worldwide.
               </p>
 
               <div className="space-y-6">
@@ -506,12 +454,9 @@ export default function Page(): ReactElement {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">
-                      256-bit SSL Encryption
-                    </h3>
+                    <h3 className="text-lg font-semibold">256-bit SSL Encryption</h3>
                     <p className="text-muted-foreground">
-                      All data transmission is encrypted using the same
-                      technology banks use.
+                      All data transmission is encrypted using the same technology banks use.
                     </p>
                   </div>
                 </div>
@@ -531,12 +476,9 @@ export default function Page(): ReactElement {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">
-                      Segregated Accounts
-                    </h3>
+                    <h3 className="text-lg font-semibold">Segregated Accounts</h3>
                     <p className="text-muted-foreground">
-                      Client funds are kept separate from company funds in
-                      tier-1 banks.
+                      Client funds are kept separate from company funds in tier-1 banks.
                     </p>
                   </div>
                 </div>
@@ -556,9 +498,7 @@ export default function Page(): ReactElement {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">
-                      Regulatory Compliance
-                    </h3>
+                    <h3 className="text-lg font-semibold">Regulatory Compliance</h3>
                     <p className="text-muted-foreground">
                       Licensed and regulated by FCA, CySEC, and ASIC.
                     </p>
@@ -584,12 +524,9 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <h3 className="mb-4 text-2xl font-bold">
-                  $100M Insurance Coverage
-                </h3>
+                <h3 className="mb-4 text-2xl font-bold">$100M Insurance Coverage</h3>
                 <p className="text-muted-foreground mb-6">
-                  All client funds are insured up to $100M through Lloyd's of
-                  London.
+                  All client funds are insured up to $100M through Lloyd's of London.
                 </p>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -617,13 +554,10 @@ export default function Page(): ReactElement {
 
       <section className="bg-primary text-primary-foreground px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="mb-8 text-4xl font-bold md:text-5xl">
-            Ready to Start Trading?
-          </h2>
+          <h2 className="mb-8 text-4xl font-bold md:text-5xl">Ready to Start Trading?</h2>
           <p className="mb-12 text-xl opacity-90">
-            Join thousands of traders who trust CryptoCFD for their
-            cryptocurrency trading needs. Start with a demo account or go live
-            in minutes.
+            Join thousands of traders who trust CryptoCFD for their cryptocurrency trading needs.
+            Start with a demo account or go live in minutes.
           </p>
           <div className="flex flex-col justify-center gap-6 sm:flex-row">
             <Button
@@ -669,34 +603,22 @@ export default function Page(): ReactElement {
               <h4 className="mb-4 text-lg font-semibold">Trading</h4>
               <ul className="text-muted-foreground space-y-2">
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Bitcoin CFDs
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Ethereum CFDs
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Altcoin CFDs
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Trading Platform
                   </a>
                 </li>
@@ -707,34 +629,22 @@ export default function Page(): ReactElement {
               <h4 className="mb-4 text-lg font-semibold">Company</h4>
               <ul className="text-muted-foreground space-y-2">
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     About Us
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Regulation
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Security
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Careers
                   </a>
                 </li>
@@ -745,34 +655,22 @@ export default function Page(): ReactElement {
               <h4 className="mb-4 text-lg font-semibold">Support</h4>
               <ul className="text-muted-foreground space-y-2">
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Help Center
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Contact Us
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Live Chat
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#" className="hover:text-foreground transition-colors">
                     Trading Education
                   </a>
                 </li>
@@ -781,9 +679,7 @@ export default function Page(): ReactElement {
           </div>
 
           <div className="border-border mt-12 flex flex-col items-center justify-between border-t pt-8 md:flex-row">
-            <p className="text-muted-foreground text-sm">
-              © 2024 CryptoCFD. All rights reserved.
-            </p>
+            <p className="text-muted-foreground text-sm">© 2024 CryptoCFD. All rights reserved.</p>
             <div className="mt-4 flex space-x-6 md:mt-0">
               <a
                 href="#"
@@ -809,10 +705,9 @@ export default function Page(): ReactElement {
           <div className="bg-muted text-muted-foreground mt-8 rounded-lg p-4 text-sm">
             <p className="mb-2 font-semibold">Risk Warning:</p>
             <p>
-              CFDs are complex instruments and come with a high risk of losing
-              money rapidly due to leverage. 76% of retail investor accounts
-              lose money when trading CFDs. You should consider whether you
-              understand how CFDs work and whether you can afford to take the
+              CFDs are complex instruments and come with a high risk of losing money rapidly due to
+              leverage. 76% of retail investor accounts lose money when trading CFDs. You should
+              consider whether you understand how CFDs work and whether you can afford to take the
               high risk of losing your money.
             </p>
           </div>

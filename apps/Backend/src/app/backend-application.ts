@@ -1,24 +1,21 @@
-import "dotenv/config";
-import cookieParser from "cookie-parser";
-import cors from "cors";
-import express, { type Express } from "express";
-import helmet from "helmet";
-import { toNodeHandler } from "better-auth/node";
-import { config, redisStreams, API_ROUTES, MESSAGES } from "@repo/config";
+import 'dotenv/config';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express, { type Express } from 'express';
+import helmet from 'helmet';
+import { toNodeHandler } from 'better-auth/node';
+import { config, redisStreams, API_ROUTES, MESSAGES } from '@repo/config';
 
-import { auth } from "../features/auth/services/better-auth.js";
-import { candlesService } from "../features/candles/services/candles.service.js";
-import authRouter from "../routes/auth.routes.js";
-import balanceRouter from "../routes/balance.routes.js";
-import assetRouter from "../routes/assets.routes.js";
-import candleRouter from "../routes/candles.routes.js";
-import pricesRouter from "../routes/prices.routes.js";
-import tradeRouter from "../features/trading/trade.routes.js";
-import ResponseWriter from "../utils/response-writer.js";
-import {
-  globalErrorHandler,
-  notFoundHandler,
-} from "../validation/error-handler.js";
+import { auth } from '../features/auth/services/better-auth.js';
+import { candlesService } from '../features/candles/services/candles.service.js';
+import authRouter from '../routes/auth.routes.js';
+import balanceRouter from '../routes/balance.routes.js';
+import assetRouter from '../routes/assets.routes.js';
+import candleRouter from '../routes/candles.routes.js';
+import pricesRouter from '../routes/prices.routes.js';
+import tradeRouter from '../features/trading/trade.routes.js';
+import ResponseWriter from '../utils/response-writer.js';
+import { globalErrorHandler, notFoundHandler } from '../validation/error-handler.js';
 
 export class BackendApplication {
   readonly app: Express;
@@ -55,8 +52,8 @@ export class BackendApplication {
       helmet.contentSecurityPolicy({
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:8000"],
-          connectSrc: ["'self'", "http://localhost:8000"],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'http://localhost:8000'],
+          connectSrc: ["'self'", 'http://localhost:8000'],
         },
       }),
     );
@@ -67,7 +64,7 @@ export class BackendApplication {
   }
 
   private configureBodyParsing() {
-    this.app.use(express.json({ limit: "10mb" }));
+    this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
   }
@@ -90,7 +87,7 @@ export class BackendApplication {
     this.app.use(API_ROUTES.PRICES, pricesRouter);
     this.app.use(API_ROUTES.TRADE, tradeRouter);
 
-    this.app.get("/", (_req, res) => {
+    this.app.get('/', (_req, res) => {
       ResponseWriter.success(res, MESSAGES.SERVER_RUNNING);
     });
   }

@@ -1,4 +1,4 @@
-import { SUPPORTED_ASSETS } from "@repo/config";
+import { SUPPORTED_ASSETS } from '@repo/config';
 
 class AssetsService {
   getSupportedAssets() {

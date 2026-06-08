@@ -1,5 +1,5 @@
-import { constant, config, redisClient } from "@repo/config";
-import { timeScaleDB } from "@repo/timescaledb";
+import { constant, config, redisClient } from '@repo/config';
+import { timeScaleDB } from '@repo/timescaledb';
 
 export class TradeBatchUploader {
   private readonly db = timeScaleDB();
@@ -29,16 +29,13 @@ export class TradeBatchUploader {
           batchSize = 0;
         }
       } catch (err) {
-        console.error("Error processing trade:", err);
+        console.error('Error processing trade:', err);
       }
     }
   }
 
   private async insertTrade(trade: any) {
-    let timestamp =
-      typeof trade.data.T === "string"
-        ? parseInt(trade.data.T, 10)
-        : trade.data.T;
+    let timestamp = typeof trade.data.T === 'string' ? parseInt(trade.data.T, 10) : trade.data.T;
 
     if (timestamp > 4102444800000) {
       timestamp = Math.floor(timestamp / 1000);
@@ -46,15 +43,11 @@ export class TradeBatchUploader {
 
     const time = new Date(timestamp);
 
-    if (
-      isNaN(time.getTime()) ||
-      time.getFullYear() < 2020 ||
-      time.getFullYear() > 2100
-    ) {
+    if (isNaN(time.getTime()) || time.getFullYear() < 2020 || time.getFullYear() > 2100) {
       console.error(
         `⚠️ Invalid timestamp for trade: ${trade.data.T}, parsed as: ${time.toISOString()}`,
       );
-      console.error("Full trade data:", JSON.stringify(trade.data));
+      console.error('Full trade data:', JSON.stringify(trade.data));
       return;
     }
 
@@ -62,7 +55,7 @@ export class TradeBatchUploader {
     const price = trade.data.p;
     const volume = trade.data.q;
     const tradeId = trade.data.t;
-    const side = trade.data.m ? "sell" : "buy";
+    const side = trade.data.m ? 'sell' : 'buy';
 
     await this.db.getClient().query(
       `INSERT INTO trades (time, symbol, price, volume, trade_id, side)

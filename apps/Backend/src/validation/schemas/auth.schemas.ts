@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { EmailSchema, TokenSchema, PINSchema } from "./common.schemas.js";
+import { z } from 'zod';
+import { EmailSchema, TokenSchema, PINSchema } from './common.schemas.js';
 
 /**
  * Authentication-related validation schemas

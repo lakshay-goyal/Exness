@@ -1,12 +1,8 @@
-import type { Response } from "express";
-import { HTTP_STATUS, MESSAGES } from "@repo/config";
+import type { Response } from 'express';
+import { HTTP_STATUS, MESSAGES } from '@repo/config';
 
 export default class ResponseWriter {
-  static success<T>(
-    res: Response,
-    data: T,
-    message: string = MESSAGES.SUCCESS,
-  ): Response {
+  static success<T>(res: Response, data: T, message: string = MESSAGES.SUCCESS): Response {
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       data,
@@ -14,11 +10,7 @@ export default class ResponseWriter {
     });
   }
 
-  static error(
-    res: Response,
-    statusCode: number,
-    message: string = MESSAGES.ERROR,
-  ): Response {
+  static error(res: Response, statusCode: number, message: string = MESSAGES.ERROR): Response {
     return res.status(statusCode).json({
       success: false,
       statusCode,
@@ -26,10 +18,7 @@ export default class ResponseWriter {
     });
   }
 
-  static unauthorized(
-    res: Response,
-    message: string = MESSAGES.UNAUTHORIZED,
-  ): Response {
+  static unauthorized(res: Response, message: string = MESSAGES.UNAUTHORIZED): Response {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
       statusCode: HTTP_STATUS.UNAUTHORIZED,

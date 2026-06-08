@@ -1,6 +1,6 @@
 declare const require: (moduleName: string) => unknown;
 
-import { logAuthEvent } from "./auth-logger";
+import { logAuthEvent } from './auth-logger';
 
 type SecureStoreModule = {
   deleteItem?: (key: string) => void;
@@ -22,21 +22,18 @@ function getSecureStore() {
   }
 
   try {
-    secureStore = require("expo-secure-store") as SecureStoreModule;
+    secureStore = require('expo-secure-store') as SecureStoreModule;
   } catch {
     secureStore = null;
     if (!didLogSecureStoreFallback) {
       logAuthEvent(
-        "secure_store_unavailable",
+        'secure_store_unavailable',
         {
-          storageFallback:
-            typeof window === "undefined" ? "memory_only" : "web_or_memory",
+          storageFallback: typeof window === 'undefined' ? 'memory_only' : 'web_or_memory',
           rebuildRequired:
-            typeof window === "undefined"
-              ? "expo_secure_store_native_module_missing"
-              : undefined,
+            typeof window === 'undefined' ? 'expo_secure_store_native_module_missing' : undefined,
         },
-        "warn",
+        'warn',
       );
       didLogSecureStoreFallback = true;
     }
@@ -46,7 +43,7 @@ function getSecureStore() {
 }
 
 function getWebStorageItem(key: string) {
-  if (typeof window === "undefined" || !window.localStorage) {
+  if (typeof window === 'undefined' || !window.localStorage) {
     return null;
   }
 
@@ -54,7 +51,7 @@ function getWebStorageItem(key: string) {
 }
 
 function setWebStorageItem(key: string, value: string) {
-  if (typeof window === "undefined" || !window.localStorage) {
+  if (typeof window === 'undefined' || !window.localStorage) {
     return false;
   }
 
@@ -63,7 +60,7 @@ function setWebStorageItem(key: string, value: string) {
 }
 
 function deleteWebStorageItem(key: string) {
-  if (typeof window === "undefined" || !window.localStorage) {
+  if (typeof window === 'undefined' || !window.localStorage) {
     return false;
   }
 
@@ -80,12 +77,12 @@ export const authStorage = {
         return store.getItem(key);
       } catch {
         logAuthEvent(
-          "secure_store_get_failed",
+          'secure_store_get_failed',
           {
             key,
-            storageFallback: "web_or_memory",
+            storageFallback: 'web_or_memory',
           },
-          "warn",
+          'warn',
         );
         // Fall back below when the current dev client lacks the native module.
       }
@@ -102,12 +99,12 @@ export const authStorage = {
         return;
       } catch {
         logAuthEvent(
-          "secure_store_set_failed",
+          'secure_store_set_failed',
           {
             key,
-            storageFallback: "web_or_memory",
+            storageFallback: 'web_or_memory',
           },
-          "warn",
+          'warn',
         );
         // Fall back below when the current dev client lacks the native module.
       }
@@ -126,12 +123,12 @@ export const authStorage = {
         return;
       } catch {
         logAuthEvent(
-          "secure_store_delete_failed",
+          'secure_store_delete_failed',
           {
             key,
-            storageFallback: "web_or_memory",
+            storageFallback: 'web_or_memory',
           },
-          "warn",
+          'warn',
         );
         // Fall back below when the current dev client lacks the native module.
       }
@@ -152,12 +149,12 @@ export async function setStoredAuthItem(key: string, value: string) {
       return;
     } catch {
       logAuthEvent(
-        "secure_store_set_async_failed",
+        'secure_store_set_async_failed',
         {
           key,
-          storageFallback: "sync_or_memory",
+          storageFallback: 'sync_or_memory',
         },
-        "warn",
+        'warn',
       );
       // Fall back to sync storage below.
     }
@@ -174,12 +171,12 @@ export async function getStoredAuthItem(key: string) {
       return await store.getItemAsync(key);
     } catch {
       logAuthEvent(
-        "secure_store_get_async_failed",
+        'secure_store_get_async_failed',
         {
           key,
-          storageFallback: "sync_or_memory",
+          storageFallback: 'sync_or_memory',
         },
-        "warn",
+        'warn',
       );
       // Fall back to sync storage below.
     }
@@ -197,12 +194,12 @@ export async function deleteStoredAuthItem(key: string) {
       return;
     } catch {
       logAuthEvent(
-        "secure_store_delete_async_failed",
+        'secure_store_delete_async_failed',
         {
           key,
-          storageFallback: "sync_or_memory",
+          storageFallback: 'sync_or_memory',
         },
-        "warn",
+        'warn',
       );
       // Fall back to sync storage below.
     }

@@ -1,11 +1,7 @@
-import { prices, type Prices } from "../state/prices.js";
-import { openOrders } from "../state/orders.js";
-import { closeOpenOrder } from "../orders/close-order.handler.js";
-import {
-  marketSymbolMapper,
-  orderCalculator,
-  priceNormalizer,
-} from "@repo/trading-core";
+import { prices, type Prices } from '../state/prices.js';
+import { openOrders } from '../state/orders.js';
+import { closeOpenOrder } from '../orders/close-order.handler.js';
+import { marketSymbolMapper, orderCalculator, priceNormalizer } from '@repo/trading-core';
 
 function updatePrices(newData: Prices[]) {
   newData.forEach((item) => {

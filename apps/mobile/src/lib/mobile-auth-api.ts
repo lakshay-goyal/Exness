@@ -1,17 +1,13 @@
-import {
-  deleteStoredAuthItem,
-  getStoredAuthItem,
-  setStoredAuthItem,
-} from "./auth-storage";
-import type { MobileSessionResponse } from "@repo/types";
-import { authClient, BACKEND_URL } from "./auth-client";
-import { logAuthEvent } from "./auth-logger";
+import { deleteStoredAuthItem, getStoredAuthItem, setStoredAuthItem } from './auth-storage';
+import type { MobileSessionResponse } from '@repo/types';
+import { authClient, BACKEND_URL } from './auth-client';
+import { logAuthEvent } from './auth-logger';
 
-const ACCESS_TOKEN_KEY = "exness_access_token";
-const REFRESH_TOKEN_KEY = "exness_refresh_token";
-const ACCESS_TOKEN_EXPIRES_AT_KEY = "exness_access_token_expires_at";
-const MOBILE_USER_KEY = "exness_mobile_user";
-const AUTH_COOKIE_KEY = "exness_cookie";
+const ACCESS_TOKEN_KEY = 'exness_access_token';
+const REFRESH_TOKEN_KEY = 'exness_refresh_token';
+const ACCESS_TOKEN_EXPIRES_AT_KEY = 'exness_access_token_expires_at';
+const MOBILE_USER_KEY = 'exness_mobile_user';
+const AUTH_COOKIE_KEY = 'exness_cookie';
 const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60 * 1000;
 
 export type { MobileSessionResponse };
@@ -22,19 +18,18 @@ function getAuthCookie() {
 
 function decodeJwtPayload(token: string) {
   try {
-    const payload = token.split(".")[1];
+    const payload = token.split('.')[1];
 
     if (!payload) {
       return null;
     }
 
-    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
     const paddedPayload = normalizedPayload.padEnd(
       normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      "=",
+      '=',
     );
-    const decodeBase64 =
-      typeof globalThis.atob === "function" ? globalThis.atob : null;
+    const decodeBase64 = typeof globalThis.atob === 'function' ? globalThis.atob : null;
 
     if (!decodeBase64) {
       return null;
@@ -52,13 +47,13 @@ function decodeJwtPayload(token: string) {
 }
 
 function getAccessTokenExpiresAt(token: string, expiresIn?: number) {
-  if (typeof expiresIn === "number" && Number.isFinite(expiresIn)) {
+  if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
     return Date.now() + expiresIn * 1000;
   }
 
   const payload = decodeJwtPayload(token);
 
-  if (typeof payload?.exp === "number") {
+  if (typeof payload?.exp === 'number') {
     return payload.exp * 1000;
   }
 
@@ -67,17 +62,11 @@ function getAccessTokenExpiresAt(token: string, expiresIn?: number) {
 
 async function storeMobileSession(data: MobileSessionResponse) {
   const accessToken = data.accessToken || data.token;
-  const accessTokenExpiresAt = getAccessTokenExpiresAt(
-    accessToken,
-    data.accessTokenExpiresIn,
-  );
+  const accessTokenExpiresAt = getAccessTokenExpiresAt(accessToken, data.accessTokenExpiresIn);
   const writes = [
-    setStoredAuthItem("exness_legacy_token", accessToken),
+    setStoredAuthItem('exness_legacy_token', accessToken),
     setStoredAuthItem(ACCESS_TOKEN_KEY, accessToken),
-    setStoredAuthItem(
-      ACCESS_TOKEN_EXPIRES_AT_KEY,
-      String(accessTokenExpiresAt),
-    ),
+    setStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY, String(accessTokenExpiresAt)),
     setStoredAuthItem(MOBILE_USER_KEY, JSON.stringify(data.user)),
   ];
 
@@ -92,13 +81,13 @@ export async function syncMobileSession() {
   const url = `${BACKEND_URL}/api/v1/auth/mobile/session-token`;
   const authCookie = getAuthCookie();
 
-  logAuthEvent("session_sync_requested", {
+  logAuthEvent('session_sync_requested', {
     url,
     hasAuthCookie: Boolean(authCookie),
   });
 
   const response = await fetch(url, {
-    credentials: "omit",
+    credentials: 'omit',
     headers: {
       Cookie: authCookie,
     },
@@ -106,19 +95,19 @@ export async function syncMobileSession() {
 
   if (!response.ok) {
     logAuthEvent(
-      "session_sync_failed",
+      'session_sync_failed',
       {
         status: response.status,
         statusText: response.statusText,
       },
-      "error",
+      'error',
     );
-    throw new Error("Unable to sync mobile session");
+    throw new Error('Unable to sync mobile session');
   }
 
   const data = (await response.json()) as MobileSessionResponse;
   await storeMobileSession(data);
-  logAuthEvent("session_sync_succeeded", {
+  logAuthEvent('session_sync_succeeded', {
     userId: data.user.id,
     email: data.user.email,
     hasMobilePin: data.user.hasMobilePin,
@@ -129,35 +118,35 @@ export async function syncMobileSession() {
 async function refreshMobileSession(refreshToken: string) {
   const url = `${BACKEND_URL}/api/v1/auth/mobile/refresh-token`;
 
-  logAuthEvent("session_refresh_requested", {
+  logAuthEvent('session_refresh_requested', {
     url,
     hasRefreshToken: Boolean(refreshToken),
   });
 
   const response = await fetch(url, {
-    method: "POST",
-    credentials: "omit",
+    method: 'POST',
+    credentials: 'omit',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ refreshToken }),
   });
 
   if (!response.ok) {
     logAuthEvent(
-      "session_refresh_failed",
+      'session_refresh_failed',
       {
         status: response.status,
         statusText: response.statusText,
       },
-      "warn",
+      'warn',
     );
-    throw new Error("Unable to refresh mobile session");
+    throw new Error('Unable to refresh mobile session');
   }
 
   const data = (await response.json()) as MobileSessionResponse;
   await storeMobileSession(data);
-  logAuthEvent("session_refresh_succeeded", {
+  logAuthEvent('session_refresh_succeeded', {
     userId: data.user.id,
     email: data.user.email,
     hasMobilePin: data.user.hasMobilePin,
@@ -167,18 +156,17 @@ async function refreshMobileSession(refreshToken: string) {
 }
 
 export async function restoreMobileSession() {
-  const [storedUser, accessToken, legacyToken, refreshToken, expiresAtValue] =
-    await Promise.all([
-      getStoredAuthItem(MOBILE_USER_KEY),
-      getStoredAuthItem(ACCESS_TOKEN_KEY),
-      getStoredAuthItem("exness_legacy_token"),
-      getStoredAuthItem(REFRESH_TOKEN_KEY),
-      getStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
-    ]);
+  const [storedUser, accessToken, legacyToken, refreshToken, expiresAtValue] = await Promise.all([
+    getStoredAuthItem(MOBILE_USER_KEY),
+    getStoredAuthItem(ACCESS_TOKEN_KEY),
+    getStoredAuthItem('exness_legacy_token'),
+    getStoredAuthItem(REFRESH_TOKEN_KEY),
+    getStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
+  ]);
   const storedAccessToken = accessToken || legacyToken;
 
   if (!storedAccessToken && !refreshToken) {
-    logAuthEvent("session_restore_skipped", {
+    logAuthEvent('session_restore_skipped', {
       hasStoredUser: Boolean(storedUser),
       hasAccessToken: Boolean(storedAccessToken),
       hasLegacyToken: Boolean(legacyToken),
@@ -189,14 +177,13 @@ export async function restoreMobileSession() {
 
   const expiresAt = Number(expiresAtValue);
   const hasValidAccessToken =
-    typeof storedAccessToken === "string" &&
-    ((Number.isFinite(expiresAt) &&
-      Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < expiresAt) ||
+    typeof storedAccessToken === 'string' &&
+    ((Number.isFinite(expiresAt) && Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < expiresAt) ||
       (() => {
         const payload = decodeJwtPayload(storedAccessToken);
         return (
-          payload?.type !== "refresh" &&
-          (typeof payload?.exp !== "number" ||
+          payload?.type !== 'refresh' &&
+          (typeof payload?.exp !== 'number' ||
             Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < payload.exp * 1000)
         );
       })());
@@ -205,18 +192,18 @@ export async function restoreMobileSession() {
     try {
       const decodedPayload = decodeJwtPayload(storedAccessToken);
       const user = storedUser
-        ? (JSON.parse(storedUser) as MobileSessionResponse["user"])
+        ? (JSON.parse(storedUser) as MobileSessionResponse['user'])
         : {
-            id: decodedPayload?.userId || "",
-            email: decodedPayload?.email || "",
-            name: decodedPayload?.email || "Authenticated user",
+            id: decodedPayload?.userId || '',
+            email: decodedPayload?.email || '',
+            name: decodedPayload?.email || 'Authenticated user',
             image: null,
             hasMobilePin: false,
           };
-      logAuthEvent("session_restore_succeeded", {
+      logAuthEvent('session_restore_succeeded', {
         userId: user.id,
         email: user.email,
-        source: accessToken ? "stored_access_token" : "legacy_token",
+        source: accessToken ? 'stored_access_token' : 'legacy_token',
       });
       return {
         token: storedAccessToken,
@@ -229,7 +216,7 @@ export async function restoreMobileSession() {
         user,
       } satisfies MobileSessionResponse;
     } catch {
-      logAuthEvent("session_restore_user_parse_failed", undefined, "warn");
+      logAuthEvent('session_restore_user_parse_failed', undefined, 'warn');
     }
   }
 
@@ -241,25 +228,23 @@ export async function restoreMobileSession() {
 }
 
 export async function getMobileAccessToken() {
-  const [accessToken, legacyToken, refreshToken, expiresAtValue] =
-    await Promise.all([
-      getStoredAuthItem(ACCESS_TOKEN_KEY),
-      getStoredAuthItem("exness_legacy_token"),
-      getStoredAuthItem(REFRESH_TOKEN_KEY),
-      getStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
-    ]);
+  const [accessToken, legacyToken, refreshToken, expiresAtValue] = await Promise.all([
+    getStoredAuthItem(ACCESS_TOKEN_KEY),
+    getStoredAuthItem('exness_legacy_token'),
+    getStoredAuthItem(REFRESH_TOKEN_KEY),
+    getStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
+  ]);
   const storedAccessToken = accessToken || legacyToken;
 
   if (storedAccessToken) {
     const expiresAt = Number(expiresAtValue);
     const hasValidStoredToken =
-      (Number.isFinite(expiresAt) &&
-        Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < expiresAt) ||
+      (Number.isFinite(expiresAt) && Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < expiresAt) ||
       (() => {
         const payload = decodeJwtPayload(storedAccessToken);
         return (
-          payload?.type !== "refresh" &&
-          (typeof payload?.exp !== "number" ||
+          payload?.type !== 'refresh' &&
+          (typeof payload?.exp !== 'number' ||
             Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS < payload.exp * 1000)
         );
       })();
@@ -282,16 +267,16 @@ export async function logoutMobileSession() {
     await authClient.signOut();
   } catch (error) {
     logAuthEvent(
-      "session_logout_signout_failed",
+      'session_logout_signout_failed',
       {
         error: error instanceof Error ? error.message : String(error),
       },
-      "warn",
+      'warn',
     );
   }
 
   await Promise.all([
-    deleteStoredAuthItem("exness_legacy_token"),
+    deleteStoredAuthItem('exness_legacy_token'),
     deleteStoredAuthItem(ACCESS_TOKEN_KEY),
     deleteStoredAuthItem(REFRESH_TOKEN_KEY),
     deleteStoredAuthItem(ACCESS_TOKEN_EXPIRES_AT_KEY),
@@ -299,24 +284,24 @@ export async function logoutMobileSession() {
     deleteStoredAuthItem(AUTH_COOKIE_KEY),
   ]);
 
-  logAuthEvent("session_logout_completed");
+  logAuthEvent('session_logout_completed');
 }
 
 export async function setMobilePin(pin: string) {
   const url = `${BACKEND_URL}/api/v1/auth/mobile/pin`;
   const authCookie = getAuthCookie();
 
-  logAuthEvent("pin_save_requested", {
+  logAuthEvent('pin_save_requested', {
     url,
     pinLength: pin.length,
     hasAuthCookie: Boolean(authCookie),
   });
 
   const response = await fetch(url, {
-    method: "POST",
-    credentials: "omit",
+    method: 'POST',
+    credentials: 'omit',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       Cookie: authCookie,
     },
     body: JSON.stringify({ pin }),
@@ -325,15 +310,15 @@ export async function setMobilePin(pin: string) {
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     logAuthEvent(
-      "pin_save_failed",
+      'pin_save_failed',
       {
         status: response.status,
         statusText: response.statusText,
         error: body?.error,
       },
-      "error",
+      'error',
     );
-    throw new Error(body?.error || "Unable to save PIN");
+    throw new Error(body?.error || 'Unable to save PIN');
   }
 
   const data = (await response.json()) as {
@@ -341,7 +326,7 @@ export async function setMobilePin(pin: string) {
     hasMobilePin: boolean;
   };
 
-  logAuthEvent("pin_save_succeeded", {
+  logAuthEvent('pin_save_succeeded', {
     success: data.success,
     hasMobilePin: data.hasMobilePin,
   });

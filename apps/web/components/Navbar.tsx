@@ -1,39 +1,32 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Wallet } from "lucide-react";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, Wallet } from 'lucide-react';
 
 interface NavbarProps {
   showNavLinks?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
-  const {
-    balance,
-    balanceLoading,
-    fetchBalance,
-    isAuthenticated,
-    user,
-    logout,
-  } = useAuth();
+  const { balance, balanceLoading, fetchBalance, isAuthenticated, user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const getUserDisplayName = () => {
     if (user?.email) {
-      return user.email.split("@")[0];
+      return user.email.split('@')[0];
     }
-    return "User";
+    return 'User';
   };
 
   const formatCurrency = (value: number | null) => {
-    if (value === null || Number.isNaN(value)) return "--";
+    if (value === null || Number.isNaN(value)) return '--';
 
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -42,16 +35,11 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
   return (
     <nav className="bg-background/90 border-border/50 fixed top-0 z-50 w-full border-b backdrop-blur-md transition-all duration-300">
       <div
-        className={`mx-auto px-4 ${
-          showNavLinks ? "max-w-7xl sm:px-6 lg:px-8" : "w-full sm:px-5"
-        }`}
+        className={`mx-auto px-4 ${showNavLinks ? 'max-w-7xl sm:px-6 lg:px-8' : 'w-full sm:px-5'}`}
       >
         <div className="flex h-16 items-center justify-between gap-4">
           <div className="flex items-center">
-            <Link
-              href="/"
-              className="text-xl font-bold tracking-tight sm:text-2xl"
-            >
+            <Link href="/" className="text-xl font-bold tracking-tight sm:text-2xl">
               CryptoCFD
             </Link>
           </div>
@@ -93,11 +81,9 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                 <div className="bg-background flex min-w-0 items-center overflow-hidden rounded-md border text-sm">
                   <div className="flex min-w-0 items-center gap-2 px-3 py-1.5">
                     <Wallet className="text-muted-foreground size-4 shrink-0" />
-                    <span className="text-muted-foreground hidden lg:inline">
-                      Balance
-                    </span>
+                    <span className="text-muted-foreground hidden lg:inline">Balance</span>
                     <span className="max-w-[9rem] truncate font-mono font-medium xl:max-w-[14rem]">
-                      {balanceLoading ? "Loading..." : formatCurrency(balance)}
+                      {balanceLoading ? 'Loading...' : formatCurrency(balance)}
                     </span>
                   </div>
                   <Button
@@ -108,9 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                     className="size-8 rounded-none border-l"
                     aria-label="Refresh balance"
                   >
-                    <RefreshCw
-                      className={`size-4 ${balanceLoading ? "animate-spin" : ""}`}
-                    />
+                    <RefreshCw className={`size-4 ${balanceLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
                 <Button size="sm">Deposit</Button>
@@ -135,17 +119,8 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
           </div>
 
           <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+            <Button variant="ghost" size="sm" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {mobileMenuOpen ? (
                   <path
                     strokeLinecap="round"
@@ -205,9 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                         <Wallet className="text-muted-foreground size-4" />
                         <span className="text-muted-foreground">Balance</span>
                         <span className="text-foreground truncate font-mono font-medium">
-                          {balanceLoading
-                            ? "Loading..."
-                            : formatCurrency(balance)}
+                          {balanceLoading ? 'Loading...' : formatCurrency(balance)}
                         </span>
                       </div>
                       <Button
@@ -216,9 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                         onClick={fetchBalance}
                         disabled={balanceLoading}
                       >
-                        <RefreshCw
-                          className={`size-4 ${balanceLoading ? "animate-spin" : ""}`}
-                        />
+                        <RefreshCw className={`size-4 ${balanceLoading ? 'animate-spin' : ''}`} />
                       </Button>
                     </div>
                     <Button className="w-full" size="sm">
@@ -226,10 +197,8 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                     </Button>
                   </div>
                   <div className="text-muted-foreground text-sm">
-                    Welcome,{" "}
-                    <span className="text-foreground font-medium">
-                      {getUserDisplayName()}
-                    </span>
+                    Welcome,{' '}
+                    <span className="text-foreground font-medium">{getUserDisplayName()}</span>
                   </div>
                   <Button variant="outline" onClick={logout} className="w-full">
                     Logout

@@ -1,4 +1,4 @@
-import { TradingApiClient } from "@repo/api-client";
+import { TradingApiClient } from '@repo/api-client';
 import type {
   BackendClosedTrade,
   BackendOpenTrade,
@@ -7,9 +7,9 @@ import type {
   CreateTradePayload,
   LatestPrice as BackendLatestPrice,
   TradingProfileData,
-} from "@repo/types";
-import { BACKEND_URL } from "./auth-client";
-import { getMobileAccessToken } from "./mobile-auth-api";
+} from '@repo/types';
+import { BACKEND_URL } from './auth-client';
+import { getMobileAccessToken } from './mobile-auth-api';
 
 export type {
   BackendCandle,
@@ -25,7 +25,7 @@ async function getRequiredMobileAccessToken() {
   const token = await getMobileAccessToken();
 
   if (!token) {
-    throw new Error("No active mobile access token");
+    throw new Error('No active mobile access token');
   }
 
   return token;
@@ -35,7 +35,7 @@ const tradingApiClient = new TradingApiClient({
   baseUrl: BACKEND_URL,
   accessToken: getRequiredMobileAccessToken,
   headers: {
-    "ngrok-skip-browser-warning": "true",
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
@@ -51,10 +51,7 @@ export function createTrade(payload: CreateTradePayload) {
   return tradingApiClient.createTrade(payload);
 }
 
-export function fetchCandles(
-  symbol: string,
-  interval: CandleInterval,
-): Promise<BackendCandle[]> {
+export function fetchCandles(symbol: string, interval: CandleInterval): Promise<BackendCandle[]> {
   return tradingApiClient.fetchCandles(symbol, interval);
 }
 

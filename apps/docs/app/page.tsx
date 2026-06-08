@@ -1,39 +1,34 @@
-import type { ReactElement } from "react";
+import type { ReactElement } from 'react';
 
 const SERVICES = [
-  "Backend API",
-  "Engine",
-  "Price Poller",
-  "WebSocket Server",
-  "DB Storage",
-  "Batch Upload",
-  "Snapshotting",
+  'Backend API',
+  'Engine',
+  'Price Poller',
+  'WebSocket Server',
+  'DB Storage',
+  'Batch Upload',
+  'Snapshotting',
 ];
 
 const PACKAGES = [
-  "@repo/trading-core",
-  "@repo/types",
-  "@repo/api-client",
-  "@repo/config",
-  "@repo/db",
-  "@repo/timescaledb",
-  "@repo/ui",
+  '@repo/trading-core',
+  '@repo/types',
+  '@repo/api-client',
+  '@repo/config',
+  '@repo/db',
+  '@repo/timescaledb',
+  '@repo/ui',
 ];
 
 export default function Page(): ReactElement {
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-8 py-12">
       <section>
-        <p className="text-muted-foreground text-sm font-semibold uppercase">
-          Turboramper docs
-        </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight">
-          Trading platform architecture
-        </h1>
+        <p className="text-muted-foreground text-sm font-semibold uppercase">Turboramper docs</p>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight">Trading platform architecture</h1>
         <p className="text-muted-foreground mt-4 max-w-3xl text-base">
-          Source map for the Turboramper services, shared packages, and data
-          flow. The runtime behavior remains split across focused workers and
-          package-owned types.
+          Source map for the Turboramper services, shared packages, and data flow. The runtime
+          behavior remains split across focused workers and package-owned types.
         </p>
       </section>
 

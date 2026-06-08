@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 type AnimatedSplashProps = {
   visible: boolean;
@@ -65,9 +65,7 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
 
   return (
     <Animated.View pointerEvents="auto" style={[styles.container, { opacity }]}>
-      <Animated.View
-        style={[styles.logoWrap, { transform: [{ scale: ringScale }] }]}
-      >
+      <Animated.View style={[styles.logoWrap, { transform: [{ scale: ringScale }] }]}>
         <Svg width={170} height={170} viewBox="0 0 16 16" fill="none">
           <Path
             fillRule="evenodd"
@@ -84,13 +82,13 @@ export function AnimatedSplash({ visible, onFinish }: AnimatedSplashProps) {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    backgroundColor: "#000000",
-    justifyContent: "center",
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    justifyContent: 'center',
     zIndex: 20,
   },
   logoWrap: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

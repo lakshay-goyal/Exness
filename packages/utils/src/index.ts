@@ -1,1 +1,1 @@
-export * from "./nodemailer/index.ts";
+export * from './nodemailer/index.ts';

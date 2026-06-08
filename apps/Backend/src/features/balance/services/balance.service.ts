@@ -1,4 +1,4 @@
-import { prisma } from "@repo/db";
+import { prisma } from '@repo/db';
 
 class BalanceService {
   async getBalance(userId: string) {
@@ -7,7 +7,7 @@ class BalanceService {
     });
 
     if (!user) {
-      return { ok: false as const, error: "User not found" };
+      return { ok: false as const, error: 'User not found' };
     }
 
     const balance = (user as { balance?: number }).balance ?? 0;
@@ -15,7 +15,7 @@ class BalanceService {
     return {
       ok: true as const,
       data: {
-        status: "success",
+        status: 'success',
         message: balance,
       },
     };

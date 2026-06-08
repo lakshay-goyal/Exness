@@ -1,6 +1,6 @@
-import { redisStreams, config, constant } from "@repo/config";
-import { users } from "../state/users.js";
-import { closeOrders } from "../state/orders.js";
+import { redisStreams, config, constant } from '@repo/config';
+import { users } from '../state/users.js';
+import { closeOrders } from '../state/orders.js';
 
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
@@ -10,7 +10,7 @@ export async function getCloseOrdersFunction(result: any) {
 
   if (!users.some((user: any) => user.userId === result.userId)) {
     await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
-      function: "getCloseOrders",
+      function: 'getCloseOrders',
       message: JSON.stringify([]),
       requestId,
       correlationId: requestId,
@@ -22,11 +22,11 @@ export async function getCloseOrdersFunction(result: any) {
     .filter((order) => order.userId === result.userId)
     .map((order) => ({
       ...order,
-      status: "closed",
+      status: 'closed',
     }));
 
   await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
-    function: "getCloseOrders",
+    function: 'getCloseOrders',
     message: JSON.stringify(userCloseOrders),
     requestId,
     correlationId: requestId,

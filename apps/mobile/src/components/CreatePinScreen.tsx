@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Text, TextInput, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useState } from 'react';
+import { Text, TextInput, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PressableScaleMotion } from "@/components/PressMotion";
-import { getAuthErrorMessage, logAuthEvent } from "@/lib/auth-logger";
-import { setMobilePin } from "@/lib/mobile-auth-api";
+import { PressableScaleMotion } from '@/components/PressMotion';
+import { getAuthErrorMessage, logAuthEvent } from '@/lib/auth-logger';
+import { setMobilePin } from '@/lib/mobile-auth-api';
 
 type CreatePinScreenProps = {
   onBack: () => void;
@@ -13,42 +13,42 @@ type CreatePinScreenProps = {
 };
 
 export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const canContinue = /^\d{4,6}$/.test(pin) && !isSaving;
 
   async function handleContinue() {
     if (!canContinue) {
       logAuthEvent(
-        "pin_continue_blocked",
+        'pin_continue_blocked',
         {
           pinLength: pin.length,
         },
-        "warn",
+        'warn',
       );
-      setError("Enter a 4 to 6 digit PIN.");
+      setError('Enter a 4 to 6 digit PIN.');
       return;
     }
 
     setIsSaving(true);
-    setError("");
-    logAuthEvent("pin_continue_pressed", {
+    setError('');
+    logAuthEvent('pin_continue_pressed', {
       pinLength: pin.length,
     });
 
     try {
       await setMobilePin(pin);
-      logAuthEvent("pin_flow_save_completed");
+      logAuthEvent('pin_flow_save_completed');
       onComplete();
     } catch (err) {
-      const message = getAuthErrorMessage(err, "Unable to save PIN");
+      const message = getAuthErrorMessage(err, 'Unable to save PIN');
       logAuthEvent(
-        "pin_flow_save_failed",
+        'pin_flow_save_failed',
         {
           error: message,
         },
-        "error",
+        'error',
       );
       setError(message);
     } finally {
@@ -86,10 +86,8 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
               Create a PIN
             </Text>
             <Text className="mt-3 max-w-[330px] text-center text-[16px] leading-6 text-[#9A9A9A]">
-              This secures access to your trading account on this device.{" "}
-              <Text className="font-extrabold text-[#E2C856]">
-                This cannot be recovered.
-              </Text>
+              This secures access to your trading account on this device.{' '}
+              <Text className="font-extrabold text-[#E2C856]">This cannot be recovered.</Text>
             </Text>
           </View>
 
@@ -101,15 +99,13 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
             secureTextEntry
             value={pin}
             onChangeText={(value) => {
-              setPin(value.replace(/\D/g, ""));
-              setError("");
+              setPin(value.replace(/\D/g, ''));
+              setError('');
             }}
           />
 
           {error ? (
-            <Text className="mt-3 text-center text-[14px] font-bold text-[#FF7A7A]">
-              {error}
-            </Text>
+            <Text className="mt-3 text-center text-[14px] font-bold text-[#FF7A7A]">{error}</Text>
           ) : null}
 
           <View className="flex-1" />
@@ -117,13 +113,13 @@ export function CreatePinScreen({ onBack, onComplete }: CreatePinScreenProps) {
           <PressableScaleMotion
             accessibilityRole="button"
             className={`h-[54px] items-center justify-center rounded-full ${
-              canContinue ? "bg-[#A594F7]" : "bg-[#5F5A83]"
+              canContinue ? 'bg-[#A594F7]' : 'bg-[#5F5A83]'
             }`}
             disabled={!canContinue}
             onPress={handleContinue}
           >
             <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">
-              {isSaving ? "Saving..." : "Continue"}
+              {isSaving ? 'Saving...' : 'Continue'}
             </Text>
           </PressableScaleMotion>
         </View>

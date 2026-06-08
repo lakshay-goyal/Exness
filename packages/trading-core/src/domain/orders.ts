@@ -1,16 +1,13 @@
-import type { CloseReason, OpenOrder, PriceUpdate } from "@repo/types";
-import { priceNormalizer } from "./prices";
+import type { CloseReason, OpenOrder, PriceUpdate } from '@repo/types';
+import { priceNormalizer } from './prices';
 
 export class OrderCalculator {
   getMargin(quantity: number, price: number, leverage: number) {
     return (quantity * price) / leverage;
   }
 
-  getProfitLoss(
-    order: Pick<OpenOrder, "type" | "quantity" | "openPrice">,
-    closePrice: number,
-  ) {
-    return order.type === "buy"
+  getProfitLoss(order: Pick<OpenOrder, 'type' | 'quantity' | 'openPrice'>, closePrice: number) {
+    return order.type === 'buy'
       ? (closePrice - order.openPrice) * order.quantity
       : (order.openPrice - closePrice) * order.quantity;
   }
@@ -30,14 +27,14 @@ export class OrderCalculator {
     const hasTakeProfit = Number.isFinite(takeProfit) && takeProfit > 0;
     const hasStopLoss = Number.isFinite(stopLoss) && stopLoss > 0;
 
-    if (order.type === "buy") {
-      if (hasStopLoss && triggerPrice <= stopLoss) return "stop_loss";
-      if (hasTakeProfit && triggerPrice >= takeProfit) return "take_profit";
+    if (order.type === 'buy') {
+      if (hasStopLoss && triggerPrice <= stopLoss) return 'stop_loss';
+      if (hasTakeProfit && triggerPrice >= takeProfit) return 'take_profit';
       return null;
     }
 
-    if (hasStopLoss && triggerPrice >= stopLoss) return "stop_loss";
-    if (hasTakeProfit && triggerPrice <= takeProfit) return "take_profit";
+    if (hasStopLoss && triggerPrice >= stopLoss) return 'stop_loss';
+    if (hasTakeProfit && triggerPrice <= takeProfit) return 'take_profit';
     return null;
   }
 }

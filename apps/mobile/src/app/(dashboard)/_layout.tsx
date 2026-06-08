@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { Redirect, Stack, router } from "expo-router";
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { Redirect, Stack, router } from 'expo-router';
 
-import { DashboardTabsProvider } from "@/components/HelloWorldScreen";
+import { DashboardTabsProvider } from '@/components/HelloWorldScreen';
 import {
   logoutMobileSession,
   MobileSessionResponse,
   restoreMobileSession,
-} from "@/lib/mobile-auth-api";
+} from '@/lib/mobile-auth-api';
 
 export default function DashboardLayout() {
-  const [user, setUser] = useState<MobileSessionResponse["user"] | null>(null);
+  const [user, setUser] = useState<MobileSessionResponse['user'] | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function DashboardLayout() {
   const logout = useCallback(async () => {
     await logoutMobileSession();
     setUser(null);
-    router.replace("/");
+    router.replace('/');
   }, []);
 
   if (!isSessionReady) {
@@ -65,20 +65,20 @@ export default function DashboardLayout() {
             animationMatchesGesture: true,
             fullScreenGestureEnabled: true,
             gestureEnabled: true,
-            headerBackButtonDisplayMode: "minimal",
-            headerBackTitle: "Wallet",
-            headerBlurEffect: "systemChromeMaterialDark",
+            headerBackButtonDisplayMode: 'minimal',
+            headerBackTitle: 'Wallet',
+            headerBlurEffect: 'systemChromeMaterialDark',
             headerLargeTitle: false,
             headerShadowVisible: false,
             headerShown: true,
-            headerStyle: { backgroundColor: "#171918" },
-            headerTintColor: "#A594F7",
+            headerStyle: { backgroundColor: '#171918' },
+            headerTintColor: '#A594F7',
             headerTitleStyle: {
-              color: "#FFFFFF",
+              color: '#FFFFFF',
               fontSize: 17,
-              fontWeight: "800",
+              fontWeight: '800',
             },
-            title: "Market",
+            title: 'Market',
           }}
         />
       </Stack>

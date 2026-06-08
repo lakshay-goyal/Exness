@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
-import { Animated, Easing, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type WalletLoadingScreenProps = {
   onComplete: () => void;

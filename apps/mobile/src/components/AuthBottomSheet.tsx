@@ -1,34 +1,25 @@
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, Text, View } from 'react-native';
 
-import { PressableScaleMotion } from "@/components/PressMotion";
-import { logAuthEvent } from "@/lib/auth-logger";
-import { playSubtleTapHaptic } from "@/lib/trade-haptics";
+import { PressableScaleMotion } from '@/components/PressMotion';
+import { logAuthEvent } from '@/lib/auth-logger';
+import { playSubtleTapHaptic } from '@/lib/trade-haptics';
 
 type AuthBottomSheetProps = {
   visible: boolean;
   onClose: () => void;
-  onGoogleSelected: (mode: "login" | "create") => void;
+  onGoogleSelected: (mode: 'login' | 'create') => void;
 };
 
-export function AuthBottomSheet({
-  visible,
-  onClose,
-  onGoogleSelected,
-}: AuthBottomSheetProps) {
+export function AuthBottomSheet({ visible, onClose, onGoogleSelected }: AuthBottomSheetProps) {
   return (
-    <Modal
-      animationType="slide"
-      transparent
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
       <View className="flex-1 justify-end">
         <Pressable
           accessibilityLabel="Close authentication options"
           accessibilityRole="button"
           className="absolute inset-0 bg-black/70"
           onPress={() => {
-            logAuthEvent("auth_options_sheet_closed", { source: "backdrop" });
+            logAuthEvent('auth_options_sheet_closed', { source: 'backdrop' });
             onClose();
           }}
         />
@@ -39,8 +30,7 @@ export function AuthBottomSheet({
             Access your account
           </Text>
           <Text className="mx-auto mt-2 max-w-[300px] text-center text-[15px] leading-6 text-[#9A9A9A]">
-            Login to manage orders, balances, watchlists, and saved market
-            insights.
+            Login to manage orders, balances, watchlists, and saved market insights.
           </Text>
 
           <View className="mt-8 gap-3">
@@ -49,9 +39,9 @@ export function AuthBottomSheet({
               className="h-14 flex-row items-center justify-center rounded-full bg-white"
               onPress={() => {
                 playSubtleTapHaptic();
-                logAuthEvent("auth_option_selected", { mode: "login" });
+                logAuthEvent('auth_option_selected', { mode: 'login' });
                 onClose();
-                onGoogleSelected("login");
+                onGoogleSelected('login');
               }}
             >
               <Text className="text-[16px] font-extrabold tracking-normal text-black">
@@ -64,9 +54,9 @@ export function AuthBottomSheet({
               className="h-14 flex-row items-center justify-center gap-3 rounded-full border border-[#333333] bg-[#191919]"
               onPress={() => {
                 playSubtleTapHaptic();
-                logAuthEvent("auth_option_selected", { mode: "create" });
+                logAuthEvent('auth_option_selected', { mode: 'create' });
                 onClose();
-                onGoogleSelected("create");
+                onGoogleSelected('create');
               }}
             >
               <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
@@ -82,13 +72,11 @@ export function AuthBottomSheet({
             accessibilityRole="button"
             className="mt-6 items-center py-2"
             onPress={() => {
-              logAuthEvent("auth_options_sheet_closed", { source: "not_now" });
+              logAuthEvent('auth_options_sheet_closed', { source: 'not_now' });
               onClose();
             }}
           >
-            <Text className="text-[14px] font-bold text-[#A6A6A6]">
-              Not now
-            </Text>
+            <Text className="text-[14px] font-bold text-[#A6A6A6]">Not now</Text>
           </PressableScaleMotion>
         </View>
       </View>

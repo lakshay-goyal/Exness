@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, {
   createContext,
@@ -7,10 +7,10 @@ import React, {
   useContext,
   ReactNode,
   useCallback,
-} from "react";
-import { useRouter, usePathname } from "next/navigation";
-import axios from "axios";
-import { backendRequestHeaders, getBackendUrl } from "@/lib/backend-api";
+} from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import axios from 'axios';
+import { backendRequestHeaders, getBackendUrl } from '@/lib/backend-api';
 
 interface User {
   id: string;
@@ -43,12 +43,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   const logout = useCallback(() => {
-    localStorage.removeItem("token");
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
-    delete axios.defaults.headers.common["Authorization"];
-    router.push("/login");
+    delete axios.defaults.headers.common['Authorization'];
+    router.push('/login');
   }, [router]);
 
   const verifyToken = useCallback(
@@ -78,30 +78,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           },
         );
 
-        if (
-          verifyUserResponse.status === 200 &&
-          verifyUserResponse.data.exists
-        ) {
+        if (verifyUserResponse.status === 200 && verifyUserResponse.data.exists) {
           try {
-            const base64Url = tokenToCheck.split(".")[1];
-            const base64 = base64Url?.replace(/-/g, "+").replace(/_/g, "/");
+            const base64Url = tokenToCheck.split('.')[1];
+            const base64 = base64Url?.replace(/-/g, '+').replace(/_/g, '/');
             if (!base64) {
-              console.error("Invalid token format: missing payload");
+              console.error('Invalid token format: missing payload');
               return false;
             }
             const jsonPayload = decodeURIComponent(
               atob(base64)
-                .split("")
-                .map(
-                  (c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2),
-                )
-                .join(""),
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join(''),
             );
             const decoded = JSON.parse(jsonPayload);
 
             setUser({
               id: decoded.userId || decoded.id,
-              email: decoded.email || "",
+              email: decoded.email || '',
             });
 
             try {
@@ -117,22 +112,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 },
               );
             } catch (ensureError) {
-              console.error("Error ensuring user:", ensureError);
+              console.error('Error ensuring user:', ensureError);
             }
 
             return true;
           } catch (decodeError) {
-            console.error("Error decoding token:", decodeError);
+            console.error('Error decoding token:', decodeError);
             return false;
           }
         }
 
         if (verifyUserResponse.status === 404) {
-          localStorage.removeItem("token");
+          localStorage.removeItem('token');
           setToken(null);
           setUser(null);
           setIsAuthenticated(false);
-          delete axios.defaults.headers.common["Authorization"];
+          delete axios.defaults.headers.common['Authorization'];
           return false;
         }
 
@@ -143,15 +138,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           error.response?.status === 403 ||
           error.response?.status === 404
         ) {
-          localStorage.removeItem("token");
+          localStorage.removeItem('token');
           setToken(null);
           setUser(null);
           setIsAuthenticated(false);
-          delete axios.defaults.headers.common["Authorization"];
+          delete axios.defaults.headers.common['Authorization'];
           return false;
         }
 
-        console.error("Error verifying token:", error);
+        console.error('Error verifying token:', error);
         return false;
       }
     },
@@ -163,49 +158,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const url = new URL(window.location.href);
-      const tokenFromUrl = url.searchParams.get("token");
+      const tokenFromUrl = url.searchParams.get('token');
 
       let tokenToUse: string | null = null;
 
       if (tokenFromUrl) {
-        localStorage.setItem("token", tokenFromUrl);
+        localStorage.setItem('token', tokenFromUrl);
         tokenToUse = tokenFromUrl;
 
-        url.searchParams.delete("token");
-        window.history.replaceState({}, "", url.toString());
+        url.searchParams.delete('token');
+        window.history.replaceState({}, '', url.toString());
       } else {
-        tokenToUse = localStorage.getItem("token");
+        tokenToUse = localStorage.getItem('token');
       }
 
       if (tokenToUse) {
         setToken(tokenToUse);
-        axios.defaults.headers.common["Authorization"] = `Bearer ${tokenToUse}`;
+        axios.defaults.headers.common['Authorization'] = `Bearer ${tokenToUse}`;
 
         const isValid = await verifyToken(tokenToUse);
 
         if (isValid) {
           setIsAuthenticated(true);
 
-          if (pathname === "/login" || pathname === "/") {
-            router.push("/dashboard");
+          if (pathname === '/login' || pathname === '/') {
+            router.push('/dashboard');
           }
         } else {
-          localStorage.removeItem("token");
+          localStorage.removeItem('token');
           setToken(null);
           setIsAuthenticated(false);
-          delete axios.defaults.headers.common["Authorization"];
+          delete axios.defaults.headers.common['Authorization'];
         }
       } else {
         setIsAuthenticated(false);
         setToken(null);
-        delete axios.defaults.headers.common["Authorization"];
+        delete axios.defaults.headers.common['Authorization'];
       }
     } catch (error) {
-      console.error("Error initializing auth:", error);
+      console.error('Error initializing auth:', error);
       setIsAuthenticated(false);
       setToken(null);
-      localStorage.removeItem("token");
-      delete axios.defaults.headers.common["Authorization"];
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
     }
@@ -214,23 +209,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = useCallback(
     async (newToken: string) => {
       try {
-        localStorage.setItem("token", newToken);
+        localStorage.setItem('token', newToken);
         setToken(newToken);
-        axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
 
         const isValid = await verifyToken(newToken);
 
         if (isValid) {
           setIsAuthenticated(true);
-          router.push("/dashboard");
+          router.push('/dashboard');
         } else {
-          localStorage.removeItem("token");
+          localStorage.removeItem('token');
           setToken(null);
-          delete axios.defaults.headers.common["Authorization"];
-          throw new Error("Invalid token");
+          delete axios.defaults.headers.common['Authorization'];
+          throw new Error('Invalid token');
         }
       } catch (error) {
-        console.error("Login error:", error);
+        console.error('Login error:', error);
         throw error;
       }
     },
@@ -254,18 +249,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      if (response.data.status === "success") {
+      if (response.data.status === 'success') {
         setBalance(response.data.message);
       } else {
-        console.warn("Balance is unavailable:", response.data.message);
+        console.warn('Balance is unavailable:', response.data.message);
         setBalance(null);
       }
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message;
-      console.warn("Balance is unavailable:", message);
+      const message = error.response?.data?.message || error.response?.data?.error || error.message;
+      console.warn('Balance is unavailable:', message);
       setBalance(null);
     } finally {
       setBalanceLoading(false);
@@ -324,7 +316,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

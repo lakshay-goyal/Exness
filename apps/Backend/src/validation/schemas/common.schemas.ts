@@ -1,11 +1,5 @@
-import { z } from "zod";
-import {
-  ERROR_MESSAGES,
-  VALIDATION,
-  CANDLE_INTERVALS,
-  ORDER_SIDES,
-  DEFAULTS,
-} from "@repo/config";
+import { z } from 'zod';
+import { ERROR_MESSAGES, VALIDATION, CANDLE_INTERVALS, ORDER_SIDES, DEFAULTS } from '@repo/config';
 
 /**
  * Common validation schemas used across multiple endpoints
@@ -17,9 +11,9 @@ import {
  */
 export const EmailSchema = z
   .string()
-  .min(1, "Email is required")
+  .min(1, 'Email is required')
   .email(ERROR_MESSAGES.INVALID_EMAIL)
-  .max(254, "Email must not exceed 254 characters");
+  .max(254, 'Email must not exceed 254 characters');
 
 /**
  * UUID validation schema
@@ -44,9 +38,7 @@ export const PINSchema = z
 /**
  * Positive number validation schema
  */
-export const PositiveNumberSchema = z
-  .number()
-  .positive(ERROR_MESSAGES.POSITIVE_NUMBER);
+export const PositiveNumberSchema = z.number().positive(ERROR_MESSAGES.POSITIVE_NUMBER);
 
 /**
  * Positive integer validation schema
@@ -76,12 +68,9 @@ export const OptionalPositiveNumberSchema = z
  */
 export const SymbolSchema = z
   .string()
-  .min(1, "Symbol cannot be empty")
-  .max(20, "Symbol must not exceed 20 characters")
-  .regex(
-    /^[A-Z0-9]+(\/[A-Z0-9]+)?$/,
-    ERROR_MESSAGES.INVALID_SYMBOL_FORMAT,
-  );
+  .min(1, 'Symbol cannot be empty')
+  .max(20, 'Symbol must not exceed 20 characters')
+  .regex(/^[A-Z0-9]+(\/[A-Z0-9]+)?$/, ERROR_MESSAGES.INVALID_SYMBOL_FORMAT);
 
 /**
  * Trading order side validation schema
@@ -104,20 +93,16 @@ export const PaginationSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) =>
-      val ? Number.parseInt(val, 10) : DEFAULTS.PAGINATION_PAGE,
-    )
-    .pipe(z.number().min(1, "Page must be at least 1")),
+    .transform((val) => (val ? Number.parseInt(val, 10) : DEFAULTS.PAGINATION_PAGE))
+    .pipe(z.number().min(1, 'Page must be at least 1')),
   limit: z
     .string()
     .optional()
-    .transform((val) =>
-      val ? Number.parseInt(val, 10) : DEFAULTS.PAGINATION_LIMIT,
-    )
+    .transform((val) => (val ? Number.parseInt(val, 10) : DEFAULTS.PAGINATION_LIMIT))
     .pipe(
       z
         .number()
-        .min(1, "Limit must be at least 1")
+        .min(1, 'Limit must be at least 1')
         .max(
           DEFAULTS.MAX_PAGINATION_LIMIT,
           `Limit must not exceed ${DEFAULTS.MAX_PAGINATION_LIMIT}`,
@@ -139,9 +124,4 @@ export const CoercedPositiveNumber = z
 export const CoercedPositiveInteger = z
   .string()
   .transform((val) => Number(val))
-  .pipe(
-    z
-      .number()
-      .int(ERROR_MESSAGES.POSITIVE_INTEGER)
-      .positive(ERROR_MESSAGES.POSITIVE_NUMBER),
-  );
+  .pipe(z.number().int(ERROR_MESSAGES.POSITIVE_INTEGER).positive(ERROR_MESSAGES.POSITIVE_NUMBER));

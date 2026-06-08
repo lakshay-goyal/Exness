@@ -1,12 +1,12 @@
-import { createHmac } from "crypto";
-import jwt from "jsonwebtoken";
-import { fromNodeHeaders } from "better-auth/node";
-import type { Request } from "express";
-import { config } from "@repo/config";
-import { prisma } from "@repo/db";
+import { createHmac } from 'crypto';
+import jwt from 'jsonwebtoken';
+import { fromNodeHeaders } from 'better-auth/node';
+import type { Request } from 'express';
+import { config } from '@repo/config';
+import { prisma } from '@repo/db';
 
-import { auth } from "./better-auth.js";
-import { ensureTradingUser } from "./trading-user.js";
+import { auth } from './better-auth.js';
+import { ensureTradingUser } from './trading-user.js';
 
 export async function getMobileAuthUser(req: Request) {
   const session = await auth.api.getSession({
@@ -25,10 +25,7 @@ export async function getMobileAuthUser(req: Request) {
     return null;
   }
 
-  const tradingUser = await ensureTradingUser(
-    session.user.id,
-    session.user.email,
-  );
+  const tradingUser = await ensureTradingUser(session.user.id, session.user.email);
 
   return {
     authUser,
@@ -42,11 +39,11 @@ export function createLegacyJwt(user: { id: string; email: string }) {
     {
       userId: user.id,
       email: user.email,
-      type: "access",
+      type: 'access',
     },
     config.JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: '7d',
     },
   );
 }
@@ -56,11 +53,11 @@ export function createMobileRefreshToken(user: { id: string; email: string }) {
     {
       userId: user.id,
       email: user.email,
-      type: "refresh",
+      type: 'refresh',
     },
     config.JWT_SECRET,
     {
-      expiresIn: "30d",
+      expiresIn: '30d',
     },
   );
 }
@@ -69,9 +66,9 @@ export function verifyMobileRefreshToken(token: string) {
   const payload = jwt.verify(token, config.JWT_SECRET) as jwt.JwtPayload;
 
   if (
-    payload.type !== "refresh" ||
-    typeof payload.userId !== "string" ||
-    typeof payload.email !== "string"
+    payload.type !== 'refresh' ||
+    typeof payload.userId !== 'string' ||
+    typeof payload.email !== 'string'
   ) {
     return null;
   }
@@ -83,12 +80,9 @@ export function verifyMobileRefreshToken(token: string) {
 }
 
 export function hashMobilePin(pin: string) {
-  return createHmac("sha256", config.JWT_SECRET)
-    .update(`mobile-pin:${pin}`)
-    .digest("hex");
+  return createHmac('sha256', config.JWT_SECRET).update(`mobile-pin:${pin}`).digest('hex');
 }
 
 export function isValidPin(pin: unknown) {
-  return typeof pin === "string" && /^\d{4,6}$/.test(pin);
+  return typeof pin === 'string' && /^\d{4,6}$/.test(pin);
 }
-

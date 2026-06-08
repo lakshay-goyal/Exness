@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, G, Path, Rect } from "react-native-svg";
+import { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
-import { PressableScaleMotion } from "@/components/PressMotion";
+import { PressableScaleMotion } from '@/components/PressMotion';
 import {
   BiometricAvailability,
   enableBiometricAuthentication,
   getBiometricAvailability,
-} from "@/lib/biometric-auth";
-import { logAuthEvent } from "@/lib/auth-logger";
+} from '@/lib/biometric-auth';
+import { logAuthEvent } from '@/lib/auth-logger';
 
 type BiometricSetupScreenProps = {
   onComplete: () => void;
@@ -49,10 +49,7 @@ function LockIllustration() {
       <Rect x="58" y="92" width="42" height="94" fill="#382E59" />
       <Circle cx="116" cy="132" r="12" fill="#1B1B1B" />
       <Path d="M111 139H121L126 169H106L111 139Z" fill="#1B1B1B" />
-      <Path
-        d="M24 56L28 70L42 74L28 78L24 92L20 78L6 74L20 70L24 56Z"
-        fill="#F3F6B3"
-      />
+      <Path d="M24 56L28 70L42 74L28 78L24 92L20 78L6 74L20 70L24 56Z" fill="#F3F6B3" />
       <Path
         d="M182 158L185 166L193 169L185 172L182 180L179 172L171 169L179 166L182 158Z"
         fill="#F3F6B3"
@@ -63,12 +60,7 @@ function LockIllustration() {
         strokeWidth="7"
         strokeLinecap="round"
       />
-      <Path
-        d="M196 64L213 58"
-        stroke="#8372D2"
-        strokeWidth="7"
-        strokeLinecap="round"
-      />
+      <Path d="M196 64L213 58" stroke="#8372D2" strokeWidth="7" strokeLinecap="round" />
     </Svg>
   );
 }
@@ -76,30 +68,10 @@ function LockIllustration() {
 function BiometricIcon() {
   return (
     <Svg width={30} height={30} viewBox="0 0 30 30" fill="none">
-      <Path
-        d="M9 7.5V5.5H13"
-        stroke="#DADADA"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <Path
-        d="M17 5.5H21V9.5"
-        stroke="#DADADA"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <Path
-        d="M21 20.5V24.5H17"
-        stroke="#DADADA"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <Path
-        d="M13 24.5H9V20.5"
-        stroke="#DADADA"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
+      <Path d="M9 7.5V5.5H13" stroke="#DADADA" strokeWidth="1.7" strokeLinecap="round" />
+      <Path d="M17 5.5H21V9.5" stroke="#DADADA" strokeWidth="1.7" strokeLinecap="round" />
+      <Path d="M21 20.5V24.5H17" stroke="#DADADA" strokeWidth="1.7" strokeLinecap="round" />
+      <Path d="M13 24.5H9V20.5" stroke="#DADADA" strokeWidth="1.7" strokeLinecap="round" />
       <Path
         d="M12 15C12 13.1 13.1 12 15 12C16.9 12 18 13.1 18 15"
         stroke="#DADADA"
@@ -116,14 +88,11 @@ function BiometricIcon() {
   );
 }
 
-export function BiometricSetupScreen({
-  onComplete,
-}: BiometricSetupScreenProps) {
-  const [availability, setAvailability] =
-    useState<BiometricAvailability | null>(null);
+export function BiometricSetupScreen({ onComplete }: BiometricSetupScreenProps) {
+  const [availability, setAvailability] = useState<BiometricAvailability | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -134,7 +103,7 @@ export function BiometricSetupScreen({
       }
 
       if (!result.isAvailable) {
-        logAuthEvent("biometric_setup_skipped_unavailable", {
+        logAuthEvent('biometric_setup_skipped_unavailable', {
           kind: result.kind,
         });
         onComplete();
@@ -156,13 +125,13 @@ export function BiometricSetupScreen({
 
     if (isEnabled) {
       setIsEnabled(false);
-      setMessage("");
+      setMessage('');
       return;
     }
 
     setIsAuthenticating(true);
-    setMessage("");
-    logAuthEvent("biometric_opt_in_pressed", {
+    setMessage('');
+    logAuthEvent('biometric_opt_in_pressed', {
       kind: availability.kind,
     });
 
@@ -171,23 +140,18 @@ export function BiometricSetupScreen({
       if (result.success) {
         setIsEnabled(true);
         setMessage(`${availability.title} enabled for this device.`);
-      } else if (
-        result.error === "user_cancel" ||
-        result.error === "system_cancel"
-      ) {
+      } else if (result.error === 'user_cancel' || result.error === 'system_cancel') {
         setMessage(`${availability.title} was not enabled.`);
       } else {
-        setMessage(
-          `Unable to enable ${availability.title}. You can skip this.`,
-        );
+        setMessage(`Unable to enable ${availability.title}. You can skip this.`);
       }
     } catch (err) {
       logAuthEvent(
-        "biometric_opt_in_failed",
+        'biometric_opt_in_failed',
         {
           error: err instanceof Error ? err.message : String(err),
         },
-        "warn",
+        'warn',
       );
       setMessage(`Unable to enable ${availability.title}. You can skip this.`);
     } finally {
@@ -214,9 +178,7 @@ export function BiometricSetupScreen({
               className="h-10 items-center justify-center px-1"
               onPress={onComplete}
             >
-              <Text className="text-[16px] font-extrabold text-white">
-                Next
-              </Text>
+              <Text className="text-[16px] font-extrabold text-white">Next</Text>
             </PressableScaleMotion>
           </View>
 
@@ -226,8 +188,8 @@ export function BiometricSetupScreen({
               Protect your wallet
             </Text>
             <Text className="mt-5 max-w-[320px] text-center text-[16px] leading-6 text-[#9A9A9A]">
-              Adding biometric security will ensure that you are the only one
-              that can access your wallet.
+              Adding biometric security will ensure that you are the only one that can access your
+              wallet.
             </Text>
           </View>
 
@@ -252,9 +214,7 @@ export function BiometricSetupScreen({
               </View>
               <View
                 className={`h-9 w-16 justify-center rounded-full px-1 ${
-                  isEnabled
-                    ? "items-end bg-[#8372D2]"
-                    : "items-start bg-[#686868]"
+                  isEnabled ? 'items-end bg-[#8372D2]' : 'items-start bg-[#686868]'
                 }`}
               >
                 <View className="h-7 w-7 rounded-full bg-[#EDEDED]" />
@@ -263,9 +223,7 @@ export function BiometricSetupScreen({
           </View>
 
           {message ? (
-            <Text className="mt-4 text-center text-[13px] font-bold text-[#AFAFAF]">
-              {message}
-            </Text>
+            <Text className="mt-4 text-center text-[13px] font-bold text-[#AFAFAF]">{message}</Text>
           ) : null}
 
           <View className="flex-1" />
@@ -275,9 +233,7 @@ export function BiometricSetupScreen({
             className="h-[54px] items-center justify-center rounded-full bg-[#8E7EDD]"
             onPress={onComplete}
           >
-            <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">
-              Next
-            </Text>
+            <Text className="text-[17px] font-extrabold tracking-normal text-[#151515]">Next</Text>
           </PressableScaleMotion>
         </View>
       </SafeAreaView>

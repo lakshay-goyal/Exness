@@ -1,9 +1,9 @@
-import { setStoredAuthItem } from "./auth-storage";
-import { logAuthEvent } from "./auth-logger";
+import { setStoredAuthItem } from './auth-storage';
+import { logAuthEvent } from './auth-logger';
 
 declare const require: (moduleName: string) => unknown;
 
-type BiometricKind = "face" | "fingerprint" | "iris" | "biometric";
+type BiometricKind = 'face' | 'fingerprint' | 'iris' | 'biometric';
 
 export type BiometricAvailability = {
   isAvailable: boolean;
@@ -13,7 +13,7 @@ export type BiometricAvailability = {
   prompt: string;
 };
 
-const BIOMETRIC_ENABLED_KEY = "exness_biometric_enabled";
+const BIOMETRIC_ENABLED_KEY = 'exness_biometric_enabled';
 
 const AuthenticationType = {
   FINGERPRINT: 1,
@@ -21,9 +21,7 @@ const AuthenticationType = {
   IRIS: 3,
 } as const;
 
-type LocalAuthenticationResult =
-  | { success: true }
-  | { success: false; error?: string };
+type LocalAuthenticationResult = { success: true } | { success: false; error?: string };
 
 type LocalAuthenticationModule = {
   hasHardwareAsync: () => Promise<boolean>;
@@ -36,7 +34,7 @@ type LocalAuthenticationModule = {
     cancelLabel?: string;
     fallbackLabel?: string;
     disableDeviceFallback?: boolean;
-    biometricsSecurityLevel?: "weak" | "strong";
+    biometricsSecurityLevel?: 'weak' | 'strong';
   }) => Promise<LocalAuthenticationResult>;
 };
 
@@ -49,18 +47,17 @@ function getLocalAuthentication() {
   }
 
   try {
-    localAuthentication =
-      require("expo-local-authentication") as LocalAuthenticationModule;
+    localAuthentication = require('expo-local-authentication') as LocalAuthenticationModule;
   } catch (err) {
     localAuthentication = null;
 
     if (!didLogMissingModule) {
       logAuthEvent(
-        "local_authentication_module_unavailable",
+        'local_authentication_module_unavailable',
         {
           error: err instanceof Error ? err.message : String(err),
         },
-        "warn",
+        'warn',
       );
       didLogMissingModule = true;
     }
@@ -69,41 +66,39 @@ function getLocalAuthentication() {
   return localAuthentication;
 }
 
-function getBiometricCopy(
-  types: number[],
-): Omit<BiometricAvailability, "isAvailable"> {
+function getBiometricCopy(types: number[]): Omit<BiometricAvailability, 'isAvailable'> {
   if (types.includes(AuthenticationType.FACIAL_RECOGNITION)) {
     return {
-      kind: "face",
-      title: "Face ID",
-      subtitle: "Use Face ID Authentication",
-      prompt: "Allow Face ID to protect your wallet",
+      kind: 'face',
+      title: 'Face ID',
+      subtitle: 'Use Face ID Authentication',
+      prompt: 'Allow Face ID to protect your wallet',
     };
   }
 
   if (types.includes(AuthenticationType.FINGERPRINT)) {
     return {
-      kind: "fingerprint",
-      title: "Fingerprint",
-      subtitle: "Use Fingerprint Authentication",
-      prompt: "Allow fingerprint to protect your wallet",
+      kind: 'fingerprint',
+      title: 'Fingerprint',
+      subtitle: 'Use Fingerprint Authentication',
+      prompt: 'Allow fingerprint to protect your wallet',
     };
   }
 
   if (types.includes(AuthenticationType.IRIS)) {
     return {
-      kind: "iris",
-      title: "Iris unlock",
-      subtitle: "Use Iris Authentication",
-      prompt: "Allow iris unlock to protect your wallet",
+      kind: 'iris',
+      title: 'Iris unlock',
+      subtitle: 'Use Iris Authentication',
+      prompt: 'Allow iris unlock to protect your wallet',
     };
   }
 
   return {
-    kind: "biometric",
-    title: "Biometrics",
-    subtitle: "Use Biometric Authentication",
-    prompt: "Allow biometrics to protect your wallet",
+    kind: 'biometric',
+    title: 'Biometrics',
+    subtitle: 'Use Biometric Authentication',
+    prompt: 'Allow biometrics to protect your wallet',
   };
 }
 
@@ -113,10 +108,10 @@ export async function getBiometricAvailability(): Promise<BiometricAvailability>
   if (!LocalAuthentication) {
     return {
       isAvailable: false,
-      kind: "biometric",
-      title: "Biometrics",
-      subtitle: "Use Biometric Authentication",
-      prompt: "Allow biometrics to protect your wallet",
+      kind: 'biometric',
+      title: 'Biometrics',
+      subtitle: 'Use Biometric Authentication',
+      prompt: 'Allow biometrics to protect your wallet',
     };
   }
 
@@ -129,10 +124,10 @@ export async function getBiometricAvailability(): Promise<BiometricAvailability>
     const copy = getBiometricCopy(supportedTypes);
     const isAvailable = hasHardware && isEnrolled && supportedTypes.length > 0;
 
-    logAuthEvent("biometric_availability_checked", {
+    logAuthEvent('biometric_availability_checked', {
       hasHardware,
       isEnrolled,
-      supportedTypes: supportedTypes.join(","),
+      supportedTypes: supportedTypes.join(','),
       kind: copy.kind,
       isAvailable,
     });
@@ -143,46 +138,44 @@ export async function getBiometricAvailability(): Promise<BiometricAvailability>
     };
   } catch (err) {
     logAuthEvent(
-      "biometric_availability_check_failed",
+      'biometric_availability_check_failed',
       {
         error: err instanceof Error ? err.message : String(err),
       },
-      "warn",
+      'warn',
     );
 
     return {
       isAvailable: false,
-      kind: "biometric",
-      title: "Biometrics",
-      subtitle: "Use Biometric Authentication",
-      prompt: "Allow biometrics to protect your wallet",
+      kind: 'biometric',
+      title: 'Biometrics',
+      subtitle: 'Use Biometric Authentication',
+      prompt: 'Allow biometrics to protect your wallet',
     };
   }
 }
 
-export async function enableBiometricAuthentication(
-  availability: BiometricAvailability,
-) {
+export async function enableBiometricAuthentication(availability: BiometricAvailability) {
   const LocalAuthentication = getLocalAuthentication();
 
   if (!LocalAuthentication) {
     return {
       success: false,
-      error: "not_available",
+      error: 'not_available',
     } as const;
   }
 
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: availability.prompt,
-    promptSubtitle: "Confirm it is you",
-    promptDescription: "This lets Exness unlock your wallet faster next time.",
-    cancelLabel: "Not now",
-    fallbackLabel: "",
+    promptSubtitle: 'Confirm it is you',
+    promptDescription: 'This lets Exness unlock your wallet faster next time.',
+    cancelLabel: 'Not now',
+    fallbackLabel: '',
     disableDeviceFallback: true,
-    biometricsSecurityLevel: "weak",
+    biometricsSecurityLevel: 'weak',
   });
 
-  logAuthEvent("biometric_authentication_finished", {
+  logAuthEvent('biometric_authentication_finished', {
     success: result.success,
     kind: availability.kind,
     error: result.success ? undefined : result.error,

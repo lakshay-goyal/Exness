@@ -1,22 +1,22 @@
-import { MongoClient, Db, Collection } from "mongodb";
-import { config } from "@repo/config";
-import { openOrders, users } from "@repo/trading-core/state";
+import { MongoClient, Db, Collection } from 'mongodb';
+import { config } from '@repo/config';
+import { openOrders, users } from '@repo/trading-core/state';
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-const USERS_COLLECTION = "users";
-const ORDERS_COLLECTION = "orders";
+const USERS_COLLECTION = 'users';
+const ORDERS_COLLECTION = 'orders';
 
 async function connectToMongoDB(): Promise<void> {
   try {
     if (!client) {
       client = new MongoClient(config.MONGODB_URL);
       await client.connect();
-      db = client.db("exness_snapshots");
+      db = client.db('exness_snapshots');
     }
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error('Error connecting to MongoDB:', error);
     throw error;
   }
 }
@@ -26,7 +26,7 @@ function getCollections(): {
   ordersCollection: Collection;
 } {
   if (!db) {
-    throw new Error("Database not connected. Call connectToMongoDB() first.");
+    throw new Error('Database not connected. Call connectToMongoDB() first.');
   }
   return {
     usersCollection: db.collection(USERS_COLLECTION),
@@ -38,12 +38,9 @@ async function clearMongoDBData(): Promise<void> {
   try {
     const { usersCollection, ordersCollection } = getCollections();
 
-    await Promise.all([
-      usersCollection.deleteMany({}),
-      ordersCollection.deleteMany({}),
-    ]);
+    await Promise.all([usersCollection.deleteMany({}), ordersCollection.deleteMany({})]);
   } catch (error) {
-    console.error("Error clearing MongoDB data:", error);
+    console.error('Error clearing MongoDB data:', error);
     throw error;
   }
 }
@@ -84,7 +81,7 @@ async function dumpDataToMongoDB(): Promise<void> {
     } else {
     }
   } catch (error) {
-    console.error("Error dumping data to MongoDB:", error);
+    console.error('Error dumping data to MongoDB:', error);
     throw error;
   }
 }
@@ -95,7 +92,7 @@ async function performSnapshot(): Promise<void> {
 
     await dumpDataToMongoDB();
   } catch (error) {
-    console.error("Error performing snapshot:", error);
+    console.error('Error performing snapshot:', error);
   }
 }
 
@@ -111,26 +108,26 @@ async function main() {
       await performSnapshot();
     }, SNAPSHOT_INTERVAL_MS);
 
-    process.on("SIGINT", async () => {
+    process.on('SIGINT', async () => {
       if (client) {
         await client.close();
       }
       process.exit(0);
     });
 
-    process.on("SIGTERM", async () => {
+    process.on('SIGTERM', async () => {
       if (client) {
         await client.close();
       }
       process.exit(0);
     });
   } catch (error) {
-    console.error("Fatal error in snapshotting service:", error);
+    console.error('Fatal error in snapshotting service:', error);
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error("Unhandled error:", error);
+  console.error('Unhandled error:', error);
   process.exit(1);
 });

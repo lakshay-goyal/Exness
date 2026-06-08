@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 import Reanimated, {
   Easing,
   useAnimatedProps,
@@ -8,16 +8,8 @@ import Reanimated, {
   withSequence,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
-import Svg, {
-  Circle,
-  Ellipse,
-  G,
-  Line,
-  Path,
-  Polygon,
-  Rect,
-} from "react-native-svg";
+} from 'react-native-reanimated';
+import Svg, { Circle, Ellipse, G, Line, Path, Polygon, Rect } from 'react-native-svg';
 
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 const AnimatedEllipse = Reanimated.createAnimatedComponent(Ellipse);
@@ -34,7 +26,7 @@ function createTransformMatrix(
   scaleX = 1,
   scaleY = 1,
 ) {
-  "worklet";
+  'worklet';
 
   const radians = (rotateDegrees * Math.PI) / 180;
   const cos = Math.cos(radians);
@@ -88,16 +80,8 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
     blueEnter.value = withDelay(entranceDelay + 1840, withSpring(1, spring));
     redEnter.value = withDelay(entranceDelay + 2200, withSpring(1, spring));
 
-    breathe.value = withRepeat(
-      withTiming(1, { duration: 2100, easing: ease }),
-      -1,
-      true,
-    );
-    orbit.value = withRepeat(
-      withTiming(1, { duration: 2600, easing: ease }),
-      -1,
-      true,
-    );
+    breathe.value = withRepeat(withTiming(1, { duration: 2100, easing: ease }), -1, true);
+    orbit.value = withRepeat(withTiming(1, { duration: 2600, easing: ease }), -1, true);
     glance.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 900, easing: ease }),
@@ -124,11 +108,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       -1,
       false,
     );
-    sleepy.value = withRepeat(
-      withTiming(1, { duration: 2400, easing: ease }),
-      -1,
-      true,
-    );
+    sleepy.value = withRepeat(withTiming(1, { duration: 2400, easing: ease }), -1, true);
     wobble.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 620, easing: ease }),
@@ -176,13 +156,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
     const angle = 11 + orbit.value * 8;
     return {
       opacity: p,
-      transform: createTransformMatrix(
-        245 + (1 - p) * 280,
-        6 - (1 - p) * 160,
-        angle,
-        63,
-        63,
-      ),
+      transform: createTransformMatrix(245 + (1 - p) * 280, 6 - (1 - p) * 160, angle, 63, 63),
     };
   });
   const pinkProps = useAnimatedProps(() => {
@@ -291,12 +265,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
           strokeWidth="7"
           strokeLinecap="round"
         />
-        <Path
-          d="M43 57C50 64 58 64 65 57"
-          stroke="#0B0B0B"
-          strokeWidth="7"
-          strokeLinecap="round"
-        />
+        <Path d="M43 57C50 64 58 64 65 57" stroke="#0B0B0B" strokeWidth="7" strokeLinecap="round" />
         <Path
           d="M86 57C93 64 101 64 108 57"
           stroke="#0B0B0B"
@@ -306,60 +275,23 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       </AnimatedG>
 
       <AnimatedG animatedProps={purpleProps}>
-        <Circle
-          cx="64"
-          cy="64"
-          r="56"
-          stroke="#C77AF6"
-          strokeWidth="16"
-          strokeLinecap="round"
-        />
-        <Path
-          d="M34 21C55 3 89 7 107 29"
-          stroke="#C77AF6"
-          strokeWidth="11"
-          strokeLinecap="round"
-        />
-        <AnimatedCircle
-          animatedProps={purpleEyeLeftProps}
-          cx="42"
-          r="10"
-          fill="#0B0B0B"
-        />
-        <AnimatedCircle
-          animatedProps={purpleEyeRightProps}
-          cx="84"
-          r="10"
-          fill="#0B0B0B"
-        />
+        <Circle cx="64" cy="64" r="56" stroke="#C77AF6" strokeWidth="16" strokeLinecap="round" />
+        <Path d="M34 21C55 3 89 7 107 29" stroke="#C77AF6" strokeWidth="11" strokeLinecap="round" />
+        <AnimatedCircle animatedProps={purpleEyeLeftProps} cx="42" r="10" fill="#0B0B0B" />
+        <AnimatedCircle animatedProps={purpleEyeRightProps} cx="84" r="10" fill="#0B0B0B" />
         <Path
           d="M58 92C70 82 87 87 92 104"
           stroke="#0B0B0B"
           strokeWidth="6"
           strokeLinecap="round"
         />
-        <Path
-          d="M64 55C58 74 70 82 89 77"
-          stroke="#0B0B0B"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
+        <Path d="M64 55C58 74 70 82 89 77" stroke="#0B0B0B" strokeWidth="6" strokeLinecap="round" />
       </AnimatedG>
 
       <AnimatedG animatedProps={pinkProps}>
         <Circle cx="78" cy="78" r="78" fill="#F48ADC" />
-        <AnimatedCircle
-          animatedProps={pinkEyeLeftProps}
-          cy="62"
-          r="12"
-          fill="#0B0B0B"
-        />
-        <AnimatedCircle
-          animatedProps={pinkEyeRightProps}
-          cy="62"
-          r="12"
-          fill="#0B0B0B"
-        />
+        <AnimatedCircle animatedProps={pinkEyeLeftProps} cy="62" r="12" fill="#0B0B0B" />
+        <AnimatedCircle animatedProps={pinkEyeRightProps} cy="62" r="12" fill="#0B0B0B" />
         <Path
           d="M39 106C62 96 86 101 102 120"
           stroke="#0B0B0B"
@@ -374,12 +306,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
           fill="#FFD33D"
           strokeLinejoin="round"
         />
-        <Path
-          d="M40 91C51 71 74 71 86 91"
-          stroke="#0B0B0B"
-          strokeWidth="8"
-          strokeLinecap="round"
-        />
+        <Path d="M40 91C51 71 74 71 86 91" stroke="#0B0B0B" strokeWidth="8" strokeLinecap="round" />
         <AnimatedPath
           animatedProps={yellowSmileProps}
           d="M72 115C87 128 111 128 126 115"
@@ -391,20 +318,8 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
 
       <AnimatedG animatedProps={orangeProps}>
         <Rect width="164" height="153" rx="31" fill="#FF8549" />
-        <AnimatedEllipse
-          animatedProps={orangeEyeProps}
-          cx="60"
-          cy="55"
-          rx="20"
-          fill="#FFFFFF"
-        />
-        <AnimatedEllipse
-          animatedProps={orangeEyeProps}
-          cx="111"
-          cy="55"
-          rx="20"
-          fill="#FFFFFF"
-        />
+        <AnimatedEllipse animatedProps={orangeEyeProps} cx="60" cy="55" rx="20" fill="#FFFFFF" />
+        <AnimatedEllipse animatedProps={orangeEyeProps} cx="111" cy="55" rx="20" fill="#FFFFFF" />
         <Circle cx="69" cy="52" r="8" fill="#0B0B0B" />
         <Circle cx="120" cy="52" r="8" fill="#0B0B0B" />
         <Path
@@ -417,12 +332,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
 
       <AnimatedG animatedProps={blueProps}>
         <Rect width="148" height="147" rx="43" fill="#94C7FF" />
-        <Path
-          d="M35 72C41 82 52 84 61 75"
-          stroke="#0B0B0B"
-          strokeWidth="7"
-          strokeLinecap="round"
-        />
+        <Path d="M35 72C41 82 52 84 61 75" stroke="#0B0B0B" strokeWidth="7" strokeLinecap="round" />
         <Path
           d="M84 72C90 82 101 84 110 75"
           stroke="#0B0B0B"
@@ -439,11 +349,7 @@ export function MoodCharacters({ width, height }: MoodCharactersProps) {
       </AnimatedG>
 
       <AnimatedG animatedProps={redProps}>
-        <Polygon
-          points="72,3 159,146 0,157"
-          fill="#FF777B"
-          strokeLinejoin="round"
-        />
+        <Polygon points="72,3 159,146 0,157" fill="#FF777B" strokeLinejoin="round" />
         <AnimatedLine
           animatedProps={redAngerLineLeftProps}
           x1="48"

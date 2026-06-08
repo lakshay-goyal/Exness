@@ -4,12 +4,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev":"bun run --watch src/index.ts",
+    "dev": "bun run --watch src/index.ts",
     "check-types": "tsc --noEmit"
   },
-  "dependencies":{
-    "@repo/config":"workspace:*",
-    "@repo/types":"workspace:*"
+  "dependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/types": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

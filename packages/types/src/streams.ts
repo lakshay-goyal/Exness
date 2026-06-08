@@ -1,12 +1,12 @@
-import type { ClosedOrder, CloseReason, OrderSide } from "./trading";
+import type { ClosedOrder, CloseReason, OrderSide } from './trading';
 
 export const streamFunctions = [
-  "createUser",
-  "createOrder",
-  "createCloseOrder",
-  "getOpenOrder",
-  "getCloseOrders",
-  "pricePoller",
+  'createUser',
+  'createOrder',
+  'createCloseOrder',
+  'getOpenOrder',
+  'getCloseOrders',
+  'pricePoller',
 ] as const;
 
 export type StreamFunctionName = (typeof streamFunctions)[number];
@@ -17,13 +17,13 @@ export type CorrelatedStreamMessage = {
 };
 
 export type CreateUserCommand = CorrelatedStreamMessage & {
-  function: "createUser";
+  function: 'createUser';
   userId: string;
   userEmail: string;
 };
 
 export type CreateOrderCommand = CorrelatedStreamMessage & {
-  function: "createOrder";
+  function: 'createOrder';
   userId: string;
   symbol: string;
   type: OrderSide | string;
@@ -35,19 +35,19 @@ export type CreateOrderCommand = CorrelatedStreamMessage & {
 };
 
 export type CloseOrderCommand = CorrelatedStreamMessage & {
-  function: "createCloseOrder";
+  function: 'createCloseOrder';
   orderId: string;
   userId: string;
   closeReason?: CloseReason;
 };
 
 export type GetUserOrdersCommand = CorrelatedStreamMessage & {
-  function: "getOpenOrder" | "getCloseOrders";
+  function: 'getOpenOrder' | 'getCloseOrders';
   userId: string;
 };
 
 export type PricePollerCommand = CorrelatedStreamMessage & {
-  function: "pricePoller";
+  function: 'pricePoller';
   message: string;
 };
 
@@ -60,7 +60,7 @@ export type EngineCommand =
 
 export type DbStorageCommand =
   | (CorrelatedStreamMessage & {
-      function: "createCloseOrder";
+      function: 'createCloseOrder';
       message: ClosedOrder;
     })
   | GetUserOrdersCommand

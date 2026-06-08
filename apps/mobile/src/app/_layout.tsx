@@ -1,14 +1,14 @@
-import "../global.css";
-import "react-native-ease/nativewind";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import * as SystemUI from "expo-system-ui";
-import { PressablesConfig } from "pressto";
-import { ReactNode, useEffect } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import '../global.css';
+import 'react-native-ease/nativewind';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
+import { PressablesConfig } from 'pressto';
+import { ReactNode, useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { getKeyboardControllerPackage } from "@/lib/keyboard-controller";
+import { getKeyboardControllerPackage } from '@/lib/keyboard-controller';
 
 SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({
@@ -18,7 +18,7 @@ SplashScreen.setOptions({
 
 export default function RootLayout() {
   useEffect(() => {
-    SystemUI.setBackgroundColorAsync("#ffffff");
+    SystemUI.setBackgroundColorAsync('#ffffff');
     SplashScreen.hideAsync();
   }, []);
 
@@ -28,7 +28,7 @@ export default function RootLayout() {
         animationConfig={{ damping: 24, mass: 0.7, stiffness: 320 }}
         animationType="spring"
         config={{ activeOpacity: 0.86, minScale: 0.975 }}
-        defaultProps={{ rippleColor: "transparent" }}
+        defaultProps={{ rippleColor: 'transparent' }}
       >
         <SafeAreaProvider>
           <KeyboardControllerProvider>

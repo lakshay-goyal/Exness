@@ -1,7 +1,6 @@
-import { Platform, TurboModuleRegistry } from "react-native";
+import { Platform, TurboModuleRegistry } from 'react-native';
 
-type KeyboardControllerPackage =
-  typeof import("react-native-keyboard-controller");
+type KeyboardControllerPackage = typeof import('react-native-keyboard-controller');
 
 declare const require: (moduleName: string) => KeyboardControllerPackage;
 
@@ -14,19 +13,15 @@ export function getKeyboardControllerPackage() {
   }
 
   const isNativeModuleAvailable =
-    Platform.OS === "web" ||
-    Boolean(TurboModuleRegistry.get("KeyboardController"));
+    Platform.OS === 'web' || Boolean(TurboModuleRegistry.get('KeyboardController'));
 
   if (!isNativeModuleAvailable) {
     cachedKeyboardController = null;
 
-    if (
-      process.env.NODE_ENV !== "production" &&
-      !didWarnKeyboardControllerUnavailable
-    ) {
+    if (process.env.NODE_ENV !== 'production' && !didWarnKeyboardControllerUnavailable) {
       didWarnKeyboardControllerUnavailable = true;
       console.warn(
-        "Keyboard controller native module is not available in this app binary. Rebuild the native app after installing react-native-keyboard-controller.",
+        'Keyboard controller native module is not available in this app binary. Rebuild the native app after installing react-native-keyboard-controller.',
       );
     }
 
@@ -34,16 +29,13 @@ export function getKeyboardControllerPackage() {
   }
 
   try {
-    cachedKeyboardController = require("react-native-keyboard-controller");
+    cachedKeyboardController = require('react-native-keyboard-controller');
   } catch (error) {
     cachedKeyboardController = null;
 
-    if (
-      process.env.NODE_ENV !== "production" &&
-      !didWarnKeyboardControllerUnavailable
-    ) {
+    if (process.env.NODE_ENV !== 'production' && !didWarnKeyboardControllerUnavailable) {
       didWarnKeyboardControllerUnavailable = true;
-      console.warn("Unable to load keyboard controller.", error);
+      console.warn('Unable to load keyboard controller.', error);
     }
   }
 

@@ -1,16 +1,16 @@
-import type { Request, Response, NextFunction } from "express";
-import { ZodError, type ZodType, type ZodIssue } from "zod";
-import ResponseWriter from "../utils/response-writer.js";
+import type { Request, Response, NextFunction } from 'express';
+import { ZodError, type ZodType, type ZodIssue } from 'zod';
+import ResponseWriter from '../utils/response-writer.js';
 
-type ValidationSource = "body" | "query" | "params" | "headers";
+type ValidationSource = 'body' | 'query' | 'params' | 'headers';
 
 const formatPath = (issue: ZodIssue): string => {
   const field = issue.path
-    .filter((segment) => typeof segment === "string" || typeof segment === "number")
+    .filter((segment) => typeof segment === 'string' || typeof segment === 'number')
     .map(String)
-    .join(".");
+    .join('.');
 
-  return field || "this field";
+  return field || 'this field';
 };
 
 const formatValidationMessage = (issue: ZodIssue): string => {
@@ -21,7 +21,7 @@ const formatValidationMessage = (issue: ZodIssue): string => {
   const message = issue.message;
 
   // If message doesn't already include the path, prepend it for clarity
-  if (!message.includes(path) && path !== "this field") {
+  if (!message.includes(path) && path !== 'this field') {
     return `${path}: ${message}`;
   }
 
@@ -34,21 +34,21 @@ const assignValidatedRequestData = (
   parsedData: unknown,
 ): void => {
   switch (source) {
-    case "body":
+    case 'body':
       req.body = parsedData;
       break;
-    case "query":
-      Object.defineProperty(req, "query", {
+    case 'query':
+      Object.defineProperty(req, 'query', {
         value: parsedData,
         writable: true,
         enumerable: true,
         configurable: true,
       });
       break;
-    case "params":
-      req.params = parsedData as Request["params"];
+    case 'params':
+      req.params = parsedData as Request['params'];
       break;
-    case "headers":
+    case 'headers':
       // Headers are not replaced, just validated
       break;
   }
@@ -56,13 +56,13 @@ const assignValidatedRequestData = (
 
 const getDataToValidate = (req: Request, source: ValidationSource): unknown => {
   switch (source) {
-    case "body":
+    case 'body':
       return req.body;
-    case "query":
+    case 'query':
       return req.query;
-    case "params":
+    case 'params':
       return req.params;
-    case "headers":
+    case 'headers':
       return req.headers;
     default:
       return undefined;
@@ -75,7 +75,7 @@ const getDataToValidate = (req: Request, source: ValidationSource): unknown => {
  * @param source - Where to get the data from: 'body', 'query', 'params', or 'headers'
  * @returns Express middleware function
  */
-export const validateRequest = (schema: ZodType, source: ValidationSource = "body") => {
+export const validateRequest = (schema: ZodType, source: ValidationSource = 'body') => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dataToValidate = getDataToValidate(req, source);
@@ -87,7 +87,7 @@ export const validateRequest = (schema: ZodType, source: ValidationSource = "bod
         const firstIssue = error.issues[0];
         const message = firstIssue
           ? formatValidationMessage(firstIssue)
-          : "Please check the information you entered and try again.";
+          : 'Please check the information you entered and try again.';
 
         ResponseWriter.badRequest(res, message);
         return;
@@ -100,14 +100,14 @@ export const validateRequest = (schema: ZodType, source: ValidationSource = "bod
 /**
  * Shorthand for validating request body
  */
-export const validateBody = (schema: ZodType) => validateRequest(schema, "body");
+export const validateBody = (schema: ZodType) => validateRequest(schema, 'body');
 
 /**
  * Shorthand for validating query parameters
  */
-export const validateQuery = (schema: ZodType) => validateRequest(schema, "query");
+export const validateQuery = (schema: ZodType) => validateRequest(schema, 'query');
 
 /**
  * Shorthand for validating URL parameters
  */
-export const validateParams = (schema: ZodType) => validateRequest(schema, "params");
+export const validateParams = (schema: ZodType) => validateRequest(schema, 'params');

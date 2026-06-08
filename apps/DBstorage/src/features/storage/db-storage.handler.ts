@@ -1,10 +1,5 @@
-import {
-  redisStreams,
-  config,
-  REDIS_STREAMS,
-  DEFAULTS,
-} from "@repo/config";
-import { prisma } from "@repo/db";
+import { redisStreams, config, REDIS_STREAMS, DEFAULTS } from '@repo/config';
+import { prisma } from '@repo/db';
 
 // Lazy initialization of Redis streams for sending responses
 let RedisStreamsInstance: ReturnType<typeof redisStreams> | null = null;
@@ -18,24 +13,24 @@ async function getRedisStreams() {
 }
 
 export async function dbStorageFunction(result: any) {
-  if (result.function === "createCloseOrder") {
+  if (result.function === 'createCloseOrder') {
     const orderData = result?.message;
 
     if (!orderData) {
-      console.error("createCloseOrder: Missing order data", result);
+      console.error('createCloseOrder: Missing order data', result);
       return;
     }
 
     const userId = orderData.userId;
     if (!userId) {
-      console.error("createCloseOrder: Missing userId", orderData);
+      console.error('createCloseOrder: Missing userId', orderData);
       return;
     }
 
     // Verify user exists in database
     const user = await prisma.user.findUnique({ where: { userID: userId } });
     if (!user) {
-      console.error("createCloseOrder aborted: user not found", userId);
+      console.error('createCloseOrder aborted: user not found', userId);
       return;
     }
 
@@ -43,40 +38,34 @@ export async function dbStorageFunction(result: any) {
       // Prepare order data matching Prisma schema
       // Ensure symbol is lowercase to match enum (btc, sol, eth)
       const symbol = orderData.symbol?.toLowerCase();
-      if (!symbol || !["btc", "sol", "eth"].includes(symbol)) {
-        console.error("createCloseOrder: Invalid symbol", orderData.symbol);
+      if (!symbol || !['btc', 'sol', 'eth'].includes(symbol)) {
+        console.error('createCloseOrder: Invalid symbol', orderData.symbol);
         return;
       }
 
       // Ensure type is lowercase to match OrderSide enum (buy, sell)
       const type = orderData.type?.toLowerCase();
-      if (!type || !["buy", "sell"].includes(type)) {
-        console.error("createCloseOrder: Invalid type", orderData.type);
+      if (!type || !['buy', 'sell'].includes(type)) {
+        console.error('createCloseOrder: Invalid type', orderData.type);
         return;
       }
 
       // Convert Date objects to proper DateTime if needed
       const openTime =
-        orderData.openTime instanceof Date
-          ? orderData.openTime
-          : new Date(orderData.openTime);
+        orderData.openTime instanceof Date ? orderData.openTime : new Date(orderData.openTime);
       const closeTime =
-        orderData.closeTime instanceof Date
-          ? orderData.closeTime
-          : new Date(orderData.closeTime);
+        orderData.closeTime instanceof Date ? orderData.closeTime : new Date(orderData.closeTime);
 
       // Create order in database
       const createdOrder = await prisma.orders.create({
         data: {
           orderId: orderData.orderId,
           userId: userId,
-          symbol: symbol as "btc" | "sol" | "eth",
-          type: type as "buy" | "sell",
+          symbol: symbol as 'btc' | 'sol' | 'eth',
+          type: type as 'buy' | 'sell',
           quantity: parseFloat(orderData.quantity) || 0,
           leverage: parseInt(orderData.leverage) || 1,
-          takeProfit: orderData.takeProfit
-            ? parseFloat(orderData.takeProfit)
-            : null,
+          takeProfit: orderData.takeProfit ? parseFloat(orderData.takeProfit) : null,
           stopLoss: orderData.stopLoss ? parseFloat(orderData.stopLoss) : null,
           stippage: orderData.stippage ? parseFloat(orderData.stippage) : null,
           openPrice: parseFloat(orderData.openPrice) || 0,
@@ -84,32 +73,32 @@ export async function dbStorageFunction(result: any) {
           openTime: openTime,
           closeTime: closeTime,
           profitLoss: parseFloat(orderData.profitLoss) || 0,
-          closeReason: orderData.closeReason || "manual",
+          closeReason: orderData.closeReason || 'manual',
         },
       });
     } catch (error) {
-      console.error("createCloseOrder: Error saving to database", error);
-      console.error("Failed order data:", orderData);
+      console.error('createCloseOrder: Error saving to database', error);
+      console.error('Failed order data:', orderData);
     }
   }
 
-  if (result.function === "getCloseOrders") {
+  if (result.function === 'getCloseOrders') {
     // Extract userId from result - it could be at top level or in message
     const userId = result?.userId || result?.message;
     const requestId = result.requestId || result.correlationId;
 
     if (!userId) {
-      console.error("getCloseOrders: Missing userId");
+      console.error('getCloseOrders: Missing userId');
       try {
         const RedisStreams = await getRedisStreams();
         await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
-          function: "getCloseOrders",
+          function: 'getCloseOrders',
           message: JSON.stringify([]),
           requestId,
           correlationId: requestId,
         });
       } catch (error) {
-        console.error("Error sending error response:", error);
+        console.error('Error sending error response:', error);
       }
       return;
     }
@@ -124,7 +113,7 @@ export async function dbStorageFunction(result: any) {
           userId: userId,
         },
         orderBy: {
-          closeTime: "desc",
+          closeTime: 'desc',
         },
       });
 
@@ -141,21 +130,21 @@ export async function dbStorageFunction(result: any) {
         profitLoss: order.profitLoss || 0,
         takeProfit: order.takeProfit ?? null,
         stopLoss: order.stopLoss ?? null,
-        closeReason: order.closeReason || "manual",
-        status: "closed",
+        closeReason: order.closeReason || 'manual',
+        status: 'closed',
       }));
 
       await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
-        function: "getCloseOrders",
+        function: 'getCloseOrders',
         message: JSON.stringify(formattedCloseOrders),
         requestId,
         correlationId: requestId,
       });
     } catch (error) {
-      console.error("Error fetching closeOrders:", error);
+      console.error('Error fetching closeOrders:', error);
       const RedisStreams = await getRedisStreams();
       await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
-        function: "getCloseOrders",
+        function: 'getCloseOrders',
         message: JSON.stringify([]),
         requestId,
         correlationId: requestId,
@@ -163,7 +152,7 @@ export async function dbStorageFunction(result: any) {
     }
   }
 
-  if (result.function === "createUser") {
+  if (result.function === 'createUser') {
     const { userId, userEmail } = result.message || {};
     if (userId && userEmail) {
       try {
@@ -205,7 +194,7 @@ export async function dbStorageFunction(result: any) {
           }
         }
       } catch (error) {
-        console.error("Error in createUser:", error);
+        console.error('Error in createUser:', error);
         // If there's still a conflict, try to find and update existing user
         const existingUser = await prisma.user.findFirst({
           where: {

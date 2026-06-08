@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+bun.lockb
+bun.lock
+
+# Build outputs and caches
+dist/
+.next/
+.turbo/
+build/
+out/
+coverage/
+
+# Generated files
+**/generated/
+**/prisma/migrations/

@@ -1,5 +1,5 @@
-import { createClient, type RedisClientType } from "redis";
-import { v4 as uuidv4 } from "uuid";
+import { createClient, type RedisClientType } from 'redis';
+import { v4 as uuidv4 } from 'uuid';
 
 class RedisStreams {
   private client: RedisClientType;
@@ -7,9 +7,7 @@ class RedisStreams {
 
   constructor(private url: string) {
     this.client = createClient({ url: url });
-    this.client.on("error", (err) =>
-      console.error(`Error creating client: ${err}`),
-    );
+    this.client.on('error', (err) => console.error(`Error creating client: ${err}`));
   }
 
   async connect() {
@@ -28,12 +26,12 @@ class RedisStreams {
       await this.client.xGroupCreate(
         streamName,
         groupName,
-        "0", // Start from beginning
+        '0', // Start from beginning
         { MKSTREAM: true }, // Create stream if it doesn't exist
       );
     } catch (error: any) {
       // Group might already exist, which is fine
-      if (error?.message?.includes("BUSYGROUP")) {
+      if (error?.message?.includes('BUSYGROUP')) {
       } else {
         console.error(`Error creating consumer group:`, error);
       }
@@ -51,25 +49,22 @@ class RedisStreams {
 
       const messageId = await this.client.xAdd(
         streamName,
-        "*", // Let Redis assign an ID automatically
+        '*', // Let Redis assign an ID automatically
         { message: JSON.stringify(data) },
       );
       return { messageId, requestId: data.requestId || data.correlationId };
     } catch (e) {
-      console.error("Error adding to Redis stream:", e);
+      console.error('Error adding to Redis stream:', e);
       throw e;
     }
   }
 
-  async readRedisStream(
-    STREAM_KEY: string,
-    callbackFunction: (msg: any) => void,
-  ) {
+  async readRedisStream(STREAM_KEY: string, callbackFunction: (msg: any) => void) {
     try {
       while (true) {
         if (!this.client.isOpen) return;
 
-        let lastId = "$"; // start from beginning. Use "$" to only read new ones.
+        let lastId = '$'; // start from beginning. Use "$" to only read new ones.
         const response = await this.client.xRead(
           [{ key: STREAM_KEY, id: lastId }],
           { BLOCK: 0, COUNT: 1 }, // wait max 5s, read up to 10 msgs
@@ -87,7 +82,7 @@ class RedisStreams {
               payload[key] = message[key];
             }
 
-            const jsonString = Object.values(payload).join("");
+            const jsonString = Object.values(payload).join('');
             const result = JSON.parse(jsonString);
             callbackFunction(result);
             break; // Exit the loop after processing and calling the callback
@@ -96,7 +91,7 @@ class RedisStreams {
         // Removed unreachable conditions === false block
       }
     } catch (e) {
-      console.error("Error reading from Redis stream:", e);
+      console.error('Error reading from Redis stream:', e);
       throw e;
     }
   }
@@ -113,7 +108,7 @@ class RedisStreams {
   ): Promise<any | null> {
     try {
       if (!this.client.isOpen) {
-        throw new Error("Redis client is not connected");
+        throw new Error('Redis client is not connected');
       }
 
       // If using consumer group
@@ -126,7 +121,7 @@ class RedisStreams {
           .xReadGroup(
             options.consumerGroup,
             options.consumerName,
-            [{ key: streamName, id: "0" }], // "0" means read pending messages from beginning
+            [{ key: streamName, id: '0' }], // "0" means read pending messages from beginning
             { BLOCK: 0, COUNT: 1 },
           )
           .catch(() => null);
@@ -142,7 +137,7 @@ class RedisStreams {
           response = await this.client.xReadGroup(
             options.consumerGroup,
             options.consumerName,
-            [{ key: streamName, id: ">" }], // ">" means new messages for this consumer
+            [{ key: streamName, id: '>' }], // ">" means new messages for this consumer
             { BLOCK: blockMs, COUNT: 1 },
           );
         }
@@ -157,12 +152,7 @@ class RedisStreams {
         }
 
         const msg = messages[0];
-        if (
-          !msg ||
-          typeof msg !== "object" ||
-          !("id" in msg) ||
-          !("message" in msg)
-        ) {
+        if (!msg || typeof msg !== 'object' || !('id' in msg) || !('message' in msg)) {
           return null;
         }
 
@@ -175,14 +165,14 @@ class RedisStreams {
           payload[key] = message[key];
         }
 
-        const jsonString = Object.values(payload).join("");
+        const jsonString = Object.values(payload).join('');
         const result = JSON.parse(jsonString);
 
         // Acknowledge the message
         try {
           await this.client.xAck(streamName, options.consumerGroup, id);
         } catch (ackError) {
-          console.error("Error acknowledging message:", ackError);
+          console.error('Error acknowledging message:', ackError);
         }
 
         // Filter by requestId if provided
@@ -206,21 +196,17 @@ class RedisStreams {
         // Step 1: Try reading new messages first (non-blocking quick check)
         try {
           const newMsgResponse = await this.client.xRead(
-            [{ key: streamName, id: "$" }],
+            [{ key: streamName, id: '$' }],
             { BLOCK: 100, COUNT: 10 }, // Quick check for new messages
           );
 
-          if (
-            newMsgResponse &&
-            newMsgResponse.length > 0 &&
-            newMsgResponse[0]
-          ) {
+          if (newMsgResponse && newMsgResponse.length > 0 && newMsgResponse[0]) {
             for (const msg of newMsgResponse[0].messages) {
               const payload: Record<string, any> = {};
               for (const key in msg.message) {
                 payload[key] = msg.message[key];
               }
-              const jsonString = Object.values(payload).join("");
+              const jsonString = Object.values(payload).join('');
               const result = JSON.parse(jsonString);
               const resultRequestId = result.requestId || result.correlationId;
               if (resultRequestId === options.requestId) {
@@ -233,7 +219,7 @@ class RedisStreams {
         }
 
         // Step 2: Search through existing messages from the beginning
-        let lastId = "0"; // Start from beginning
+        let lastId = '0'; // Start from beginning
         const maxAttempts = 200; // Search through up to 200 messages
         let attempts = 0;
         const seenIds = new Set<string>();
@@ -260,12 +246,7 @@ class RedisStreams {
             }
             seenIds.add(msg.id);
 
-            if (
-              !msg ||
-              typeof msg !== "object" ||
-              !("id" in msg) ||
-              !("message" in msg)
-            ) {
+            if (!msg || typeof msg !== 'object' || !('id' in msg) || !('message' in msg)) {
               continue;
             }
 
@@ -274,7 +255,7 @@ class RedisStreams {
               payload[key] = msg.message[key];
             }
 
-            const jsonString = Object.values(payload).join("");
+            const jsonString = Object.values(payload).join('');
             const result = JSON.parse(jsonString);
             const resultRequestId = result.requestId || result.correlationId;
 
@@ -290,11 +271,7 @@ class RedisStreams {
           }
 
           const lastMessage = messages[messages.length - 1];
-          if (
-            lastMessage &&
-            typeof lastMessage === "object" &&
-            "id" in lastMessage
-          ) {
+          if (lastMessage && typeof lastMessage === 'object' && 'id' in lastMessage) {
             lastId = lastMessage.id as string;
           } else {
             return null; // Invalid message structure
@@ -305,10 +282,10 @@ class RedisStreams {
         return null; // Searched through messages but didn't find a match
       } else {
         // No requestId filtering - just read next new message
-        const response = await this.client.xRead(
-          [{ key: streamName, id: "$" }],
-          { BLOCK: blockMs, COUNT: 1 },
-        );
+        const response = await this.client.xRead([{ key: streamName, id: '$' }], {
+          BLOCK: blockMs,
+          COUNT: 1,
+        });
 
         if (!response || response.length === 0 || !response[0]) {
           return null;
@@ -320,12 +297,7 @@ class RedisStreams {
         }
 
         const msg = messages[0];
-        if (
-          !msg ||
-          typeof msg !== "object" ||
-          !("id" in msg) ||
-          !("message" in msg)
-        ) {
+        if (!msg || typeof msg !== 'object' || !('id' in msg) || !('message' in msg)) {
           return null;
         }
 
@@ -334,31 +306,28 @@ class RedisStreams {
           payload[key] = msg.message[key];
         }
 
-        const jsonString = Object.values(payload).join("");
+        const jsonString = Object.values(payload).join('');
         const result = JSON.parse(jsonString);
         return result;
       }
     } catch (e) {
-      console.error("Error reading next message from Redis stream:", e);
+      console.error('Error reading next message from Redis stream:', e);
       throw e;
     }
   }
 
-  async readLatestFromRedisStream(
-    streamName: string,
-    count: number = 1,
-  ): Promise<any[]> {
+  async readLatestFromRedisStream(streamName: string, count: number = 1): Promise<any[]> {
     try {
       if (!this.client.isOpen) {
-        throw new Error("Redis client is not connected");
+        throw new Error('Redis client is not connected');
       }
 
       const response = await (this.client as any).sendCommand([
-        "XREVRANGE",
+        'XREVRANGE',
         streamName,
-        "+",
-        "-",
-        "COUNT",
+        '+',
+        '-',
+        'COUNT',
         String(count),
       ]);
 
@@ -379,13 +348,13 @@ class RedisStreams {
                 payload[String(key)] = String(value);
               }
             }
-          } else if (rawFields && typeof rawFields === "object") {
+          } else if (rawFields && typeof rawFields === 'object') {
             for (const key in rawFields) {
               payload[key] = rawFields[key];
             }
           }
 
-          const jsonString = Object.values(payload).join("");
+          const jsonString = Object.values(payload).join('');
           if (!jsonString) return null;
 
           try {
@@ -396,7 +365,7 @@ class RedisStreams {
         })
         .filter(Boolean);
     } catch (e) {
-      console.error("Error reading latest messages from Redis stream:", e);
+      console.error('Error reading latest messages from Redis stream:', e);
       throw e;
     }
   }

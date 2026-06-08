@@ -1,7 +1,7 @@
-import type { Request } from "express";
-import { getEngineStreamClient } from "../../../infrastructure/redis/engine-stream.service.js";
-import { parseStreamMessage } from "../../../shared/streams/stream-message.js";
-import { tradeInputService } from "./trade-input.service.js";
+import type { Request } from 'express';
+import { getEngineStreamClient } from '../../../infrastructure/redis/engine-stream.service.js';
+import { parseStreamMessage } from '../../../shared/streams/stream-message.js';
+import { tradeInputService } from './trade-input.service.js';
 
 function timeoutAfter(ms: number, message: string) {
   return new Promise<never>((_, reject) => {
@@ -18,7 +18,7 @@ class TradeService {
     }
 
     const orderPayload = {
-      function: "createOrder",
+      function: 'createOrder',
       userId,
       ...validatedInput.value,
     };
@@ -28,64 +28,59 @@ class TradeService {
       const requestId = await engineStreamClient.sendToEngine(orderPayload);
       const result = (await Promise.race([
         engineStreamClient.readEngineResponse(requestId, 5000),
-        timeoutAfter(3000, "Order creation request timed out after 3 seconds"),
+        timeoutAfter(3000, 'Order creation request timed out after 3 seconds'),
       ])) as { function?: string; message?: unknown } | null;
 
       if (!result) {
         return {
           ok: false as const,
-          error: "Request timeout: No response received within 3 seconds",
-          message:
-            "Order creation request timed out. The order may have been cancelled.",
+          error: 'Request timeout: No response received within 3 seconds',
+          message: 'Order creation request timed out. The order may have been cancelled.',
           timeout: true,
         };
       }
 
-      if (result.function !== "createOrder") {
+      if (result.function !== 'createOrder') {
         return {
           ok: false as const,
-          error: "Unexpected response from Engine",
-          message: "Failed to create order",
+          error: 'Unexpected response from Engine',
+          message: 'Failed to create order',
         };
       }
 
-      const orderResult = parseStreamMessage<Record<string, unknown>>(
-        result.message,
-        {},
-      );
+      const orderResult = parseStreamMessage<Record<string, unknown>>(result.message, {});
 
       if (orderResult.error || !orderResult.success) {
         return {
           ok: false as const,
-          error: String(orderResult.error || "Failed to create order"),
-          message: String(orderResult.error || "Failed to create order"),
+          error: String(orderResult.error || 'Failed to create order'),
+          message: String(orderResult.error || 'Failed to create order'),
         };
       }
 
       return {
         ok: true as const,
         data: {
-          message: String(orderResult.message || "Order created successfully"),
+          message: String(orderResult.message || 'Order created successfully'),
           orderId: orderResult.orderId,
         },
       };
     } catch (error) {
-      console.error("Error in create order:", error);
+      console.error('Error in create order:', error);
 
-      if (error instanceof Error && error.message.includes("timed out")) {
+      if (error instanceof Error && error.message.includes('timed out')) {
         return {
           ok: false as const,
-          error: "Request timeout: Order creation took longer than 3 seconds",
-          message:
-            "Order creation request timed out. The order may have been cancelled.",
+          error: 'Request timeout: Order creation took longer than 3 seconds',
+          message: 'Order creation request timed out. The order may have been cancelled.',
           timeout: true,
         };
       }
 
       return {
         ok: false as const,
-        error: "Failed to read response from Engine",
-        message: "Failed to create order",
+        error: 'Failed to read response from Engine',
+        message: 'Failed to create order',
       };
     }
   }
@@ -93,24 +88,21 @@ class TradeService {
   async getOpenOrders(req: Request, userId: string) {
     try {
       const { response } = await getEngineStreamClient(req).request({
-        function: "getOpenOrder",
+        function: 'getOpenOrder',
         userId,
       });
 
-      if (response?.function === "getOpenOrder") {
+      if (response?.function === 'getOpenOrder') {
         return { ok: true as const, data: { message: response.message } };
       }
 
-      console.warn("Unexpected response structure for open orders:", response);
+      console.warn('Unexpected response structure for open orders:', response);
       return { ok: true as const, data: { message: JSON.stringify([]) } };
     } catch (error) {
-      console.error(
-        "Error reading from secondary Redis stream for open orders:",
-        error,
-      );
+      console.error('Error reading from secondary Redis stream for open orders:', error);
       return {
         ok: false as const,
-        error: "Failed to fetch open orders",
+        error: 'Failed to fetch open orders',
         message: JSON.stringify([]),
       };
     }
@@ -120,25 +112,22 @@ class TradeService {
     if (!orderId) {
       return {
         ok: false as const,
-        error: "Missing required parameters: orderId",
+        error: 'Missing required parameters: orderId',
       };
     }
 
     try {
       const { response } = await getEngineStreamClient(req).request({
-        function: "createCloseOrder",
+        function: 'createCloseOrder',
         orderId,
         userId,
       });
 
-      if (response?.function !== "createCloseOrder") {
-        return { ok: false as const, error: "Failed to close order" };
+      if (response?.function !== 'createCloseOrder') {
+        return { ok: false as const, error: 'Failed to close order' };
       }
 
-      const orderData = parseStreamMessage<Record<string, unknown>>(
-        response.message,
-        {},
-      );
+      const orderData = parseStreamMessage<Record<string, unknown>>(response.message, {});
 
       if (orderData.error) {
         return {
@@ -149,23 +138,23 @@ class TradeService {
       }
 
       if (orderData.orderId !== orderId) {
-        console.warn("Warning: Order ID mismatch during close order.");
-        return { ok: false as const, error: "Order ID mismatch" };
+        console.warn('Warning: Order ID mismatch during close order.');
+        return { ok: false as const, error: 'Order ID mismatch' };
       }
 
       return {
         ok: true as const,
         data: {
-          message: "Order closed successfully",
+          message: 'Order closed successfully',
           order: orderData,
         },
       };
     } catch (error) {
-      console.error("Error in close order:", error);
+      console.error('Error in close order:', error);
       return {
         ok: false as const,
-        error: "Failed to close order",
-        message: "Internal server error",
+        error: 'Failed to close order',
+        message: 'Internal server error',
       };
     }
   }
@@ -173,11 +162,11 @@ class TradeService {
   async getCloseOrders(req: Request, userId: string) {
     try {
       const { response } = await getEngineStreamClient(req).request({
-        function: "getCloseOrders",
+        function: 'getCloseOrders',
         userId,
       });
 
-      if (response?.function !== "getCloseOrders") {
+      if (response?.function !== 'getCloseOrders') {
         return { ok: true as const, data: { message: [] } };
       }
 
@@ -189,13 +178,10 @@ class TradeService {
         },
       };
     } catch (error) {
-      console.error(
-        "Error reading from secondary Redis stream for close orders:",
-        error,
-      );
+      console.error('Error reading from secondary Redis stream for close orders:', error);
       return {
         ok: false as const,
-        error: "Failed to fetch close orders",
+        error: 'Failed to fetch close orders',
         message: [],
       };
     }

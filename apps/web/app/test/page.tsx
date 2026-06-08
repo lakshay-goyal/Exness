@@ -1,15 +1,10 @@
-"use client";
+'use client';
 
-import type { ReactElement } from "react";
-import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@repo/ui/components/card";
-import { Input } from "@repo/ui/components/input";
-import { Separator } from "@repo/ui/components/separator";
+import type { ReactElement } from 'react';
+import { Button } from '@repo/ui/components/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/components/card';
+import { Input } from '@repo/ui/components/input';
+import { Separator } from '@repo/ui/components/separator';
 
 export default function LandingPage(): ReactElement {
   return (
@@ -37,8 +32,8 @@ export default function LandingPage(): ReactElement {
           Simplify Authentication for Your Apps
         </h2>
         <p className="text-muted-foreground mb-8 max-w-2xl">
-          BetterAuth makes login simple, secure, and scalable. Integrate
-          passwordless and OAuth effortlessly.
+          BetterAuth makes login simple, secure, and scalable. Integrate passwordless and OAuth
+          effortlessly.
         </p>
         <div className="flex gap-3">
           <Button size="lg">Start for Free</Button>
@@ -57,25 +52,23 @@ export default function LandingPage(): ReactElement {
       >
         {[
           {
-            title: "Passwordless Login",
-            desc: "Let users log in with just their email — no password required.",
+            title: 'Passwordless Login',
+            desc: 'Let users log in with just their email — no password required.',
           },
           {
-            title: "OAuth Integration",
-            desc: "Connect Google, GitHub, and more in a few clicks.",
+            title: 'OAuth Integration',
+            desc: 'Connect Google, GitHub, and more in a few clicks.',
           },
           {
-            title: "Secure Tokens",
-            desc: "JWT-based authentication ensures end-to-end security.",
+            title: 'Secure Tokens',
+            desc: 'JWT-based authentication ensures end-to-end security.',
           },
         ].map((feature) => (
           <Card key={feature.title} className="border shadow-sm">
             <CardHeader>
               <CardTitle>{feature.title}</CardTitle>
             </CardHeader>
-            <CardContent className="text-muted-foreground">
-              {feature.desc}
-            </CardContent>
+            <CardContent className="text-muted-foreground">{feature.desc}</CardContent>
           </Card>
         ))}
       </section>
@@ -85,9 +78,7 @@ export default function LandingPage(): ReactElement {
       {/* CTA Section */}
       <section id="contact" className="bg-muted/30 px-8 py-20 text-center">
         <h3 className="mb-4 text-3xl font-bold">Stay Updated</h3>
-        <p className="text-muted-foreground mb-6">
-          Join our newsletter to get the latest updates.
-        </p>
+        <p className="text-muted-foreground mb-6">Join our newsletter to get the latest updates.</p>
         <form className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 sm:flex-row">
           <Input placeholder="Enter your email" type="email" />
           <Button type="submit">Subscribe</Button>

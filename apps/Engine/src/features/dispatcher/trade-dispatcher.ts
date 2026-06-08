@@ -1,28 +1,28 @@
-import { config } from "@repo/config";
-import { createUserFunction } from "../users/create-user.handler.js";
-import { createOrderFunction } from "../orders/create-order.handler.js";
-import { getOpenOrderFunction } from "../orders/get-open-orders.handler.js";
-import { getCloseOrdersFunction } from "../orders/get-closed-orders.handler.js";
-import { createCloseOrderFunction } from "../orders/close-order.handler.js";
-import { pricePollerFunction } from "../market-data/price-poller.handler.js";
+import { config } from '@repo/config';
+import { createUserFunction } from '../users/create-user.handler.js';
+import { createOrderFunction } from '../orders/create-order.handler.js';
+import { getOpenOrderFunction } from '../orders/get-open-orders.handler.js';
+import { getCloseOrdersFunction } from '../orders/get-closed-orders.handler.js';
+import { createCloseOrderFunction } from '../orders/close-order.handler.js';
+import { pricePollerFunction } from '../market-data/price-poller.handler.js';
 
 export async function tradeFunction(result: any) {
-  if (result.function === "createCloseOrder") {
+  if (result.function === 'createCloseOrder') {
     await createCloseOrderFunction(result);
   }
-  if (result.function === "createUser") {
+  if (result.function === 'createUser') {
     await createUserFunction(result);
   }
-  if (result.function === "createOrder") {
+  if (result.function === 'createOrder') {
     await createOrderFunction(result);
   }
-  if (result.function === "getOpenOrder") {
+  if (result.function === 'getOpenOrder') {
     await getOpenOrderFunction(result);
   }
-  if (result.function === "getCloseOrders") {
+  if (result.function === 'getCloseOrders') {
     await getCloseOrdersFunction(result);
   }
-  if (result.function === "pricePoller") {
+  if (result.function === 'pricePoller') {
     await pricePollerFunction(result);
   }
 }

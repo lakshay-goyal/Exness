@@ -1,4 +1,4 @@
-import type { Request } from "express";
+import type { Request } from 'express';
 
 export type AuthenticatedRequest = Request & {
   user?: {

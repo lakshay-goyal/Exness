@@ -1,9 +1,9 @@
-import type { Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { config, HTTP_HEADERS, TOKEN_TYPES, MESSAGES } from "@repo/config";
-import { prisma } from "@repo/db";
-import ResponseWriter from "../utils/response-writer.js";
-import type { AuthenticatedRequest } from "../features/auth/types/auth-request.js";
+import type { Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { config, HTTP_HEADERS, TOKEN_TYPES, MESSAGES } from '@repo/config';
+import { prisma } from '@repo/db';
+import ResponseWriter from '../utils/response-writer.js';
+import type { AuthenticatedRequest } from '../features/auth/types/auth-request.js';
 
 export const authMiddleware = async (
   req: AuthenticatedRequest,
@@ -12,7 +12,7 @@ export const authMiddleware = async (
 ) => {
   try {
     const authHeader = req.header(HTTP_HEADERS.AUTHORIZATION);
-    const token = authHeader?.replace(HTTP_HEADERS.BEARER_PREFIX, "");
+    const token = authHeader?.replace(HTTP_HEADERS.BEARER_PREFIX, '');
 
     if (!token) {
       return ResponseWriter.unauthorized(res, MESSAGES.ACCESS_DENIED_NO_TOKEN);
@@ -53,7 +53,7 @@ export const authMiddleware = async (
     };
     next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    console.error('Auth middleware error:', error);
     ResponseWriter.unauthorized(res, MESSAGES.INVALID_TOKEN);
   }
 };

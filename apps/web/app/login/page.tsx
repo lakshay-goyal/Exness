@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import axios from "axios";
-import { Navbar } from "@/components/Navbar";
-import { GuestRoute } from "@/components/GuestRoute";
-import { backendRequestHeaders, getBackendUrl } from "@/lib/backend-api";
+import { useState } from 'react';
+import Link from 'next/link';
+import axios from 'axios';
+import { Navbar } from '@/components/Navbar';
+import { GuestRoute } from '@/components/GuestRoute';
+import { backendRequestHeaders, getBackendUrl } from '@/lib/backend-api';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +30,7 @@ const Login: React.FC = () => {
       );
       setIsSubmitted(true);
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -61,15 +61,14 @@ const Login: React.FC = () => {
                 </div>
                 <h1 className="mb-4 text-3xl font-bold">Check Your Email</h1>
                 <p className="text-muted-foreground mb-8">
-                  We've sent a trading account setup link to{" "}
-                  <strong>{email}</strong>. Click the link in the email to
-                  complete your registration and start trading.
+                  We've sent a trading account setup link to <strong>{email}</strong>. Click the
+                  link in the email to complete your registration and start trading.
                 </p>
                 <div className="space-y-4">
                   <button
                     onClick={() => {
                       setIsSubmitted(false);
-                      setEmail("");
+                      setEmail('');
                     }}
                     className="border-border hover:bg-accent w-full rounded-lg border px-6 py-3 font-medium transition-colors"
                   >
@@ -107,10 +106,7 @@ const Login: React.FC = () => {
             <div className="bg-card border-border rounded-2xl border p-8 shadow-lg">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="mb-2 block text-sm font-medium"
-                  >
+                  <label htmlFor="email" className="mb-2 block text-sm font-medium">
                     Email Address
                   </label>
                   <input
@@ -153,7 +149,7 @@ const Login: React.FC = () => {
                       Creating Account...
                     </>
                   ) : (
-                    "Get Started"
+                    'Get Started'
                   )}
                 </button>
               </form>
@@ -161,8 +157,7 @@ const Login: React.FC = () => {
               <div className="border-border mt-6 border-t pt-6">
                 <div className="text-center">
                   <p className="text-muted-foreground mb-4 text-sm">
-                    By continuing, you agree to our Terms of Service and Privacy
-                    Policy
+                    By continuing, you agree to our Terms of Service and Privacy Policy
                   </p>
                   <div className="text-muted-foreground flex items-center justify-center space-x-4 text-xs">
                     <span>✓ No hidden fees</span>
@@ -174,9 +169,7 @@ const Login: React.FC = () => {
             </div>
 
             <div className="mt-12 space-y-4">
-              <h3 className="mb-6 text-center text-lg font-semibold">
-                Why Choose CryptoCFD?
-              </h3>
+              <h3 className="mb-6 text-center text-lg font-semibold">Why Choose CryptoCFD?</h3>
 
               <div className="grid gap-4">
                 <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
@@ -249,12 +242,10 @@ const Login: React.FC = () => {
 
             <div className="bg-muted mt-8 rounded-lg p-4">
               <p className="text-muted-foreground text-xs">
-                <strong>Risk Warning:</strong> CFDs are complex instruments and
-                come with a high risk of losing money rapidly due to leverage.
-                76% of retail investor accounts lose money when trading CFDs.
-                You should consider whether you understand how CFDs work and
-                whether you can afford to take the high risk of losing your
-                money.
+                <strong>Risk Warning:</strong> CFDs are complex instruments and come with a high
+                risk of losing money rapidly due to leverage. 76% of retail investor accounts lose
+                money when trading CFDs. You should consider whether you understand how CFDs work
+                and whether you can afford to take the high risk of losing your money.
               </p>
             </div>
           </div>

@@ -1,9 +1,9 @@
-import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
-import { nodemailerSender } from "@repo/utils";
-import { config } from "@repo/config";
-import { prisma } from "@repo/db";
-import type { Request } from "express";
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { nodemailerSender } from '@repo/utils';
+import { config } from '@repo/config';
+import { prisma } from '@repo/db';
+import type { Request } from 'express';
 
 import {
   createLegacyJwt,
@@ -12,9 +12,9 @@ import {
   hashMobilePin,
   isValidPin,
   verifyMobileRefreshToken,
-} from "./mobile-auth.js";
-import { ensureTradingUser } from "./trading-user.js";
-import { engineUserService } from "./engine-user.service.js";
+} from './mobile-auth.js';
+import { ensureTradingUser } from './trading-user.js';
+import { engineUserService } from './engine-user.service.js';
 
 const jwtSecret = config.JWT_SECRET;
 
@@ -47,7 +47,7 @@ class AuthService {
     const mobileUser = await getMobileAuthUser(req);
 
     if (!mobileUser) {
-      return { ok: false as const, error: "No active auth session" };
+      return { ok: false as const, error: 'No active auth session' };
     }
 
     const token = createLegacyJwt({
@@ -60,13 +60,9 @@ class AuthService {
     });
 
     try {
-      await this.ensureEngineUser(
-        req,
-        mobileUser.tradingUser.userID,
-        mobileUser.tradingUser.email,
-      );
+      await this.ensureEngineUser(req, mobileUser.tradingUser.userID, mobileUser.tradingUser.email);
     } catch (error) {
-      console.error("Failed to ensure mobile user in Engine:", error);
+      console.error('Failed to ensure mobile user in Engine:', error);
     }
 
     return {
@@ -90,14 +86,14 @@ class AuthService {
 
   async refreshMobileToken(req: Request, refreshToken: string) {
     if (!refreshToken) {
-      return { ok: false as const, error: "Refresh token is required" };
+      return { ok: false as const, error: 'Refresh token is required' };
     }
 
     try {
       const refreshUser = verifyMobileRefreshToken(refreshToken);
 
       if (!refreshUser) {
-        return { ok: false as const, error: "Invalid refresh token" };
+        return { ok: false as const, error: 'Invalid refresh token' };
       }
 
       const tradingUser = await prisma.user.findFirst({
@@ -107,7 +103,7 @@ class AuthService {
       });
 
       if (!tradingUser || tradingUser.email !== refreshUser.email) {
-        return { ok: false as const, error: "Invalid refresh token" };
+        return { ok: false as const, error: 'Invalid refresh token' };
       }
 
       const authUser = await prisma.authUser.findUnique({
@@ -122,10 +118,7 @@ class AuthService {
       try {
         await this.ensureEngineUser(req, tradingUser.userID, tradingUser.email);
       } catch (error) {
-        console.error(
-          "Failed to ensure refreshed mobile user in Engine:",
-          error,
-        );
+        console.error('Failed to ensure refreshed mobile user in Engine:', error);
       }
 
       return {
@@ -146,7 +139,7 @@ class AuthService {
         },
       };
     } catch {
-      return { ok: false as const, error: "Invalid or expired refresh token" };
+      return { ok: false as const, error: 'Invalid or expired refresh token' };
     }
   }
 
@@ -154,11 +147,11 @@ class AuthService {
     const mobileUser = await getMobileAuthUser(req);
 
     if (!mobileUser) {
-      return { ok: false as const, error: "No active auth session" };
+      return { ok: false as const, error: 'No active auth session' };
     }
 
     if (!isValidPin(pin)) {
-      return { ok: false as const, error: "PIN must be 4 to 6 digits" };
+      return { ok: false as const, error: 'PIN must be 4 to 6 digits' };
     }
 
     await prisma.authUser.update({
@@ -177,12 +170,12 @@ class AuthService {
 
   async login(email: string) {
     if (!email) {
-      return { ok: false as const, error: "Email is required" };
+      return { ok: false as const, error: 'Email is required' };
     }
 
     if (!jwtSecret) {
-      console.error("JWT_SECRET is not configured");
-      return { ok: false as const, error: "Server configuration error" };
+      console.error('JWT_SECRET is not configured');
+      return { ok: false as const, error: 'Server configuration error' };
     }
 
     try {
@@ -190,12 +183,12 @@ class AuthService {
       const userId = existingTradingUser?.userID || uuidv4();
       const token = jwt.sign({ userId, email }, jwtSecret);
 
-      if (process.env.NODE_ENV === "production") {
+      if (process.env.NODE_ENV === 'production') {
         try {
           await nodemailerSender(email, token);
         } catch (emailError: unknown) {
           console.error(
-            "Failed to send verification email:",
+            'Failed to send verification email:',
             emailError instanceof Error ? emailError.message : emailError,
           );
         }
@@ -203,19 +196,19 @@ class AuthService {
 
       return {
         ok: true as const,
-        data: { message: "Verification link send", email },
+        data: { message: 'Verification link send', email },
       };
     } catch (error: unknown) {
-      console.error("Login error:", error);
+      console.error('Login error:', error);
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to process login request";
+        error instanceof Error ? error.message : 'Failed to process login request';
       return { ok: false as const, error: errorMessage };
     }
   }
 
   async verifyEmailLink(req: Request, token: string) {
     if (!token) {
-      return { ok: false as const, error: "Invalid token ❌" };
+      return { ok: false as const, error: 'Invalid token ❌' };
     }
 
     try {
@@ -227,51 +220,48 @@ class AuthService {
 
         try {
           const result = await this.ensureEngineUser(req, userId, userEmail);
-          if (result && result.function === "createUser") {
-            if (
-              result.message === userId ||
-              result.message === "user Already Exist"
-            ) {
+          if (result && result.function === 'createUser') {
+            if (result.message === userId || result.message === 'user Already Exist') {
               return {
                 ok: true as const,
                 redirect: `${config.FRONTEND_URL}/dashboard?token=${token}`,
               };
             }
 
-            return { ok: true as const, text: "User already existed" };
+            return { ok: true as const, text: 'User already existed' };
           }
         } catch {
-          return { ok: false as const, error: "Trade not placed", statusCode: 411 };
+          return { ok: false as const, error: 'Trade not placed', statusCode: 411 };
         }
       }
 
-      return { ok: false as const, error: "Invalid token ❌" };
+      return { ok: false as const, error: 'Invalid token ❌' };
     } catch {
-      return { ok: false as const, error: "Token expired or invalid ❌" };
+      return { ok: false as const, error: 'Token expired or invalid ❌' };
     }
   }
 
   verifyAccessToken(token: string) {
     if (!token) {
-      return { ok: false as const, error: "No token provided." };
+      return { ok: false as const, error: 'No token provided.' };
     }
 
     try {
       const verify = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
 
       if (!verify) {
-        return { ok: false as const, error: "Invalid token." };
+        return { ok: false as const, error: 'Invalid token.' };
       }
 
-      if (verify.type === "refresh") {
-        return { ok: false as const, error: "Invalid token type." };
+      if (verify.type === 'refresh') {
+        return { ok: false as const, error: 'Invalid token type.' };
       }
 
       const userEmail = verify.email;
       const userId = verify.userId;
 
       if (!userId || !userEmail) {
-        return { ok: false as const, error: "Invalid token payload." };
+        return { ok: false as const, error: 'Invalid token payload.' };
       }
 
       return {
@@ -279,7 +269,7 @@ class AuthService {
         data: { userId, userEmail },
       };
     } catch {
-      return { ok: false as const, error: "Invalid or expired token." };
+      return { ok: false as const, error: 'Invalid or expired token.' };
     }
   }
 
@@ -305,7 +295,7 @@ class AuthService {
       try {
         const result = await this.ensureEngineUser(req, userId, userEmail);
 
-        if (result && result.function === "createUser") {
+        if (result && result.function === 'createUser') {
           const userAfterCreation = await prisma.user.findFirst({
             where: {
               OR: [{ userID: userId }, { email: userEmail }],
@@ -319,18 +309,18 @@ class AuthService {
                 success: true,
                 exists: true,
                 userId: userAfterCreation.userID,
-                message: "User verified and exists in database",
+                message: 'User verified and exists in database',
               },
             };
           }
         }
       } catch (e) {
-        console.error("Error creating user:", e);
+        console.error('Error creating user:', e);
       }
 
       return {
         ok: false as const,
-        error: "User not found in database and creation is in progress.",
+        error: 'User not found in database and creation is in progress.',
         exists: false,
       };
     }
@@ -341,7 +331,7 @@ class AuthService {
         success: true,
         exists: true,
         userId: user.userID,
-        message: "User verified and exists in database",
+        message: 'User verified and exists in database',
       },
     };
   }
@@ -362,22 +352,17 @@ class AuthService {
     const canonicalUserId = existingUser?.userID || userId;
 
     try {
-      const result = await this.ensureEngineUser(
-        req,
-        canonicalUserId,
-        userEmail,
-      );
+      const result = await this.ensureEngineUser(req, canonicalUserId, userEmail);
 
-      if (result && result.function === "createUser") {
+      if (result && result.function === 'createUser') {
         return {
           ok: true as const,
           data: {
             success: true,
             message:
-              result.message === canonicalUserId ||
-              result.message === "user Already Exist"
-                ? "User ensured in Engine and DBStorage"
-                : "User creation initiated",
+              result.message === canonicalUserId || result.message === 'user Already Exist'
+                ? 'User ensured in Engine and DBStorage'
+                : 'User creation initiated',
             userId: canonicalUserId,
           },
         };
@@ -387,15 +372,15 @@ class AuthService {
         ok: true as const,
         data: {
           success: true,
-          message: "User creation initiated",
+          message: 'User creation initiated',
           userId: canonicalUserId,
         },
       };
     } catch (e) {
-      console.error("Error ensuring user:", e);
+      console.error('Error ensuring user:', e);
       return {
         ok: false as const,
-        error: "Failed to ensure user, but request was sent to Engine",
+        error: 'Failed to ensure user, but request was sent to Engine',
       };
     }
   }

@@ -1,1 +1,1 @@
-export { users } from "@repo/trading-core/state";
+export { users } from '@repo/trading-core/state';

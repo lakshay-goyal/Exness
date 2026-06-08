@@ -1,17 +1,14 @@
-import Svg, { Circle, G, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 
 type TradingValueIconProps = {
-  name: "setup" | "security" | "sync";
+  name: 'setup' | 'security' | 'sync';
 };
 
 export function TradingValueIcon({ name }: TradingValueIconProps) {
-  if (name === "security") {
+  if (name === 'security') {
     return (
       <Svg width={34} height={34} viewBox="0 0 34 34" fill="none">
-        <Path
-          d="M17 4L27 8V16C27 22 23 27 17 30C11 27 7 22 7 16V8L17 4Z"
-          fill="#F4F4F4"
-        />
+        <Path d="M17 4L27 8V16C27 22 23 27 17 30C11 27 7 22 7 16V8L17 4Z" fill="#F4F4F4" />
         <Rect x="12" y="15" width="10" height="8" rx="2" fill="#111111" />
         <Path
           d="M14 15V12C14 10 15 9 17 9C19 9 20 10 20 12V15"
@@ -23,7 +20,7 @@ export function TradingValueIcon({ name }: TradingValueIconProps) {
     );
   }
 
-  if (name === "sync") {
+  if (name === 'sync') {
     return (
       <Svg width={34} height={34} viewBox="0 0 34 34" fill="none">
         <Circle cx="17" cy="17" r="13" fill="#F4F4F4" />

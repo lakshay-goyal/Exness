@@ -1,3 +1,3 @@
-import { WalletDashboardTabScreen } from "@/components/HelloWorldScreen";
+import { WalletDashboardTabScreen } from '@/components/HelloWorldScreen';
 
 export default WalletDashboardTabScreen;

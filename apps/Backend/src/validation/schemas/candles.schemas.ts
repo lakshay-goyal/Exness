@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { SymbolSchema, CandleIntervalSchema } from "./common.schemas.js";
+import { z } from 'zod';
+import { SymbolSchema, CandleIntervalSchema } from './common.schemas.js';
 
 /**
  * Candles/market data validation schemas
@@ -17,17 +17,23 @@ export const GetCandlesQuerySchema = z.object({
     .string()
     .optional()
     .transform((val) => (val ? Number.parseInt(val, 10) : undefined))
-    .pipe(z.number().min(1, "Limit must be at least 1").max(1000, "Limit must not exceed 1000").optional()),
+    .pipe(
+      z
+        .number()
+        .min(1, 'Limit must be at least 1')
+        .max(1000, 'Limit must not exceed 1000')
+        .optional(),
+    ),
   startTime: z
     .string()
     .optional()
     .transform((val) => (val ? Number.parseInt(val, 10) : undefined))
-    .pipe(z.number().positive("Start time must be a positive timestamp").optional()),
+    .pipe(z.number().positive('Start time must be a positive timestamp').optional()),
   endTime: z
     .string()
     .optional()
     .transform((val) => (val ? Number.parseInt(val, 10) : undefined))
-    .pipe(z.number().positive("End time must be a positive timestamp").optional()),
+    .pipe(z.number().positive('End time must be a positive timestamp').optional()),
 });
 
 /**
@@ -47,8 +53,8 @@ export const RefreshAggregatesSchema = z.object({
     .union([z.boolean(), z.string()])
     .optional()
     .transform((val) => {
-      if (typeof val === "boolean") return val;
-      if (typeof val === "string") return val === "true" || val === "1";
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val === 'true' || val === '1';
       return false;
     }),
 });

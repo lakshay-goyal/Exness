@@ -7,11 +7,11 @@ services:
       POSTGRES_PASSWORD: postgresql
       POSTGRES_DB: exness
     ports:
-      - "5434:5432"
+      - '5434:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgresql -d exness"]
+      test: ['CMD-SHELL', 'pg_isready -U postgresql -d exness']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,11 +26,11 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: mydb
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser -d mydb"]
+      test: ['CMD-SHELL', 'pg_isready -U myuser -d mydb']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,11 +41,11 @@ services:
     image: redis:7-alpine
     container_name: exness-redis
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,11 +60,11 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: admin123
       MONGO_INITDB_DATABASE: exness_snapshots
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -86,7 +86,7 @@ services:
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
     ports:
-      - "5555:5555"
+      - '5555:5555'
     command: >
       sh -c "
         cd /app/packages/db &&
@@ -132,7 +132,7 @@ services:
         condition: service_healthy
     networks:
       - exness-network
-    restart: "no"
+    restart: 'no'
 
   backend:
     build:
@@ -149,7 +149,7 @@ services:
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -250,7 +250,7 @@ services:
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
     ports:
-      - "7070:7070"
+      - '7070:7070'
     depends_on:
       redis:
         condition: service_healthy
@@ -323,7 +323,7 @@ services:
       PORT: 3001
       NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
     ports:
-      - "3001:3001"
+      - '3001:3001'
     depends_on:
       backend:
         condition: service_started
@@ -349,7 +349,7 @@ services:
       BACKEND_URL: http://localhost:8000
       PORT: 3000
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - exness-network
     restart: unless-stopped
@@ -363,4 +363,3 @@ volumes:
 networks:
   exness-network:
     driver: bridge
-

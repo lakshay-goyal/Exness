@@ -13,7 +13,7 @@
   "dependencies": {
     "@repo/trading-core": "workspace:*",
     "@repo/types": "workspace:*",
-    "@repo/ui":"workspace:*",
+    "@repo/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "axios": "^1.7.2",

@@ -1,5 +1,5 @@
-import { CreateOrderSchema } from "../../../validation/schemas/trading.schemas.js";
-import type { CreateOrderInput } from "../../../validation/schemas/trading.schemas.js";
+import { CreateOrderSchema } from '../../../validation/schemas/trading.schemas.js';
+import type { CreateOrderInput } from '../../../validation/schemas/trading.schemas.js';
 
 type ValidatedCreateTradeInput =
   | {
@@ -29,7 +29,7 @@ class TradeInputService {
       const firstError = parseResult.error.issues[0];
       return {
         ok: false,
-        error: firstError?.message || "Invalid order parameters",
+        error: firstError?.message || 'Invalid order parameters',
       };
     }
 

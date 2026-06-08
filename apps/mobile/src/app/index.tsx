@@ -1,55 +1,43 @@
-import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuthBottomSheet } from "@/components/AuthBottomSheet";
-import { BiometricSetupScreen } from "@/components/BiometricSetupScreen";
-import { CreatePinScreen } from "@/components/CreatePinScreen";
-import { GoogleAuthSheet } from "@/components/GoogleAuthSheet";
-import { MoodCharacters } from "@/components/MoodCharacters";
-import { PressableScaleMotion } from "@/components/PressMotion";
-import { TradingSetupIllustration } from "@/components/TradingSetupIllustration";
-import { TradingValueIcon } from "@/components/TradingValueIcon";
-import { WalletLoadingScreen } from "@/components/WalletLoadingScreen";
-import { logAuthEvent } from "@/lib/auth-logger";
-import { restoreMobileSession } from "@/lib/mobile-auth-api";
-import { AnimatedSplash } from "@/components/AnimatedSplash";
+import { AuthBottomSheet } from '@/components/AuthBottomSheet';
+import { BiometricSetupScreen } from '@/components/BiometricSetupScreen';
+import { CreatePinScreen } from '@/components/CreatePinScreen';
+import { GoogleAuthSheet } from '@/components/GoogleAuthSheet';
+import { MoodCharacters } from '@/components/MoodCharacters';
+import { PressableScaleMotion } from '@/components/PressMotion';
+import { TradingSetupIllustration } from '@/components/TradingSetupIllustration';
+import { TradingValueIcon } from '@/components/TradingValueIcon';
+import { WalletLoadingScreen } from '@/components/WalletLoadingScreen';
+import { logAuthEvent } from '@/lib/auth-logger';
+import { restoreMobileSession } from '@/lib/mobile-auth-api';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 
-type AppScreen =
-  | "booting"
-  | "onboarding"
-  | "setup"
-  | "pin"
-  | "walletLoading"
-  | "biometric";
+type AppScreen = 'booting' | 'onboarding' | 'setup' | 'pin' | 'walletLoading' | 'biometric';
 
 export default function App() {
   const router = useRouter();
-  const [screen, setScreen] = useState<AppScreen>("booting");
+  const [screen, setScreen] = useState<AppScreen>('booting');
   const [isAnimatedSplashVisible, setIsAnimatedSplashVisible] = useState(true);
   const [isAuthSheetVisible, setIsAuthSheetVisible] = useState(false);
-  const [googleAuthMode, setGoogleAuthMode] = useState<"login" | "create">(
-    "login",
-  );
-  const [isGoogleAuthSheetVisible, setIsGoogleAuthSheetVisible] =
-    useState(false);
+  const [googleAuthMode, setGoogleAuthMode] = useState<'login' | 'create'>('login');
+  const [isGoogleAuthSheetVisible, setIsGoogleAuthSheetVisible] = useState(false);
   const { height, width } = useWindowDimensions();
   const moodboardWidth = Math.min(width * 1.24, 470);
   const moodboardHeight = moodboardWidth * (430 / 390);
   const completeOnboarding = useCallback(() => {
-    logAuthEvent("onboarding_completed");
-    router.replace("/wallet");
+    logAuthEvent('onboarding_completed');
+    router.replace('/wallet');
   }, [router]);
   const hideAnimatedSplash = useCallback(() => {
     setIsAnimatedSplashVisible(false);
   }, []);
   const animatedSplashOverlay = (
-    <AnimatedSplash
-      visible={isAnimatedSplashVisible}
-      onFinish={hideAnimatedSplash}
-    />
+    <AnimatedSplash visible={isAnimatedSplashVisible} onFinish={hideAnimatedSplash} />
   );
 
   useEffect(() => {
@@ -62,23 +50,23 @@ export default function App() {
         }
 
         if (session) {
-          router.replace("/wallet");
+          router.replace('/wallet');
           return;
         }
 
-        setScreen("onboarding");
+        setScreen('onboarding');
       })
       .catch((err) => {
         logAuthEvent(
-          "session_restore_failed",
+          'session_restore_failed',
           {
             error: err instanceof Error ? err.message : String(err),
           },
-          "warn",
+          'warn',
         );
 
         if (isMounted) {
-          setScreen("onboarding");
+          setScreen('onboarding');
         }
       });
 
@@ -87,7 +75,7 @@ export default function App() {
     };
   }, [router]);
 
-  if (screen === "booting") {
+  if (screen === 'booting') {
     return (
       <View className="flex-1 bg-[#1B1B1B]">
         <StatusBar style="light" />
@@ -96,17 +84,17 @@ export default function App() {
     );
   }
 
-  if (screen === "pin") {
+  if (screen === 'pin') {
     return (
       <View className="flex-1">
         <CreatePinScreen
           onBack={() => {
-            logAuthEvent("pin_screen_back_pressed");
-            setScreen("setup");
+            logAuthEvent('pin_screen_back_pressed');
+            setScreen('setup');
           }}
           onComplete={() => {
-            logAuthEvent("pin_flow_completed");
-            setScreen("walletLoading");
+            logAuthEvent('pin_flow_completed');
+            setScreen('walletLoading');
           }}
         />
         {animatedSplashOverlay}
@@ -114,13 +102,13 @@ export default function App() {
     );
   }
 
-  if (screen === "walletLoading") {
+  if (screen === 'walletLoading') {
     return (
       <View className="flex-1">
         <WalletLoadingScreen
           onComplete={() => {
-            logAuthEvent("wallet_creation_animation_completed");
-            setScreen("biometric");
+            logAuthEvent('wallet_creation_animation_completed');
+            setScreen('biometric');
           }}
         />
         {animatedSplashOverlay}
@@ -128,7 +116,7 @@ export default function App() {
     );
   }
 
-  if (screen === "biometric") {
+  if (screen === 'biometric') {
     return (
       <View className="flex-1">
         <BiometricSetupScreen onComplete={completeOnboarding} />
@@ -137,7 +125,7 @@ export default function App() {
     );
   }
 
-  if (screen === "setup") {
+  if (screen === 'setup') {
     return (
       <View className="flex-1 bg-[#1B1B1B]">
         <StatusBar style="light" />
@@ -149,8 +137,8 @@ export default function App() {
                 accessibilityLabel="Go back"
                 className="h-10 w-10 items-start justify-center"
                 onPress={() => {
-                  logAuthEvent("setup_back_pressed");
-                  setScreen("onboarding");
+                  logAuthEvent('setup_back_pressed');
+                  setScreen('onboarding');
                 }}
               >
                 <Text className="text-[32px] leading-9 text-white">‹</Text>
@@ -160,9 +148,7 @@ export default function App() {
                 accessibilityLabel="Help"
                 className="h-10 w-10 items-end justify-center"
               >
-                <Text className="text-[26px] font-bold leading-8 text-white">
-                  ?
-                </Text>
+                <Text className="text-[26px] font-bold leading-8 text-white">?</Text>
               </PressableScaleMotion>
             </View>
 
@@ -172,8 +158,7 @@ export default function App() {
                 Start Trading
               </Text>
               <Text className="mt-2 text-center text-[16px] leading-6 text-[#9A9A9A]">
-                Login or create your Exness account to access markets, balances,
-                and order tools.
+                Login or create your Exness account to access markets, balances, and order tools.
               </Text>
             </View>
 
@@ -185,8 +170,8 @@ export default function App() {
                     Seamless account setup
                   </Text>
                   <Text className="mt-1 text-[15px] leading-6 text-[#9A9A9A]">
-                    Sign in with Google and we will prepare your demo balance
-                    and trading profile automatically.
+                    Sign in with Google and we will prepare your demo balance and trading profile
+                    automatically.
                   </Text>
                 </View>
               </View>
@@ -198,8 +183,7 @@ export default function App() {
                     Device PIN protection
                   </Text>
                   <Text className="mt-1 text-[15px] leading-6 text-[#9A9A9A]">
-                    Add a PIN for this phone before you manage account actions
-                    or saved preferences.
+                    Add a PIN for this phone before you manage account actions or saved preferences.
                   </Text>
                 </View>
               </View>
@@ -211,8 +195,8 @@ export default function App() {
                     Synced trading access
                   </Text>
                   <Text className="mt-1 text-[15px] leading-6 text-[#9A9A9A]">
-                    Your mobile session connects to the same backend user used
-                    for balances, orders, and market history.
+                    Your mobile session connects to the same backend user used for balances, orders,
+                    and market history.
                   </Text>
                 </View>
               </View>
@@ -224,7 +208,7 @@ export default function App() {
               accessibilityRole="button"
               className="h-[54px] items-center justify-center rounded-full bg-[#A594F7]"
               onPress={() => {
-                logAuthEvent("auth_options_sheet_opened");
+                logAuthEvent('auth_options_sheet_opened');
                 setIsAuthSheetVisible(true);
               }}
             >
@@ -238,7 +222,7 @@ export default function App() {
           visible={isAuthSheetVisible}
           onClose={() => setIsAuthSheetVisible(false)}
           onGoogleSelected={(mode) => {
-            logAuthEvent("google_sheet_opened", { mode });
+            logAuthEvent('google_sheet_opened', { mode });
             setGoogleAuthMode(mode);
             setIsGoogleAuthSheetVisible(true);
           }}
@@ -247,15 +231,15 @@ export default function App() {
           mode={googleAuthMode}
           visible={isGoogleAuthSheetVisible}
           onClose={() => {
-            logAuthEvent("google_sheet_closed", { mode: googleAuthMode });
+            logAuthEvent('google_sheet_closed', { mode: googleAuthMode });
             setIsGoogleAuthSheetVisible(false);
           }}
           onAuthenticated={(user) => {
-            logAuthEvent("auth_flow_authenticated", {
+            logAuthEvent('auth_flow_authenticated', {
               hasMobilePin: user.hasMobilePin,
-              nextScreen: "wallet",
+              nextScreen: 'wallet',
             });
-            router.replace("/wallet");
+            router.replace('/wallet');
           }}
         />
         {animatedSplashOverlay}
@@ -266,19 +250,17 @@ export default function App() {
   return (
     <View className="flex-1 bg-white">
       <StatusBar style="dark" />
-      <SafeAreaView className="flex-1" edges={["top", "left", "right"]}>
+      <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
         <View className="relative flex-1 overflow-hidden">
           <View className="z-10 items-center px-6 pt-10">
             <Text
               accessibilityRole="header"
               maxFontSizeMultiplier={1.08}
               className={`text-center font-black tracking-normal text-[#030303] ${
-                height < 720
-                  ? "text-[47px] leading-[52px]"
-                  : "text-[53px] leading-[58px]"
+                height < 720 ? 'text-[47px] leading-[52px]' : 'text-[53px] leading-[58px]'
               }`}
             >
-              Not Sure{"\n"}About Your{"\n"}Mood?
+              Not Sure{'\n'}About Your{'\n'}Mood?
             </Text>
 
             <PressableScaleMotion
@@ -286,8 +268,8 @@ export default function App() {
               accessibilityLabel="Let us help"
               className="mt-7 min-h-[58px] flex-row items-center gap-3.5 self-center rounded-full border border-[#E4E4E4] bg-[#F1F1F1] py-0 pl-7 pr-2 shadow-sm"
               onPress={() => {
-                logAuthEvent("onboarding_help_pressed");
-                setScreen("setup");
+                logAuthEvent('onboarding_help_pressed');
+                setScreen('setup');
               }}
             >
               <Text
@@ -297,9 +279,7 @@ export default function App() {
                 Let Us Help!
               </Text>
               <View className="h-11 w-11 items-center justify-center rounded-full bg-[#050505]">
-                <Text className="-mt-px text-[24px] font-black leading-7 text-white">
-                  {">"}
-                </Text>
+                <Text className="-mt-px text-[24px] font-black leading-7 text-white">{'>'}</Text>
               </View>
             </PressableScaleMotion>
           </View>
@@ -328,7 +308,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   moodboard: {
-    left: "50%",
-    position: "absolute",
+    left: '50%',
+    position: 'absolute',
   },
 });

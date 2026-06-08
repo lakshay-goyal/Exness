@@ -1,3 +1,3 @@
-import { TradeDashboardTabScreen } from "@/components/HelloWorldScreen";
+import { TradeDashboardTabScreen } from '@/components/HelloWorldScreen';
 
 export default TradeDashboardTabScreen;

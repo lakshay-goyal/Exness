@@ -1,14 +1,10 @@
-import { redisStreams, config, constant } from "@repo/config";
-import { users } from "../state/users.js";
-import { closeOrders, openOrders } from "../state/orders.js";
-import { prices } from "../state/prices.js";
-import { prisma } from "@repo/db";
-import type { CloseReason } from "@repo/types";
-import {
-  marketSymbolMapper,
-  orderCalculator,
-  priceNormalizer,
-} from "@repo/trading-core";
+import { redisStreams, config, constant } from '@repo/config';
+import { users } from '../state/users.js';
+import { closeOrders, openOrders } from '../state/orders.js';
+import { prices } from '../state/prices.js';
+import { prisma } from '@repo/db';
+import type { CloseReason } from '@repo/types';
+import { marketSymbolMapper, orderCalculator, priceNormalizer } from '@repo/trading-core';
 
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
@@ -22,12 +18,9 @@ type CloseOpenOrderOptions = {
   sendResponse?: boolean;
 };
 
-async function sendCloseResponse(
-  requestId: string | undefined,
-  message: Record<string, unknown>,
-) {
+async function sendCloseResponse(requestId: string | undefined, message: Record<string, unknown>) {
   await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
-    function: "createCloseOrder",
+    function: 'createCloseOrder',
     message: JSON.stringify(message),
     requestId,
     correlationId: requestId,
@@ -38,60 +31,51 @@ export async function closeOpenOrder({
   orderId,
   userId,
   requestId,
-  closeReason = "manual",
+  closeReason = 'manual',
   sendResponse = true,
 }: CloseOpenOrderOptions) {
   const orderIndex = openOrders.findIndex((order) => order.orderId === orderId);
 
   if (orderIndex === -1) {
     if (sendResponse) {
-      await sendCloseResponse(requestId, { error: "Order not found", orderId });
+      await sendCloseResponse(requestId, { error: 'Order not found', orderId });
     }
-    return { success: false, error: "Order not found" };
+    return { success: false, error: 'Order not found' };
   }
 
   const order = openOrders[orderIndex];
 
   if (!order || order.userId !== userId) {
     if (sendResponse) {
-      await sendCloseResponse(requestId, { error: "Order not found", orderId });
+      await sendCloseResponse(requestId, { error: 'Order not found', orderId });
     }
-    return { success: false, error: "Order not found" };
+    return { success: false, error: 'Order not found' };
   }
 
-  const priceAssetName = marketSymbolMapper.getPriceAssetName(
-    order.symbol || "",
-  );
-  const priceData = priceNormalizer.findPriceForSymbol(
-    prices,
-    order.symbol || "",
-  );
+  const priceAssetName = marketSymbolMapper.getPriceAssetName(order.symbol || '');
+  const priceData = priceNormalizer.findPriceForSymbol(prices, order.symbol || '');
 
   if (!priceData) {
     console.error(
       `Price data not found for symbol: ${order.symbol} (expected asset: ${priceAssetName})`,
     );
     console.error(
-      "Available price assets:",
+      'Available price assets:',
       prices.map((p) => p.asset),
     );
     if (sendResponse) {
       await sendCloseResponse(requestId, {
-        error: "Price data not found",
+        error: 'Price data not found',
         orderId,
       });
     }
-    return { success: false, error: "Price data not found" };
+    return { success: false, error: 'Price data not found' };
   }
 
   // For buy orders, close at bid price. For sell orders, close at ask price.
   const closePrice = priceNormalizer.getExitPrice(order, priceData);
   const profitLoss = orderCalculator.getProfitLoss(order, closePrice);
-  const reservedMargin = orderCalculator.getMargin(
-    order.quantity,
-    order.openPrice,
-    order.leverage,
-  );
+  const reservedMargin = orderCalculator.getMargin(order.quantity, order.openPrice, order.leverage);
   const balanceAdjustment = reservedMargin + profitLoss;
 
   try {
@@ -106,17 +90,14 @@ export async function closeOpenOrder({
       inMemoryUser.balance = updatedUser.balance;
     }
   } catch (balanceUpdateError) {
-    console.error(
-      "Failed to update user balance while closing order:",
-      balanceUpdateError,
-    );
+    console.error('Failed to update user balance while closing order:', balanceUpdateError);
     if (sendResponse) {
       await sendCloseResponse(requestId, {
-        error: "Failed to update balance",
+        error: 'Failed to update balance',
         orderId,
       });
     }
-    return { success: false, error: "Failed to update balance" };
+    return { success: false, error: 'Failed to update balance' };
   }
 
   openOrders.splice(orderIndex, 1);
@@ -143,7 +124,7 @@ export async function closeOpenOrder({
   closeOrders.unshift(orderResult);
 
   await RedisStreams.addToRedisStream(constant.dbStorageStream, {
-    function: "createCloseOrder",
+    function: 'createCloseOrder',
     message: orderResult,
   });
 
@@ -158,7 +139,7 @@ export async function createCloseOrderFunction(result: any) {
   if (!users.some((user: any) => user.userId === result.userId)) {
     const requestId = result.requestId || result.correlationId;
     await sendCloseResponse(requestId, {
-      error: "User not found",
+      error: 'User not found',
       userId: result.userId,
     });
     return;
@@ -168,7 +149,7 @@ export async function createCloseOrderFunction(result: any) {
     orderId: result.orderId,
     userId: result.userId,
     requestId: result.requestId || result.correlationId,
-    closeReason: "manual",
+    closeReason: 'manual',
     sendResponse: true,
   });
 }

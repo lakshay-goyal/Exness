@@ -1,3 +1,3 @@
-import { ProfileDashboardTabScreen } from "@/components/HelloWorldScreen";
+import { ProfileDashboardTabScreen } from '@/components/HelloWorldScreen';
 
 export default ProfileDashboardTabScreen;

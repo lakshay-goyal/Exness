@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   SymbolSchema,
   OrderSideSchema,
@@ -6,7 +6,7 @@ import {
   PositiveIntegerSchema,
   OptionalPositiveNumberSchema,
   NonNegativeNumberSchema,
-} from "./common.schemas.js";
+} from './common.schemas.js';
 
 /**
  * Trading-related validation schemas
@@ -33,7 +33,7 @@ export const CreateOrderSchema = z.object({
  * Validates order closing request body
  */
 export const CloseOrderSchema = z.object({
-  orderId: z.string().min(1, "Order ID cannot be empty"),
+  orderId: z.string().min(1, 'Order ID cannot be empty'),
 });
 
 /**

@@ -1,4 +1,4 @@
-import Svg, { Circle, G, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 
 export function TradingSetupIllustration() {
   return (
@@ -17,18 +17,9 @@ export function TradingSetupIllustration() {
           strokeWidth="7"
           strokeLinecap="round"
         />
-        <Path
-          d="M21 66H107C111 66 114 69 114 73V78H14V73C14 69 17 66 21 66Z"
-          fill="#F5F5F5"
-        />
-        <Path
-          d="M18 77H114V87C114 93 109 98 103 98H29C23 98 18 93 18 87V77Z"
-          fill="#BBBBBB"
-        />
-        <Path
-          d="M53 87H80C78 96 73 101 66 101C59 101 55 96 53 87Z"
-          fill="#BBBBBB"
-        />
+        <Path d="M21 66H107C111 66 114 69 114 73V78H14V73C14 69 17 66 21 66Z" fill="#F5F5F5" />
+        <Path d="M18 77H114V87C114 93 109 98 103 98H29C23 98 18 93 18 87V77Z" fill="#BBBBBB" />
+        <Path d="M53 87H80C78 96 73 101 66 101C59 101 55 96 53 87Z" fill="#BBBBBB" />
         <Circle cx="28" cy="44" r="5" fill="#FFFFFF" opacity="0.42" />
         <Circle cx="28" cy="71" r="5" fill="#1A1A1A" opacity="0.28" />
         <Line

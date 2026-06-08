@@ -1,4 +1,4 @@
-import { BackendApplication } from "./app/backend-application.js";
+import { BackendApplication } from './app/backend-application.js';
 
 const server = await new BackendApplication().configure();
 server.start();

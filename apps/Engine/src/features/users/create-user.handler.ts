@@ -1,20 +1,13 @@
-import { users } from "../state/users.js";
-import { closeOrders, openOrders } from "../state/orders.js";
-import {
-  redisStreams,
-  config,
-  REDIS_STREAMS,
-  DEFAULTS,
-} from "@repo/config";
+import { users } from '../state/users.js';
+import { closeOrders, openOrders } from '../state/orders.js';
+import { redisStreams, config, REDIS_STREAMS, DEFAULTS } from '@repo/config';
 
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function createUserFunction(result: any) {
-  let user = users.find(
-    (u) => u.userId === result.userId || u.userEmail === result.userEmail,
-  );
+  let user = users.find((u) => u.userId === result.userId || u.userEmail === result.userEmail);
 
   if (!user) {
     const newUser = {
@@ -41,12 +34,12 @@ export async function createUserFunction(result: any) {
   }
 
   await RedisStreams.addToRedisStream(REDIS_STREAMS.DB_STORAGE, {
-    function: "createUser",
+    function: 'createUser',
     message: result,
   });
 
   await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
-    function: "createUser",
+    function: 'createUser',
     message: result.userId,
     requestId: result.requestId || result.correlationId, // Pass through correlation ID
     correlationId: result.requestId || result.correlationId,

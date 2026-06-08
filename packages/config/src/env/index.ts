@@ -1,11 +1,11 @@
-import { z } from "zod";
-import dotenv from "dotenv";
-import path from "path";
-import { existsSync } from "fs";
+import { z } from 'zod';
+import dotenv from 'dotenv';
+import path from 'path';
+import { existsSync } from 'fs';
 
 // Try to load .env file if it exists (for local development)
 // In Docker, environment variables are set via docker-compose, so this is optional
-const envPath = path.resolve(__dirname, "../../../../.env");
+const envPath = path.resolve(__dirname, '../../../../.env');
 if (existsSync(envPath)) {
   dotenv.config({ path: envPath, override: false }); // override: false means don't overwrite existing env vars
 } else {

@@ -1,7 +1,7 @@
-import type { Request, Response } from "express";
-import ResponseWriter from "../../../utils/response-writer.js";
-import { candlesService } from "../services/candles.service.js";
-import { asyncHandler } from "../../../validation/error-handler.js";
+import type { Request, Response } from 'express';
+import ResponseWriter from '../../../utils/response-writer.js';
+import { candlesService } from '../services/candles.service.js';
+import { asyncHandler } from '../../../validation/error-handler.js';
 
 class CandlesController {
   getCandles = asyncHandler(async (req: Request, res: Response) => {

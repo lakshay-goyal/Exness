@@ -7,7 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,30 +24,24 @@ import {
   UIManager,
   useWindowDimensions,
   View,
-} from "react-native";
-import {
-  Link,
-  Stack,
-  router,
-  useIsFocused,
-  useLocalSearchParams,
-} from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { cssInterop } from "nativewind";
-import { LineChart } from "react-native-gifted-charts";
-import { marketSymbolMapper, priceNormalizer } from "@repo/trading-core";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { EaseView, type EaseViewProps } from "react-native-ease";
+} from 'react-native';
+import { Link, Stack, router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { cssInterop } from 'nativewind';
+import { LineChart } from 'react-native-gifted-charts';
+import { marketSymbolMapper, priceNormalizer } from '@repo/trading-core';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { EaseView, type EaseViewProps } from 'react-native-ease';
 
-import { PressableScaleMotion } from "@/components/PressMotion";
-import { getKeyboardControllerPackage } from "@/lib/keyboard-controller";
-import { MobileSessionResponse } from "@/lib/mobile-auth-api";
+import { PressableScaleMotion } from '@/components/PressMotion';
+import { getKeyboardControllerPackage } from '@/lib/keyboard-controller';
+import { MobileSessionResponse } from '@/lib/mobile-auth-api';
 import {
   playSubtleTapHaptic,
   playTradeClosedHaptic,
   playTradePlacedHaptic,
-} from "@/lib/trade-haptics";
+} from '@/lib/trade-haptics';
 import {
   BackendClosedTrade,
   BackendOpenTrade,
@@ -57,27 +51,27 @@ import {
   fetchCandles,
   fetchLatestPrices,
   fetchTradingProfileData,
-} from "@/lib/trading-api";
-import { BACKEND_URL } from "@/lib/auth-client";
+} from '@/lib/trading-api';
+import { BACKEND_URL } from '@/lib/auth-client';
 
 type HelloWorldScreenProps = {
   onLogout: () => void;
-  user: MobileSessionResponse["user"] | null;
+  user: MobileSessionResponse['user'] | null;
 };
 
 type IconName =
-  | "apps"
-  | "arrowDown"
-  | "arrowUp"
-  | "buy"
-  | "check"
-  | "clock"
-  | "compass"
-  | "expand"
-  | "home"
-  | "profile"
-  | "search"
-  | "swap";
+  | 'apps'
+  | 'arrowDown'
+  | 'arrowUp'
+  | 'buy'
+  | 'check'
+  | 'clock'
+  | 'compass'
+  | 'expand'
+  | 'home'
+  | 'profile'
+  | 'search'
+  | 'swap';
 
 type DashboardData = {
   balance: number | null;
@@ -114,7 +108,7 @@ type DashboardTabsContextValue = {
   onTradeCreated: (orderId?: string) => Promise<void>;
   onLogout: () => void;
   onRefresh: () => Promise<DashboardData | null>;
-  user: MobileSessionResponse["user"] | null;
+  user: MobileSessionResponse['user'] | null;
 };
 
 type ChartPoint = {
@@ -129,20 +123,18 @@ type ChartPoint = {
   };
 };
 
-type SelectedTrade =
-  | { status: "open"; orderId: string }
-  | { status: "closed"; orderId: string };
+type SelectedTrade = { status: 'open'; orderId: string } | { status: 'closed'; orderId: string };
 
-type TradeKind = "open" | "closed";
+type TradeKind = 'open' | 'closed';
 
 const candleIntervals: { label: string; value: CandleInterval }[] = [
-  { label: "1m", value: "1m" },
-  { label: "5m", value: "5m" },
-  { label: "15m", value: "15m" },
-  { label: "30m", value: "30m" },
-  { label: "1h", value: "1h" },
-  { label: "4h", value: "4h" },
-  { label: "1d", value: "1d" },
+  { label: '1m', value: '1m' },
+  { label: '5m', value: '5m' },
+  { label: '15m', value: '15m' },
+  { label: '30m', value: '30m' },
+  { label: '1h', value: '1h' },
+  { label: '4h', value: '4h' },
+  { label: '1d', value: '1d' },
 ];
 
 const emptyDashboardData: DashboardData = {
@@ -153,16 +145,16 @@ const emptyDashboardData: DashboardData = {
 
 const tradeKeyboardToolbarTheme = {
   light: {
-    primary: "#151515",
-    disabled: "#8F8F8F",
-    background: "#F4F4F4",
-    ripple: "rgba(0,0,0,0.08)",
+    primary: '#151515',
+    disabled: '#8F8F8F',
+    background: '#F4F4F4',
+    ripple: 'rgba(0,0,0,0.08)',
   },
   dark: {
-    primary: "#FFFFFF",
-    disabled: "#777D7A",
-    background: "#1C1F1E",
-    ripple: "rgba(255,255,255,0.12)",
+    primary: '#FFFFFF',
+    disabled: '#777D7A',
+    background: '#1C1F1E',
+    ripple: 'rgba(255,255,255,0.12)',
   },
 };
 
@@ -171,22 +163,22 @@ const tabEnterAnimate = { opacity: 1, translateY: 0 };
 const tradeTabIndicatorPadding = 6;
 const chartIntervalTabIndicatorPadding = 4;
 const StyledAnimatedView = cssInterop(Animated.View, {
-  className: "style",
+  className: 'style',
 });
-const requiredCryptoMarketCodes = ["BTC", "ETH", "SOL"] as const;
+const requiredCryptoMarketCodes = ['BTC', 'ETH', 'SOL'] as const;
 
 const hasNativeEaseView = () => {
-  if (Platform.OS === "web") {
+  if (Platform.OS === 'web') {
     return true;
   }
 
-  return Boolean(UIManager.getViewManagerConfig?.("EaseView"));
+  return Boolean(UIManager.getViewManagerConfig?.('EaseView'));
 };
 
 const getWebSocketUrl = () => {
   const configuredUrl = process.env.EXPO_PUBLIC_WEBSOCKET_URL;
 
-  if (configuredUrl?.toLowerCase() === "disabled") {
+  if (configuredUrl?.toLowerCase() === 'disabled') {
     return null;
   }
 
@@ -196,35 +188,29 @@ const getWebSocketUrl = () => {
 
   try {
     const backendUrl = new URL(BACKEND_URL);
-    const protocol = backendUrl.protocol === "https:" ? "wss:" : "ws:";
+    const protocol = backendUrl.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${backendUrl.hostname}:7070`;
   } catch {
-    return "ws://localhost:7070";
+    return 'ws://localhost:7070';
   }
 };
 
 const normalizeMarketPrice = (value?: number | string | null) =>
   priceNormalizer.normalizeStreamPriceValue(value);
 
-const getMarketCode = (symbol: string) =>
-  marketSymbolMapper.getMarketCode(symbol);
+const getMarketCode = (symbol: string) => marketSymbolMapper.getMarketCode(symbol);
 
 const getCanonicalLiveAssetSymbol = (symbol: string) =>
   marketSymbolMapper.getCanonicalLiveAssetSymbol(symbol);
 
-const getMarketName = (symbol: string) =>
-  marketSymbolMapper.getMarketName(symbol);
+const getMarketName = (symbol: string) => marketSymbolMapper.getMarketName(symbol);
 
 const getLiveAssetCandidates = (symbol: string) =>
   marketSymbolMapper.getLiveAssetCandidates(symbol);
 
-const hasAllRequiredCryptoPrices = (
-  livePrices: Record<string, LiveMarketPrice>,
-) => {
+const hasAllRequiredCryptoPrices = (livePrices: Record<string, LiveMarketPrice>) => {
   return requiredCryptoMarketCodes.every((marketCode) =>
-    getLiveAssetCandidates(marketCode).some(
-      (candidate) => livePrices[candidate],
-    ),
+    getLiveAssetCandidates(marketCode).some((candidate) => livePrices[candidate]),
   );
 };
 
@@ -286,12 +272,12 @@ const findLivePriceForTrade = (
 
 const formatCurrency = (value?: number | null, digits = 2) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return "--";
+    return '--';
   }
 
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
@@ -316,46 +302,46 @@ const formatSignedCurrency = (value: number) => {
 };
 
 const formatPercent = (value: number) => {
-  const formatted = Math.abs(value).toLocaleString("en-US", {
+  const formatted = Math.abs(value).toLocaleString('en-US', {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   });
 
   if (value > 0) return `+${formatted}%`;
   if (value < 0) return `-${formatted}%`;
-  return "0.00%";
+  return '0.00%';
 };
 
 const formatDate = (value?: string) => {
-  if (!value) return "Unavailable";
+  if (!value) return 'Unavailable';
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Unavailable";
+    return 'Unavailable';
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(date);
 };
 
 const formatDateTime = (value?: string) => {
-  if (!value) return "Unavailable";
+  if (!value) return 'Unavailable';
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Unavailable";
+    return 'Unavailable';
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(date);
 };
 
@@ -363,37 +349,37 @@ const formatChartDate = (value: string, interval: CandleInterval) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "";
+    return '';
   }
 
-  if (interval === "1d") {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
+  if (interval === '1d') {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
     }).format(date);
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   }).format(date);
 };
 
 const formatCloseReason = (value?: string | null) => {
-  if (!value) return "Manual";
+  if (!value) return 'Manual';
 
   return value
-    .split("_")
+    .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+    .join(' ');
 };
 
 const getTradePnl = (trade: BackendOpenTrade) => {
   const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
   const currentPrice = normalizeMarketPrice(trade.currentPrice) ?? openPrice;
 
-  return trade.type === "buy"
+  return trade.type === 'buy'
     ? (currentPrice - openPrice) * trade.quantity
     : (openPrice - currentPrice) * trade.quantity;
 };
@@ -405,7 +391,7 @@ const getTradeMargin = (trade: BackendOpenTrade) => {
 };
 
 function Icon({
-  color = "#A594F7",
+  color = '#A594F7',
   name,
   size = 28,
 }: {
@@ -414,14 +400,14 @@ function Icon({
   size?: number;
 }) {
   const strokeProps = {
-    fill: "none",
+    fill: 'none',
     stroke: color,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
     strokeWidth: 2.4,
   };
 
-  if (name === "home") {
+  if (name === 'home') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M5 13L14 5L23 13V24H17V17H11V24H5V13Z" fill={color} />
@@ -429,7 +415,7 @@ function Icon({
     );
   }
 
-  if (name === "apps") {
+  if (name === 'apps') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Rect x="5" y="5" width="6" height="6" rx="1.2" {...strokeProps} />
@@ -440,7 +426,7 @@ function Icon({
     );
   }
 
-  if (name === "swap") {
+  if (name === 'swap') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M8 9H22L18 5" {...strokeProps} />
@@ -449,7 +435,7 @@ function Icon({
     );
   }
 
-  if (name === "clock") {
+  if (name === 'clock') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Circle cx="14" cy="14" r="9" {...strokeProps} />
@@ -458,31 +444,25 @@ function Icon({
     );
   }
 
-  if (name === "compass") {
+  if (name === 'compass') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Circle cx="14" cy="14" r="9" {...strokeProps} />
-        <Path
-          d="M18.5 9.5L15.8 16L9.5 18.5L12.2 12L18.5 9.5Z"
-          {...strokeProps}
-        />
+        <Path d="M18.5 9.5L15.8 16L9.5 18.5L12.2 12L18.5 9.5Z" {...strokeProps} />
       </Svg>
     );
   }
 
-  if (name === "profile") {
+  if (name === 'profile') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Circle cx="14" cy="10" r="4" {...strokeProps} />
-        <Path
-          d="M6.5 23C7.6 18.7 10.1 17 14 17C17.9 17 20.4 18.7 21.5 23"
-          {...strokeProps}
-        />
+        <Path d="M6.5 23C7.6 18.7 10.1 17 14 17C17.9 17 20.4 18.7 21.5 23" {...strokeProps} />
       </Svg>
     );
   }
 
-  if (name === "expand") {
+  if (name === 'expand') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M6 11V6H11" {...strokeProps} />
@@ -493,7 +473,7 @@ function Icon({
     );
   }
 
-  if (name === "search") {
+  if (name === 'search') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Circle cx="12.5" cy="12.5" r="7.5" {...strokeProps} />
@@ -502,7 +482,7 @@ function Icon({
     );
   }
 
-  if (name === "arrowUp") {
+  if (name === 'arrowUp') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M6 18L22 6" {...strokeProps} />
@@ -511,7 +491,7 @@ function Icon({
     );
   }
 
-  if (name === "arrowDown") {
+  if (name === 'arrowDown') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M22 10L6 22" {...strokeProps} />
@@ -520,7 +500,7 @@ function Icon({
     );
   }
 
-  if (name === "buy") {
+  if (name === 'buy') {
     return (
       <Svg width={size} height={size} viewBox="0 0 28 28">
         <Path d="M14 4V24" {...strokeProps} />
@@ -539,18 +519,14 @@ function Icon({
   );
 }
 
-const DashboardTabsContext = createContext<DashboardTabsContextValue | null>(
-  null,
-);
+const DashboardTabsContext = createContext<DashboardTabsContextValue | null>(null);
 const TabFocusAnimationContext = createContext(0);
 
 function useDashboardTabsContext() {
   const context = useContext(DashboardTabsContext);
 
   if (!context) {
-    throw new Error(
-      "Dashboard tab screens must be rendered inside DashboardTabsProvider.",
-    );
+    throw new Error('Dashboard tab screens must be rendered inside DashboardTabsProvider.');
   }
 
   return context;
@@ -572,17 +548,9 @@ function useFocusedTabAnimationKey() {
   return animationKey;
 }
 
-function FocusedTabAnimationProvider({
-  children,
-  value,
-}: {
-  children: ReactNode;
-  value: number;
-}) {
+function FocusedTabAnimationProvider({ children, value }: { children: ReactNode; value: number }) {
   return (
-    <TabFocusAnimationContext.Provider value={value}>
-      {children}
-    </TabFocusAnimationContext.Provider>
+    <TabFocusAnimationContext.Provider value={value}>{children}</TabFocusAnimationContext.Provider>
   );
 }
 
@@ -595,8 +563,8 @@ function DashboardTabFrame({
 }) {
   const { width } = useWindowDimensions();
   const safeAreaEdges = includeTopSafeArea
-    ? (["top", "left", "right"] as const)
-    : (["left", "right"] as const);
+    ? (['top', 'left', 'right'] as const)
+    : (['left', 'right'] as const);
 
   return (
     <View className="flex-1 bg-[#171918]">
@@ -606,8 +574,8 @@ function DashboardTabFrame({
           className="flex-1"
           style={{
             maxWidth: Math.min(width, 520),
-            width: "100%",
-            alignSelf: "center",
+            width: '100%',
+            alignSelf: 'center',
           }}
         >
           {children}
@@ -629,8 +597,8 @@ function TabEaseItem({
   const focusAnimationKey = useContext(TabFocusAnimationContext);
   const fallbackOpacity = useMemo(() => new Animated.Value(0), []);
   const fallbackTranslateY = useMemo(() => new Animated.Value(10), []);
-  const transition = useMemo<EaseViewProps["transition"]>(
-    () => ({ type: "timing", duration: 260, easing: "easeIn", delay }),
+  const transition = useMemo<EaseViewProps['transition']>(
+    () => ({ type: 'timing', duration: 260, easing: 'easeIn', delay }),
     [delay],
   );
 
@@ -693,18 +661,18 @@ function TabEaseItem({
   );
 }
 
-function Avatar({ user }: { user: MobileSessionResponse["user"] | null }) {
+function Avatar({ user }: { user: MobileSessionResponse['user'] | null }) {
   const initials = useMemo(() => {
     const name = user?.name?.trim();
     if (!name) {
-      return "EX";
+      return 'EX';
     }
 
     return name
       .split(/\s+/)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
-      .join("");
+      .join('');
   }, [user?.name]);
 
   if (user?.image) {
@@ -724,12 +692,7 @@ function Avatar({ user }: { user: MobileSessionResponse["user"] | null }) {
   );
 }
 
-function Header({
-  user,
-}: {
-  accountName?: string;
-  user: MobileSessionResponse["user"] | null;
-}) {
+function Header({ user }: { accountName?: string; user: MobileSessionResponse['user'] | null }) {
   return (
     <View className="flex-row items-center justify-between px-6 pt-3">
       <View className="flex-row items-center justify-center gap-3">
@@ -739,8 +702,7 @@ function Header({
             numberOfLines={1}
             className="max-w-[210px] text-center text-[15px] font-black text-[#8D9290]"
           >
-            @
-            {user?.name?.replace(/\s+/g, "").toLowerCase() || "alexsmithmobbin"}
+            @{user?.name?.replace(/\s+/g, '').toLowerCase() || 'alexsmithmobbin'}
           </Text>
         </View>
       </View>
@@ -752,9 +714,7 @@ function ActionButton({ icon, label }: { icon: IconName; label: string }) {
   return (
     <PressableScaleMotion className="h-[76px] flex-1 items-center justify-center rounded-[18px] bg-[#2C2E2E]">
       <Icon color="#A594F7" name={icon} size={30} />
-      <Text className="mt-1.5 text-[13px] font-black text-[#9B9B9B]">
-        {label}
-      </Text>
+      <Text className="mt-1.5 text-[13px] font-black text-[#9B9B9B]">{label}</Text>
     </PressableScaleMotion>
   );
 }
@@ -762,7 +722,7 @@ function ActionButton({ icon, label }: { icon: IconName; label: string }) {
 function MarketLogo({ symbol }: { symbol: string }) {
   const marketCode = getMarketCode(symbol);
 
-  if (marketCode === "ETH") {
+  if (marketCode === 'ETH') {
     return (
       <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#F2F2F2]">
         <Svg width={35} height={35} viewBox="0 0 32 32">
@@ -774,7 +734,7 @@ function MarketLogo({ symbol }: { symbol: string }) {
     );
   }
 
-  if (marketCode === "BTC") {
+  if (marketCode === 'BTC') {
     return (
       <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#F7931A]">
         <Text className="text-[31px] font-black text-white">B</Text>
@@ -782,7 +742,7 @@ function MarketLogo({ symbol }: { symbol: string }) {
     );
   }
 
-  if (marketCode === "SOL") {
+  if (marketCode === 'SOL') {
     return (
       <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-black">
         <View className="h-2 w-9 -skew-x-12 rounded-full bg-[#00FFA3]" />
@@ -794,9 +754,7 @@ function MarketLogo({ symbol }: { symbol: string }) {
 
   return (
     <View className="h-[58px] w-[58px] items-center justify-center rounded-full bg-[#343837]">
-      <Text className="text-[22px] font-black text-white">
-        {marketCode.charAt(0)}
-      </Text>
+      <Text className="text-[22px] font-black text-white">{marketCode.charAt(0)}</Text>
     </View>
   );
 }
@@ -806,7 +764,7 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
   const priceDigits = getPriceDigits(market.marketPrice);
   const spread = Math.max(market.ask - market.bid, 0);
   const href = {
-    pathname: "/crypto/[symbol]",
+    pathname: '/crypto/[symbol]',
     params: { symbol: market.symbol },
   } as const;
 
@@ -824,9 +782,7 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
               <Text className="text-[18px] font-black text-white">
                 {getMarketName(market.symbol)}
               </Text>
-              <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">
-                {market.symbol}
-              </Text>
+              <Text className="mt-1 text-[13px] font-bold text-[#9A9A9A]">{market.symbol}</Text>
             </View>
             <View className="items-end">
               <Text className="text-[18px] font-black text-white">
@@ -834,7 +790,7 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
               </Text>
               <Text
                 className={`mt-1 text-[14px] font-black ${
-                  isUp ? "text-[#28E978]" : "text-[#FF5366]"
+                  isUp ? 'text-[#28E978]' : 'text-[#FF5366]'
                 }`}
               >
                 {`${formatSignedCurrency(market.change)} (${formatPercent(market.changePercent)})`}
@@ -844,25 +800,19 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
 
           <View className="mt-4 flex-row gap-3">
             <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-                Bid
-              </Text>
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">Bid</Text>
               <Text className="mt-1 text-[14px] font-black text-white">
                 {formatCurrency(market.bid, priceDigits)}
               </Text>
             </View>
             <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-                Ask
-              </Text>
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">Ask</Text>
               <Text className="mt-1 text-[14px] font-black text-white">
                 {formatCurrency(market.ask, priceDigits)}
               </Text>
             </View>
             <View className="flex-1 rounded-[14px] bg-[#222524] px-3 py-3">
-              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">
-                Spread
-              </Text>
+              <Text className="text-[11px] font-extrabold uppercase text-[#858585]">Spread</Text>
               <Text className="mt-1 text-[14px] font-black text-white">
                 {formatCurrency(spread, priceDigits)}
               </Text>
@@ -874,30 +824,14 @@ function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
   );
 }
 
-function InfoCard({
-  label,
-  tone,
-  value,
-}: {
-  label: string;
-  tone?: "up" | "down";
-  value: string;
-}) {
+function InfoCard({ label, tone, value }: { label: string; tone?: 'up' | 'down'; value: string }) {
   const valueClass =
-    tone === "up"
-      ? "text-[#28E978]"
-      : tone === "down"
-        ? "text-[#FF5366]"
-        : "text-white";
+    tone === 'up' ? 'text-[#28E978]' : tone === 'down' ? 'text-[#FF5366]' : 'text-white';
 
   return (
     <View className="min-h-[70px] flex-1 rounded-[16px] bg-[#292C2B] px-4 py-4">
-      <Text className="text-[12px] font-extrabold uppercase text-[#8D9290]">
-        {label}
-      </Text>
-      <Text className={`mt-2 text-[17px] font-black ${valueClass}`}>
-        {value}
-      </Text>
+      <Text className="text-[12px] font-extrabold uppercase text-[#8D9290]">{label}</Text>
+      <Text className={`mt-2 text-[17px] font-black ${valueClass}`}>{value}</Text>
     </View>
   );
 }
@@ -911,9 +845,7 @@ function ChartIntervalTabs({
 }) {
   const [tabsWidth, setTabsWidth] = useState(0);
   const selectedIndex = Math.max(
-    candleIntervals.findIndex(
-      (interval) => interval.value === selectedInterval,
-    ),
+    candleIntervals.findIndex((interval) => interval.value === selectedInterval),
     0,
   );
   const maxIndex = candleIntervals.length - 1;
@@ -955,17 +887,14 @@ function ChartIntervalTabs({
       <Animated.View
         pointerEvents="none"
         style={{
-          backgroundColor: "#A594F7",
+          backgroundColor: '#A594F7',
           borderRadius: 11,
           bottom: chartIntervalTabIndicatorPadding,
           left: chartIntervalTabIndicatorPadding,
           opacity: indicatorWidth > 0 ? 1 : 0,
-          position: "absolute",
+          position: 'absolute',
           top: chartIntervalTabIndicatorPadding,
-          transform: [
-            { translateX: indicatorTranslateX },
-            { scaleX: indicatorScaleX },
-          ],
+          transform: [{ translateX: indicatorTranslateX }, { scaleX: indicatorScaleX }],
           width: indicatorWidth,
         }}
       />
@@ -981,9 +910,7 @@ function ChartIntervalTabs({
             onPress={() => onChange(interval.value)}
           >
             <Text
-              className={`text-[12px] font-black ${
-                isActive ? "text-[#151515]" : "text-[#9A9A9A]"
-              }`}
+              className={`text-[12px] font-black ${isActive ? 'text-[#151515]' : 'text-[#9A9A9A]'}`}
             >
               {interval.label}
             </Text>
@@ -1006,40 +933,30 @@ function MarketTradeDetailsView({
   onTradeCreated: (orderId?: string) => void | Promise<void>;
 }) {
   const { width } = useWindowDimensions();
-  const [selectedInterval, setSelectedInterval] =
-    useState<CandleInterval>("1m");
+  const [selectedInterval, setSelectedInterval] = useState<CandleInterval>('1m');
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
   const [chartRetry, setChartRetry] = useState(0);
-  const [orderVolume, setOrderVolume] = useState("0.01");
-  const [leverage, setLeverage] = useState("100");
-  const [takeProfit, setTakeProfit] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
-  const [slippage, setSlippage] = useState("0.5");
-  const [submitSide, setSubmitSide] = useState<"buy" | "sell" | null>(null);
+  const [orderVolume, setOrderVolume] = useState('0.01');
+  const [leverage, setLeverage] = useState('100');
+  const [takeProfit, setTakeProfit] = useState('');
+  const [stopLoss, setStopLoss] = useState('');
+  const [slippage, setSlippage] = useState('0.5');
+  const [submitSide, setSubmitSide] = useState<'buy' | 'sell' | null>(null);
 
   const marketSymbol = market?.symbol ?? null;
   const sheetWidth = Math.min(width, 520);
   const chartWidth = Math.max(sheetWidth - 92, 250);
   const orderVolumeNumber = Number.parseFloat(orderVolume) || 0;
   const leverageNumber = Number.parseInt(leverage, 10);
-  const leverageIsValid =
-    Number.isInteger(leverageNumber) && leverageNumber > 0;
+  const leverageIsValid = Number.isInteger(leverageNumber) && leverageNumber > 0;
   const marginRequired = market
-    ? (market.marketPrice * orderVolumeNumber) /
-      (leverageIsValid ? leverageNumber : 1)
+    ? (market.marketPrice * orderVolumeNumber) / (leverageIsValid ? leverageNumber : 1)
     : null;
-  const reservedMargin = data.openTrades.reduce(
-    (total, trade) => total + getTradeMargin(trade),
-    0,
-  );
-  const floatingPnl = data.openTrades.reduce(
-    (total, trade) => total + getTradePnl(trade),
-    0,
-  );
-  const accountFreeMargin =
-    data.balance === null ? null : data.balance + floatingPnl;
+  const reservedMargin = data.openTrades.reduce((total, trade) => total + getTradeMargin(trade), 0);
+  const floatingPnl = data.openTrades.reduce((total, trade) => total + getTradePnl(trade), 0);
+  const accountFreeMargin = data.balance === null ? null : data.balance + floatingPnl;
   const estimatedFreeMargin =
     accountFreeMargin !== null && marginRequired !== null
       ? accountFreeMargin - marginRequired
@@ -1086,14 +1003,11 @@ function MarketTradeDetailsView({
               value,
             };
           })
-          .filter(
-            (point): point is { time: string; value: number } => point !== null,
-          );
+          .filter((point): point is { time: string; value: number } => point !== null);
         const labelEvery = Math.max(1, Math.floor(points.length / 4));
         const nextChartData = points.map((point, index) => {
           const date = formatChartDate(point.time, selectedInterval);
-          const shouldShowLabel =
-            index % labelEvery === 0 || index === points.length - 1;
+          const shouldShowLabel = index % labelEvery === 0 || index === points.length - 1;
 
           return {
             value: point.value,
@@ -1103,7 +1017,7 @@ function MarketTradeDetailsView({
               ? {
                   label: date,
                   labelTextStyle: {
-                    color: "#858585",
+                    color: '#858585',
                     fontSize: 10,
                     width: 58,
                   },
@@ -1117,11 +1031,7 @@ function MarketTradeDetailsView({
         }
       } catch (error) {
         if (!isCancelled) {
-          setChartError(
-            error instanceof Error
-              ? error.message
-              : "Chart data is unavailable",
-          );
+          setChartError(error instanceof Error ? error.message : 'Chart data is unavailable');
           setChartData([]);
         }
       } finally {
@@ -1148,84 +1058,62 @@ function MarketTradeDetailsView({
     digits = 2,
   ) => {
     const parsed = Number.parseFloat(value);
-    const next = Math.max(
-      min,
-      (Number.isFinite(parsed) ? parsed : fallback) + delta,
-    );
+    const next = Math.max(min, (Number.isFinite(parsed) ? parsed : fallback) + delta);
     return digits === 0 ? String(Math.round(next)) : next.toFixed(digits);
   };
 
-  const submitOrder = async (type: "buy" | "sell") => {
-    const entryPrice = type === "buy" ? market.ask : market.bid;
-    const takeProfitValue = takeProfit
-      ? Number.parseFloat(takeProfit)
-      : undefined;
+  const submitOrder = async (type: 'buy' | 'sell') => {
+    const entryPrice = type === 'buy' ? market.ask : market.bid;
+    const takeProfitValue = takeProfit ? Number.parseFloat(takeProfit) : undefined;
     const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
     const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
 
     if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
-      Alert.alert("Invalid volume", "Volume must be greater than 0.");
+      Alert.alert('Invalid volume', 'Volume must be greater than 0.');
       return;
     }
 
     if (!leverageIsValid) {
-      Alert.alert(
-        "Invalid leverage",
-        "Leverage must be a positive whole number.",
-      );
+      Alert.alert('Invalid leverage', 'Leverage must be a positive whole number.');
       return;
     }
 
-    if (
-      slippageValue !== undefined &&
-      (!Number.isFinite(slippageValue) || slippageValue < 0)
-    ) {
-      Alert.alert(
-        "Invalid slippage",
-        "Slippage must be zero or a positive number.",
-      );
+    if (slippageValue !== undefined && (!Number.isFinite(slippageValue) || slippageValue < 0)) {
+      Alert.alert('Invalid slippage', 'Slippage must be zero or a positive number.');
       return;
     }
 
     if (
       (takeProfitValue !== undefined &&
         (!Number.isFinite(takeProfitValue) || takeProfitValue <= 0)) ||
-      (stopLossValue !== undefined &&
-        (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
+      (stopLossValue !== undefined && (!Number.isFinite(stopLossValue) || stopLossValue <= 0))
     ) {
-      Alert.alert(
-        "Invalid protection",
-        "Take profit and stop loss must be positive numbers.",
-      );
+      Alert.alert('Invalid protection', 'Take profit and stop loss must be positive numbers.');
       return;
     }
 
     if (
       takeProfitValue !== undefined &&
-      (type === "buy"
-        ? takeProfitValue <= entryPrice
-        : takeProfitValue >= entryPrice)
+      (type === 'buy' ? takeProfitValue <= entryPrice : takeProfitValue >= entryPrice)
     ) {
       Alert.alert(
-        "Invalid take profit",
-        type === "buy"
-          ? "For buy orders, take profit must be above the buy price."
-          : "For sell orders, take profit must be below the sell price.",
+        'Invalid take profit',
+        type === 'buy'
+          ? 'For buy orders, take profit must be above the buy price.'
+          : 'For sell orders, take profit must be below the sell price.',
       );
       return;
     }
 
     if (
       stopLossValue !== undefined &&
-      (type === "buy"
-        ? stopLossValue >= entryPrice
-        : stopLossValue <= entryPrice)
+      (type === 'buy' ? stopLossValue >= entryPrice : stopLossValue <= entryPrice)
     ) {
       Alert.alert(
-        "Invalid stop loss",
-        type === "buy"
-          ? "For buy orders, stop loss must be below the buy price."
-          : "For sell orders, stop loss must be above the sell price.",
+        'Invalid stop loss',
+        type === 'buy'
+          ? 'For buy orders, stop loss must be below the buy price.'
+          : 'For sell orders, stop loss must be above the sell price.',
       );
       return;
     }
@@ -1244,14 +1132,14 @@ function MarketTradeDetailsView({
       void playTradePlacedHaptic();
       await onTradeCreated(result.orderId);
       Alert.alert(
-        "Order created",
-        `${type === "buy" ? "Buy" : "Sell"} order created successfully.`,
+        'Order created',
+        `${type === 'buy' ? 'Buy' : 'Sell'} order created successfully.`,
       );
       onClose();
     } catch (error) {
       Alert.alert(
-        "Unable to create order",
-        error instanceof Error ? error.message : "Please try again.",
+        'Unable to create order',
+        error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
       setSubmitSide(null);
@@ -1264,10 +1152,7 @@ function MarketTradeDetailsView({
         <TradeEntryScroll>
           <View className="px-5">
             <Link.AppleZoomTarget>
-              <View
-                collapsable={false}
-                className="rounded-[22px] bg-[#292C2B] px-4 py-4"
-              >
+              <View collapsable={false} className="rounded-[22px] bg-[#292C2B] px-4 py-4">
                 <View className="flex-row items-center justify-between">
                   <View>
                     <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
@@ -1280,7 +1165,7 @@ function MarketTradeDetailsView({
                   <View className="items-end">
                     <Text
                       className={`text-[16px] font-black ${
-                        market.change >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                        market.change >= 0 ? 'text-[#28E978]' : 'text-[#FF5366]'
                       }`}
                     >
                       {formatPercent(market.changePercent)}
@@ -1313,9 +1198,7 @@ function MarketTradeDetailsView({
                         className="mt-4 rounded-full bg-[#A594F7] px-5 py-2"
                         onPress={() => setChartRetry((value) => value + 1)}
                       >
-                        <Text className="text-[13px] font-black text-[#151515]">
-                          Retry
-                        </Text>
+                        <Text className="text-[13px] font-black text-[#151515]">Retry</Text>
                       </PressableScaleMotion>
                     </View>
                   ) : chartData.length === 0 ? (
@@ -1333,10 +1216,7 @@ function MarketTradeDetailsView({
                       hideDataPoints
                       spacing={Math.max(
                         5,
-                        Math.min(
-                          13,
-                          chartWidth / Math.max(chartData.length - 1, 1),
-                        ),
+                        Math.min(13, chartWidth / Math.max(chartData.length - 1, 1)),
                       )}
                       color="#A594F7"
                       thickness={2}
@@ -1354,21 +1234,21 @@ function MarketTradeDetailsView({
                       yAxisLabelWidth={54}
                       rulesType="dotted"
                       rulesColor="rgba(148,163,184,0.22)"
-                      yAxisTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                      yAxisTextStyle={{ color: '#9CA3AF', fontSize: 10 }}
                       xAxisColor="rgba(148,163,184,0.35)"
-                      xAxisLabelTextStyle={{ color: "#9CA3AF", fontSize: 10 }}
+                      xAxisLabelTextStyle={{ color: '#9CA3AF', fontSize: 10 }}
                       pointerConfig={{
                         pointerStripHeight: 210,
-                        pointerStripColor: "rgba(148,163,184,0.5)",
+                        pointerStripColor: 'rgba(148,163,184,0.5)',
                         pointerStripWidth: 1,
-                        pointerColor: "#A594F7",
+                        pointerColor: '#A594F7',
                         radius: 4,
                         activatePointersOnLongPress: true,
                         autoAdjustPointerLabelPosition: true,
                         pointerLabelComponent: (items: ChartPoint[]) => (
                           <View className="items-center rounded-lg bg-[#A594F7] px-2 py-1">
                             <Text className="text-[10px] font-bold text-[#151515]">
-                              {items[0]?.date || "--"}
+                              {items[0]?.date || '--'}
                             </Text>
                             <Text className="text-[11px] font-black text-[#151515]">
                               {formatCurrency(items[0]?.value, priceDigits)}
@@ -1383,9 +1263,7 @@ function MarketTradeDetailsView({
             </Link.AppleZoomTarget>
 
             <View className="mt-5 rounded-[22px] bg-[#292C2B] px-4 py-4">
-              <Text className="text-[18px] font-black text-white">
-                New trade
-              </Text>
+              <Text className="text-[18px] font-black text-white">New trade</Text>
 
               <View className="mt-4 gap-3">
                 <TradeInputRow label="Volume">
@@ -1393,9 +1271,7 @@ function MarketTradeDetailsView({
                     disabled={submitSide !== null}
                     label="-"
                     onPress={() =>
-                      setOrderVolume((value) =>
-                        updateNumericValue(value, 0.01, -0.01, 0.01, 2),
-                      )
+                      setOrderVolume((value) => updateNumericValue(value, 0.01, -0.01, 0.01, 2))
                     }
                   />
                   <TradeTextInput
@@ -1408,9 +1284,7 @@ function MarketTradeDetailsView({
                     disabled={submitSide !== null}
                     label="+"
                     onPress={() =>
-                      setOrderVolume((value) =>
-                        updateNumericValue(value, 0.01, 0.01, 0.01, 2),
-                      )
+                      setOrderVolume((value) => updateNumericValue(value, 0.01, 0.01, 0.01, 2))
                     }
                   />
                 </TradeInputRow>
@@ -1419,11 +1293,7 @@ function MarketTradeDetailsView({
                   <StepperButton
                     disabled={submitSide !== null}
                     label="-"
-                    onPress={() =>
-                      setLeverage((value) =>
-                        updateNumericValue(value, 100, -1, 1, 0),
-                      )
-                    }
+                    onPress={() => setLeverage((value) => updateNumericValue(value, 100, -1, 1, 0))}
                   />
                   <TradeTextInput
                     editable={submitSide === null}
@@ -1434,11 +1304,7 @@ function MarketTradeDetailsView({
                   <StepperButton
                     disabled={submitSide !== null}
                     label="+"
-                    onPress={() =>
-                      setLeverage((value) =>
-                        updateNumericValue(value, 100, 1, 1, 0),
-                      )
-                    }
+                    onPress={() => setLeverage((value) => updateNumericValue(value, 100, 1, 1, 0))}
                   />
                 </TradeInputRow>
 
@@ -1474,22 +1340,16 @@ function MarketTradeDetailsView({
               </View>
 
               <View className="mt-4 rounded-[16px] bg-[#222524] px-4 py-4">
-                <SummaryRow
-                  label="Margin Required"
-                  value={formatCurrency(marginRequired)}
-                />
+                <SummaryRow label="Margin Required" value={formatCurrency(marginRequired)} />
                 <SummaryRow
                   label="Free Margin"
-                  tone={(estimatedFreeMargin ?? 0) >= 0 ? "up" : "down"}
+                  tone={(estimatedFreeMargin ?? 0) >= 0 ? 'up' : 'down'}
                   value={formatCurrency(estimatedFreeMargin)}
                 />
-                <SummaryRow
-                  label="Reserved Margin"
-                  value={formatCurrency(reservedMargin)}
-                />
+                <SummaryRow label="Reserved Margin" value={formatCurrency(reservedMargin)} />
                 <SummaryRow
                   label="Leverage"
-                  value={leverageIsValid ? `${leverageNumber}x` : "--"}
+                  value={leverageIsValid ? `${leverageNumber}x` : '--'}
                 />
               </View>
 
@@ -1498,10 +1358,10 @@ function MarketTradeDetailsView({
                   accessibilityRole="button"
                   className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#EF233C]"
                   disabled={submitSide !== null}
-                  onPress={() => submitOrder("sell")}
+                  onPress={() => submitOrder('sell')}
                 >
                   <Text className="text-[16px] font-black text-white">
-                    {submitSide === "sell" ? "Selling..." : "Sell"}
+                    {submitSide === 'sell' ? 'Selling...' : 'Sell'}
                   </Text>
                   <Text className="mt-1 text-[11px] font-black text-white">
                     {formatCurrency(market.bid, priceDigits)}
@@ -1511,10 +1371,10 @@ function MarketTradeDetailsView({
                   accessibilityRole="button"
                   className="h-14 flex-1 items-center justify-center rounded-[18px] bg-[#009B72]"
                   disabled={submitSide !== null}
-                  onPress={() => submitOrder("buy")}
+                  onPress={() => submitOrder('buy')}
                 >
                   <Text className="text-[16px] font-black text-white">
-                    {submitSide === "buy" ? "Buying..." : "Buy"}
+                    {submitSide === 'buy' ? 'Buying...' : 'Buy'}
                   </Text>
                   <Text className="mt-1 text-[11px] font-black text-white">
                     {formatCurrency(market.ask, priceDigits)}
@@ -1531,13 +1391,11 @@ function MarketTradeDetailsView({
 }
 
 function TradeEntryScroll({ children }: { children: ReactNode }) {
-  const KeyboardAwareScrollView =
-    getKeyboardControllerPackage()?.KeyboardAwareScrollView;
+  const KeyboardAwareScrollView = getKeyboardControllerPackage()?.KeyboardAwareScrollView;
   const sharedProps = {
     contentContainerStyle: { paddingBottom: 88 },
-    keyboardDismissMode:
-      Platform.OS === "ios" ? ("interactive" as const) : ("on-drag" as const),
-    keyboardShouldPersistTaps: "handled" as const,
+    keyboardDismissMode: Platform.OS === 'ios' ? ('interactive' as const) : ('on-drag' as const),
+    keyboardShouldPersistTaps: 'handled' as const,
     showsVerticalScrollIndicator: false,
     style: { marginTop: 20 },
   };
@@ -1568,18 +1426,10 @@ function TradeKeyboardToolbar() {
   return <KeyboardToolbar doneText="Done" theme={tradeKeyboardToolbarTheme} />;
 }
 
-function TradeInputRow({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
+function TradeInputRow({ children, label }: { children: ReactNode; label: string }) {
   return (
     <View>
-      <Text className="mb-2 text-[12px] font-extrabold uppercase text-[#858585]">
-        {label}
-      </Text>
+      <Text className="mb-2 text-[12px] font-extrabold uppercase text-[#858585]">{label}</Text>
       <View className="flex-row items-center gap-2">{children}</View>
     </View>
   );
@@ -1593,7 +1443,7 @@ function TradeTextInput({
   value,
 }: {
   editable: boolean;
-  keyboardType: "decimal-pad" | "number-pad";
+  keyboardType: 'decimal-pad' | 'number-pad';
   onChangeText: (value: string) => void;
   placeholder?: string;
   value: string;
@@ -1638,15 +1488,11 @@ function SummaryRow({
   value,
 }: {
   label: string;
-  tone?: "up" | "down";
+  tone?: 'up' | 'down';
   value: string;
 }) {
   const valueClass =
-    tone === "up"
-      ? "text-[#28E978]"
-      : tone === "down"
-        ? "text-[#FF5366]"
-        : "text-white";
+    tone === 'up' ? 'text-[#28E978]' : tone === 'down' ? 'text-[#FF5366]' : 'text-white';
 
   return (
     <View className="flex-row items-center justify-between py-1.5">
@@ -1667,39 +1513,31 @@ function WalletTab({
   isRefreshing: boolean;
   livePrices: Record<string, LiveMarketPrice>;
   onRefresh: () => Promise<DashboardData | null>;
-  user: MobileSessionResponse["user"] | null;
+  user: MobileSessionResponse['user'] | null;
 }) {
-  const openPnl = data.openTrades.reduce(
-    (total, trade) => total + getTradePnl(trade),
-    0,
-  );
-  const reservedMargin = data.openTrades.reduce(
-    (total, trade) => total + getTradeMargin(trade),
-    0,
-  );
+  const openPnl = data.openTrades.reduce((total, trade) => total + getTradePnl(trade), 0);
+  const reservedMargin = data.openTrades.reduce((total, trade) => total + getTradeMargin(trade), 0);
   const closedPnl = data.closedTrades.reduce(
     (total, trade) => total + Number(trade.profitLoss || 0),
     0,
   );
   const accountBalance = data.balance;
-  const accountEquity =
-    accountBalance === null ? null : accountBalance + reservedMargin + openPnl;
+  const accountEquity = accountBalance === null ? null : accountBalance + reservedMargin + openPnl;
   const accountStats = [
-    { label: "Available", value: formatCurrency(accountBalance) },
-    { label: "Reserved", value: formatCurrency(reservedMargin) },
+    { label: 'Available', value: formatCurrency(accountBalance) },
+    { label: 'Reserved', value: formatCurrency(reservedMargin) },
     {
-      label: "Open P/L",
+      label: 'Open P/L',
       value: formatSignedCurrency(openPnl),
-      tone: openPnl >= 0 ? "up" : "down",
+      tone: openPnl >= 0 ? 'up' : 'down',
     },
     {
-      label: "Closed P/L",
+      label: 'Closed P/L',
       value: formatSignedCurrency(closedPnl),
-      tone: closedPnl >= 0 ? "up" : "down",
+      tone: closedPnl >= 0 ? 'up' : 'down',
     },
   ] as const;
-  const openPct =
-    accountBalance && accountBalance > 0 ? (openPnl / accountBalance) * 100 : 0;
+  const openPct = accountBalance && accountBalance > 0 ? (openPnl / accountBalance) * 100 : 0;
   const liveCryptoMarkets = Object.values(livePrices).sort((a, b) =>
     getMarketCode(a.symbol).localeCompare(getMarketCode(b.symbol)),
   );
@@ -1708,9 +1546,7 @@ function WalletTab({
     <ScrollView
       className="flex-1"
       contentContainerClassName="pb-28"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
       showsVerticalScrollIndicator={false}
     >
       <View className="bg-[#173120] pb-6">
@@ -1724,7 +1560,7 @@ function WalletTab({
           <View className="mt-1 flex-row items-center gap-3">
             <Text
               className={`text-[18px] font-black ${
-                openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                openPnl >= 0 ? 'text-[#28E978]' : 'text-[#FF5366]'
               }`}
             >
               {formatSignedCurrency(openPnl)}
@@ -1732,7 +1568,7 @@ function WalletTab({
             <View className="rounded-lg bg-[#255F3C] px-3 py-1">
               <Text
                 className={`text-[16px] font-black ${
-                  openPnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+                  openPnl >= 0 ? 'text-[#28E978]' : 'text-[#FF5366]'
                 }`}
               >
                 {formatPercent(openPct)}
@@ -1752,9 +1588,7 @@ function WalletTab({
 
       <TabEaseItem className="px-6 pt-6" delay={135}>
         <View className="mt-8 flex-row items-center justify-between">
-          <Text className="text-[21px] font-black text-white">
-            Live crypto values
-          </Text>
+          <Text className="text-[21px] font-black text-white">Live crypto values</Text>
         </View>
 
         <View className="mt-4 gap-4">
@@ -1766,9 +1600,7 @@ function WalletTab({
               </Text>
             </View>
           ) : (
-            liveCryptoMarkets.map((market) => (
-              <LiveCryptoRow key={market.symbol} market={market} />
-            ))
+            liveCryptoMarkets.map((market) => <LiveCryptoRow key={market.symbol} market={market} />)
           )}
         </View>
       </TabEaseItem>
@@ -1794,7 +1626,7 @@ function TradeCard({
   const marketPrice = normalizeMarketPrice(trade.marketPrice) ?? currentPrice;
   const pnl = getTradePnl(trade);
   const pnlPct = openPrice > 0 ? (pnl / (openPrice * trade.quantity)) * 100 : 0;
-  const side = trade.type === "buy" ? "Buy" : "Sell";
+  const side = trade.type === 'buy' ? 'Buy' : 'Sell';
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
 
   return (
@@ -1808,27 +1640,22 @@ function TradeCard({
           <View className="flex-row items-center gap-2">
             <Text className="text-[20px] font-black text-white">{symbol}</Text>
             <View className="rounded-full bg-[#235638] px-3 py-1">
-              <Text className="text-[12px] font-black text-[#28E978]">
-                {side}
-              </Text>
+              <Text className="text-[12px] font-black text-[#28E978]">{side}</Text>
             </View>
           </View>
           <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
-            {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
-            {Number(trade.leverage) || 1}x
+            {trade.quantity} {trade.symbol.toUpperCase()} | {Number(trade.leverage) || 1}x
           </Text>
         </View>
         <View className="items-end">
           <Text
-            className={`text-[20px] font-black ${
-              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
-            }`}
+            className={`text-[20px] font-black ${pnl >= 0 ? 'text-[#28E978]' : 'text-[#FF5366]'}`}
           >
             {formatSignedCurrency(pnl)}
           </Text>
           <Text
             className={`mt-1 text-[14px] font-black ${
-              pnl >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
+              pnl >= 0 ? 'text-[#28E978]' : 'text-[#FF5366]'
             }`}
           >
             {formatPercent(pnlPct)}
@@ -1843,7 +1670,7 @@ function TradeCard({
             }}
           >
             <Text className="text-[12px] font-black text-[#FF8C99]">
-              {isClosing ? "Closing..." : "Close"}
+              {isClosing ? 'Closing...' : 'Close'}
             </Text>
           </Pressable>
         </View>
@@ -1854,11 +1681,7 @@ function TradeCard({
       <View className="mt-5 flex-row justify-between">
         <TradeMetric label="Entry" value={formatCurrency(openPrice)} />
         <TradeMetric label="Trade" value={formatCurrency(marketPrice)} />
-        <TradeMetric
-          alignRight
-          label="Margin"
-          value={formatCurrency(getTradeMargin(trade))}
-        />
+        <TradeMetric alignRight label="Margin" value={formatCurrency(getTradeMargin(trade))} />
       </View>
 
       <View className="mt-4 flex-row justify-between rounded-[14px] bg-[#222524] px-3 py-3">
@@ -1869,13 +1692,7 @@ function TradeCard({
   );
 }
 
-function ClosedTradeCard({
-  onPress,
-  trade,
-}: {
-  onPress: () => void;
-  trade: BackendClosedTrade;
-}) {
+function ClosedTradeCard({ onPress, trade }: { onPress: () => void; trade: BackendClosedTrade }) {
   const pnl = Number(trade.profitLoss || 0);
   const isPositive = pnl >= 0;
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
@@ -1892,19 +1709,16 @@ function ClosedTradeCard({
             <Text className="text-[20px] font-black text-white">{symbol}</Text>
             <View className="rounded-full bg-[#343635] px-3 py-1">
               <Text className="text-[12px] font-black text-[#BDBDBD]">
-                {trade.type === "buy" ? "Buy" : "Sell"}
+                {trade.type === 'buy' ? 'Buy' : 'Sell'}
               </Text>
             </View>
           </View>
           <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
-            {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
-            {formatDate(trade.closeTime)}
+            {trade.quantity} {trade.symbol.toUpperCase()} | {formatDate(trade.closeTime)}
           </Text>
         </View>
         <Text
-          className={`text-[20px] font-black ${
-            isPositive ? "text-[#28E978]" : "text-[#FF5366]"
-          }`}
+          className={`text-[20px] font-black ${isPositive ? 'text-[#28E978]' : 'text-[#FF5366]'}`}
         >
           {formatSignedCurrency(pnl)}
         </Text>
@@ -1913,10 +1727,7 @@ function ClosedTradeCard({
       <View className="mt-5 h-px bg-[#3A3E3C]" />
 
       <View className="mt-5 flex-row justify-between">
-        <TradeMetric
-          label="Entry"
-          value={formatCurrency(normalizeMarketPrice(trade.openPrice))}
-        />
+        <TradeMetric label="Entry" value={formatCurrency(normalizeMarketPrice(trade.openPrice))} />
         <TradeMetric
           alignRight
           label="Exit"
@@ -1937,39 +1748,21 @@ function TradeMetric({
   value: string;
 }) {
   return (
-    <View className={alignRight ? "items-end" : undefined}>
-      <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
-        {label}
-      </Text>
+    <View className={alignRight ? 'items-end' : undefined}>
+      <Text className="text-[12px] font-extrabold uppercase text-[#858585]">{label}</Text>
       <Text className="mt-1 text-[16px] font-black text-white">{value}</Text>
     </View>
   );
 }
 
-function DetailRow({
-  label,
-  tone,
-  value,
-}: {
-  label: string;
-  tone?: "up" | "down";
-  value: string;
-}) {
+function DetailRow({ label, tone, value }: { label: string; tone?: 'up' | 'down'; value: string }) {
   const valueClass =
-    tone === "up"
-      ? "text-[#28E978]"
-      : tone === "down"
-        ? "text-[#FF5366]"
-        : "text-white";
+    tone === 'up' ? 'text-[#28E978]' : tone === 'down' ? 'text-[#FF5366]' : 'text-white';
 
   return (
     <View className="border-b border-[#383B39] py-3">
-      <Text className="text-[12px] font-extrabold uppercase text-[#858585]">
-        {label}
-      </Text>
-      <Text className={`mt-1 text-[16px] font-black ${valueClass}`}>
-        {value}
-      </Text>
+      <Text className="text-[12px] font-extrabold uppercase text-[#858585]">{label}</Text>
+      <Text className={`mt-1 text-[16px] font-black ${valueClass}`}>{value}</Text>
     </View>
   );
 }
@@ -1984,23 +1777,21 @@ function TradeDetailsModal({
   onCloseTrade: (orderId: string) => void;
   onDismiss: () => void;
   selectedTrade:
-    | { status: "open"; trade: BackendOpenTrade }
-    | { status: "closed"; trade: BackendClosedTrade }
+    | { status: 'open'; trade: BackendOpenTrade }
+    | { status: 'closed'; trade: BackendClosedTrade }
     | null;
 }) {
   if (!selectedTrade) return null;
 
   const { status, trade } = selectedTrade;
-  const isOpen = status === "open";
+  const isOpen = status === 'open';
   const openPrice = normalizeMarketPrice(trade.openPrice) ?? 0;
   const leverage = Number(trade.leverage) > 0 ? Number(trade.leverage) : 1;
   const margin = (trade.quantity * openPrice) / leverage;
-  const side = trade.type === "buy" ? "Buy" : "Sell";
+  const side = trade.type === 'buy' ? 'Buy' : 'Sell';
   const symbol = `${trade.symbol.toUpperCase()}/USD`;
   const slippage = trade.slippage ?? trade.stippage ?? null;
-  const pnl = isOpen
-    ? getTradePnl(trade)
-    : Number((trade as BackendClosedTrade).profitLoss || 0);
+  const pnl = isOpen ? getTradePnl(trade) : Number((trade as BackendClosedTrade).profitLoss || 0);
   const currentOrClosePrice = isOpen
     ? (normalizeMarketPrice(trade.currentPrice) ?? openPrice)
     : (normalizeMarketPrice((trade as BackendClosedTrade).closePrice) ?? 0);
@@ -2014,26 +1805,21 @@ function TradeDetailsModal({
           <View className="flex-row items-start justify-between gap-4">
             <View className="flex-1">
               <View className="flex-row items-center gap-2">
-                <Text className="text-[24px] font-black text-white">
-                  {symbol}
-                </Text>
+                <Text className="text-[24px] font-black text-white">{symbol}</Text>
                 <View
-                  className={`rounded-full px-3 py-1 ${
-                    isOpen ? "bg-[#235638]" : "bg-[#343635]"
-                  }`}
+                  className={`rounded-full px-3 py-1 ${isOpen ? 'bg-[#235638]' : 'bg-[#343635]'}`}
                 >
                   <Text
                     className={`text-[12px] font-black ${
-                      isOpen ? "text-[#28E978]" : "text-[#BDBDBD]"
+                      isOpen ? 'text-[#28E978]' : 'text-[#BDBDBD]'
                     }`}
                   >
-                    {isOpen ? "Open" : "Closed"}
+                    {isOpen ? 'Open' : 'Closed'}
                   </Text>
                 </View>
               </View>
               <Text className="mt-1 text-[14px] font-bold text-[#9A9A9A]">
-                {side} | {trade.quantity} {trade.symbol.toUpperCase()} |{" "}
-                {leverage}x
+                {side} | {trade.quantity} {trade.symbol.toUpperCase()} | {leverage}x
               </Text>
             </View>
             <PressableScaleMotion
@@ -2047,12 +1833,12 @@ function TradeDetailsModal({
 
           <View className="mt-5 flex-row gap-3">
             <InfoCard
-              label={isOpen ? "Floating P/L" : "Realized P/L"}
-              tone={pnl >= 0 ? "up" : "down"}
+              label={isOpen ? 'Floating P/L' : 'Realized P/L'}
+              tone={pnl >= 0 ? 'up' : 'down'}
               value={formatSignedCurrency(pnl)}
             />
             <InfoCard
-              label={isOpen ? "Trade Price" : "Close Price"}
+              label={isOpen ? 'Trade Price' : 'Close Price'}
               value={formatCurrency(currentOrClosePrice)}
             />
           </View>
@@ -2066,15 +1852,11 @@ function TradeDetailsModal({
                 <>
                   <DetailRow
                     label="Current price"
-                    value={formatCurrency(
-                      normalizeMarketPrice(trade.currentPrice),
-                    )}
+                    value={formatCurrency(normalizeMarketPrice(trade.currentPrice))}
                   />
                   <DetailRow
                     label="Market price"
-                    value={formatCurrency(
-                      normalizeMarketPrice(trade.marketPrice),
-                    )}
+                    value={formatCurrency(normalizeMarketPrice(trade.marketPrice))}
                   />
                   <DetailRow
                     label="Bid"
@@ -2090,16 +1872,12 @@ function TradeDetailsModal({
                   <DetailRow
                     label="Close price"
                     value={formatCurrency(
-                      normalizeMarketPrice(
-                        (trade as BackendClosedTrade).closePrice,
-                      ),
+                      normalizeMarketPrice((trade as BackendClosedTrade).closePrice),
                     )}
                   />
                   <DetailRow
                     label="Closed by"
-                    value={formatCloseReason(
-                      (trade as BackendClosedTrade).closeReason,
-                    )}
+                    value={formatCloseReason((trade as BackendClosedTrade).closeReason)}
                   />
                 </>
               )}
@@ -2111,21 +1889,13 @@ function TradeDetailsModal({
                 label="Stop loss"
                 value={formatCurrency(normalizeMarketPrice(trade.stopLoss))}
               />
-              <DetailRow
-                label="Slippage"
-                value={slippage === null ? "--" : `${slippage}%`}
-              />
+              <DetailRow label="Slippage" value={slippage === null ? '--' : `${slippage}%`} />
               <DetailRow label="Margin" value={formatCurrency(margin)} />
-              <DetailRow
-                label="Open time"
-                value={formatDateTime(trade.openTime)}
-              />
+              <DetailRow label="Open time" value={formatDateTime(trade.openTime)} />
               {!isOpen ? (
                 <DetailRow
                   label="Close time"
-                  value={formatDateTime(
-                    (trade as BackendClosedTrade).closeTime,
-                  )}
+                  value={formatDateTime((trade as BackendClosedTrade).closeTime)}
                 />
               ) : null}
             </View>
@@ -2138,7 +1908,7 @@ function TradeDetailsModal({
                 onPress={() => onCloseTrade(trade.orderId)}
               >
                 <Text className="text-[15px] font-black text-[#FF8C99]">
-                  {isClosing ? "Closing trade..." : "Close trade"}
+                  {isClosing ? 'Closing trade...' : 'Close trade'}
                 </Text>
               </PressableScaleMotion>
             ) : null}
@@ -2157,13 +1927,8 @@ function TradeKindTabs({
   onChange: (kind: TradeKind) => void;
 }) {
   const [tabsWidth, setTabsWidth] = useState(0);
-  const indicatorProgress = useRef(
-    new Animated.Value(kind === "open" ? 0 : 1),
-  ).current;
-  const indicatorWidth = Math.max(
-    (tabsWidth - tradeTabIndicatorPadding * 2) / 2,
-    0,
-  );
+  const indicatorProgress = useRef(new Animated.Value(kind === 'open' ? 0 : 1)).current;
+  const indicatorWidth = Math.max((tabsWidth - tradeTabIndicatorPadding * 2) / 2, 0);
   const indicatorTranslateX = indicatorProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [0, indicatorWidth],
@@ -2178,7 +1943,7 @@ function TradeKindTabs({
       damping: 20,
       mass: 0.8,
       stiffness: 190,
-      toValue: kind === "open" ? 0 : 1,
+      toValue: kind === 'open' ? 0 : 1,
       useNativeDriver: true,
     });
 
@@ -2198,21 +1963,18 @@ function TradeKindTabs({
         <Animated.View
           pointerEvents="none"
           style={{
-            backgroundColor: "#A594F7",
+            backgroundColor: '#A594F7',
             borderRadius: 14,
             bottom: tradeTabIndicatorPadding,
             left: tradeTabIndicatorPadding,
             opacity: indicatorWidth > 0 ? 1 : 0,
-            position: "absolute",
+            position: 'absolute',
             top: tradeTabIndicatorPadding,
-            transform: [
-              { translateX: indicatorTranslateX },
-              { scaleX: indicatorScaleX },
-            ],
+            transform: [{ translateX: indicatorTranslateX }, { scaleX: indicatorScaleX }],
             width: indicatorWidth,
           }}
         />
-        {(["open", "closed"] as const).map((tabKind) => {
+        {(['open', 'closed'] as const).map((tabKind) => {
           const isActive = kind === tabKind;
 
           return (
@@ -2225,10 +1987,10 @@ function TradeKindTabs({
             >
               <Text
                 className={`text-[15px] font-black ${
-                  isActive ? "text-[#151515]" : "text-[#9A9A9A]"
+                  isActive ? 'text-[#151515]' : 'text-[#9A9A9A]'
                 }`}
               >
-                {tabKind === "open" ? "Open" : "Closed"}
+                {tabKind === 'open' ? 'Open' : 'Closed'}
               </Text>
             </PressableScaleMotion>
           );
@@ -2251,18 +2013,13 @@ function TradesTab({
   onCloseTrade: (orderId: string) => void | Promise<void>;
   onRefresh: () => Promise<DashboardData | null>;
 }) {
-  const [kind, setKind] = useState<TradeKind>("open");
-  const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(
-    null,
-  );
+  const [kind, setKind] = useState<TradeKind>('open');
+  const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
   const contentTransition = useRef(new Animated.Value(1)).current;
   const contentDirection = useRef(1);
   const scrollViewRef = useRef<ScrollView>(null);
-  const isOpen = kind === "open";
-  const openPnl = data.openTrades.reduce(
-    (total, trade) => total + getTradePnl(trade),
-    0,
-  );
+  const isOpen = kind === 'open';
+  const openPnl = data.openTrades.reduce((total, trade) => total + getTradePnl(trade), 0);
   const closedPnl = data.closedTrades.reduce(
     (total, trade) => total + Number(trade.profitLoss || 0),
     0,
@@ -2271,17 +2028,13 @@ function TradesTab({
   const selectedTradeDetails = useMemo(() => {
     if (!selectedTrade) return null;
 
-    if (selectedTrade.status === "open") {
-      const trade = data.openTrades.find(
-        (item) => item.orderId === selectedTrade.orderId,
-      );
-      return trade ? { status: "open" as const, trade } : null;
+    if (selectedTrade.status === 'open') {
+      const trade = data.openTrades.find((item) => item.orderId === selectedTrade.orderId);
+      return trade ? { status: 'open' as const, trade } : null;
     }
 
-    const trade = data.closedTrades.find(
-      (item) => item.orderId === selectedTrade.orderId,
-    );
-    return trade ? { status: "closed" as const, trade } : null;
+    const trade = data.closedTrades.find((item) => item.orderId === selectedTrade.orderId);
+    return trade ? { status: 'closed' as const, trade } : null;
   }, [data.closedTrades, data.openTrades, selectedTrade]);
 
   const closeSelectedTrade = useCallback(
@@ -2295,7 +2048,7 @@ function TradesTab({
     (nextKind: TradeKind) => {
       if (nextKind === kind) return;
 
-      contentDirection.current = nextKind === "closed" ? 1 : -1;
+      contentDirection.current = nextKind === 'closed' ? 1 : -1;
       contentTransition.stopAnimation();
       contentTransition.setValue(0);
       scrollViewRef.current?.scrollTo({ animated: true, y: 0 });
@@ -2334,9 +2087,7 @@ function TradesTab({
         ref={scrollViewRef}
         className="flex-1"
         contentContainerClassName="px-6 pb-28 pt-5"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         <TabEaseItem className="flex-row items-center justify-between">
@@ -2344,8 +2095,8 @@ function TradesTab({
             <Text className="text-[28px] font-black text-white">Trade</Text>
             <Text className="mt-2 text-[16px] font-bold text-[#9A9A9A]">
               {isOpen
-                ? "Positions currently live in the market."
-                : "Completed positions and realized returns."}
+                ? 'Positions currently live in the market.'
+                : 'Completed positions and realized returns.'}
             </Text>
           </View>
         </TabEaseItem>
@@ -2356,24 +2107,17 @@ function TradesTab({
           <StyledAnimatedView
             style={{
               opacity: contentTransition,
-              transform: [
-                { translateX: contentTranslateX },
-                { scale: contentScale },
-              ],
+              transform: [{ translateX: contentTranslateX }, { scale: contentScale }],
             }}
           >
             <View className="mt-6 flex-row gap-3">
               <InfoCard
-                label={isOpen ? "Open Value" : "Realized"}
-                tone={(isOpen ? openPnl : closedPnl) >= 0 ? "up" : "down"}
-                value={
-                  isOpen
-                    ? formatSignedCurrency(openPnl)
-                    : formatSignedCurrency(closedPnl)
-                }
+                label={isOpen ? 'Open Value' : 'Realized'}
+                tone={(isOpen ? openPnl : closedPnl) >= 0 ? 'up' : 'down'}
+                value={isOpen ? formatSignedCurrency(openPnl) : formatSignedCurrency(closedPnl)}
               />
               <InfoCard
-                label={isOpen ? "Open Count" : "Closed Count"}
+                label={isOpen ? 'Open Count' : 'Closed Count'}
                 tone="up"
                 value={`${visibleTrades.length}`}
               />
@@ -2383,7 +2127,7 @@ function TradesTab({
               {visibleTrades.length === 0 ? (
                 <View className="rounded-[18px] bg-[#292C2B] px-5 py-8">
                   <Text className="text-center text-[15px] font-bold text-[#9A9A9A]">
-                    {isOpen ? "No open trades." : "No closed trades."}
+                    {isOpen ? 'No open trades.' : 'No closed trades.'}
                   </Text>
                 </View>
               ) : isOpen ? (
@@ -2394,7 +2138,7 @@ function TradesTab({
                     onClose={() => onCloseTrade(trade.orderId)}
                     onPress={() =>
                       setSelectedTrade({
-                        status: "open",
+                        status: 'open',
                         orderId: trade.orderId,
                       })
                     }
@@ -2407,7 +2151,7 @@ function TradesTab({
                     key={trade.orderId}
                     onPress={() =>
                       setSelectedTrade({
-                        status: "closed",
+                        status: 'closed',
                         orderId: trade.orderId,
                       })
                     }
@@ -2433,9 +2177,7 @@ function TradesTab({
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="border-b border-[#383B39] py-4">
-      <Text className="text-[13px] font-extrabold uppercase text-[#858585]">
-        {label}
-      </Text>
+      <Text className="text-[13px] font-extrabold uppercase text-[#858585]">{label}</Text>
       <Text className="mt-2 text-[17px] font-black text-white">{value}</Text>
     </View>
   );
@@ -2456,30 +2198,21 @@ function ProfileTab({
   isRefreshing: boolean;
   onLogout: () => void;
   onRefresh: () => Promise<DashboardData | null>;
-  user: MobileSessionResponse["user"] | null;
+  user: MobileSessionResponse['user'] | null;
 }) {
-  const openPnl = data.openTrades.reduce(
-    (total, trade) => total + getTradePnl(trade),
-    0,
-  );
-  const reservedMargin = data.openTrades.reduce(
-    (total, trade) => total + getTradeMargin(trade),
-    0,
-  );
+  const openPnl = data.openTrades.reduce((total, trade) => total + getTradePnl(trade), 0);
+  const reservedMargin = data.openTrades.reduce((total, trade) => total + getTradeMargin(trade), 0);
   const closedPnl = data.closedTrades.reduce(
     (total, trade) => total + Number(trade.profitLoss || 0),
     0,
   );
-  const equity =
-    data.balance === null ? null : data.balance + reservedMargin + openPnl;
+  const equity = data.balance === null ? null : data.balance + reservedMargin + openPnl;
 
   return (
     <ScrollView
       className="flex-1"
       contentContainerClassName="px-6 pb-28 pt-5"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
       showsVerticalScrollIndicator={false}
     >
       <TabEaseItem>
@@ -2489,51 +2222,32 @@ function ProfileTab({
         </Text>
       </TabEaseItem>
 
-      <TabEaseItem
-        className="mt-8 items-center rounded-[24px] bg-[#292C2B] px-5 py-7"
-        delay={55}
-      >
+      <TabEaseItem className="mt-8 items-center rounded-[24px] bg-[#292C2B] px-5 py-7" delay={55}>
         <Avatar user={user} />
         <Text className="mt-4 text-center text-[25px] font-black text-white">
-          {user?.name || "Authenticated user"}
+          {user?.name || 'Authenticated user'}
         </Text>
         <Text className="mt-1 text-center text-[16px] font-bold text-[#A0A0A0]">
-          {user?.email || "Email unavailable"}
+          {user?.email || 'Email unavailable'}
         </Text>
         <View className="mt-5 rounded-full bg-[#235638] px-4 py-2">
           <Text className="text-[13px] font-black text-[#28E978]">
-            {user?.hasMobilePin ? "Mobile PIN enabled" : "Mobile PIN not set"}
+            {user?.hasMobilePin ? 'Mobile PIN enabled' : 'Mobile PIN not set'}
           </Text>
         </View>
       </TabEaseItem>
 
-      <TabEaseItem
-        className="mt-5 rounded-[22px] bg-[#292C2B] px-5"
-        delay={100}
-      >
-        <ProfileRow label="Email" value={user?.email || "Unavailable"} />
+      <TabEaseItem className="mt-5 rounded-[22px] bg-[#292C2B] px-5" delay={100}>
+        <ProfileRow label="Email" value={user?.email || 'Unavailable'} />
         <ProfileRow label="Account Equity" value={formatCurrency(equity)} />
-        <ProfileRow
-          label="Available Balance"
-          value={formatCurrency(data.balance)}
-        />
-        <ProfileRow
-          label="Reserved Margin"
-          value={formatCurrency(reservedMargin)}
-        />
+        <ProfileRow label="Available Balance" value={formatCurrency(data.balance)} />
+        <ProfileRow label="Reserved Margin" value={formatCurrency(reservedMargin)} />
         <ProfileRow label="Open P/L" value={formatSignedCurrency(openPnl)} />
-        <ProfileRow
-          label="Closed P/L"
-          value={formatSignedCurrency(closedPnl)}
-        />
+        <ProfileRow label="Closed P/L" value={formatSignedCurrency(closedPnl)} />
         <ProfileRow label="Open Trades" value={`${data.openTrades.length}`} />
         <View className="py-4">
-          <Text className="text-[13px] font-extrabold uppercase text-[#858585]">
-            Closed Trades
-          </Text>
-          <Text className="mt-2 text-[17px] font-black text-white">
-            {data.closedTrades.length}
-          </Text>
+          <Text className="text-[13px] font-extrabold uppercase text-[#858585]">Closed Trades</Text>
+          <Text className="mt-2 text-[17px] font-black text-white">{data.closedTrades.length}</Text>
         </View>
       </TabEaseItem>
 
@@ -2543,20 +2257,13 @@ function ProfileTab({
           delay={145}
         >
           <ActivityIndicator color="#A594F7" />
-          <Text className="text-[14px] font-bold text-[#9A9A9A]">
-            Loading account data
-          </Text>
+          <Text className="text-[14px] font-bold text-[#9A9A9A]">Loading account data</Text>
         </TabEaseItem>
       ) : null}
 
       {errorMessage ? (
-        <TabEaseItem
-          className="mt-5 rounded-[18px] bg-[#3A2328] px-5 py-4"
-          delay={145}
-        >
-          <Text className="text-[14px] font-bold text-[#FF8C99]">
-            {errorMessage}
-          </Text>
+        <TabEaseItem className="mt-5 rounded-[18px] bg-[#3A2328] px-5 py-4" delay={145}>
+          <Text className="text-[14px] font-bold text-[#FF8C99]">{errorMessage}</Text>
         </TabEaseItem>
       ) : null}
 
@@ -2581,15 +2288,10 @@ export function DashboardTabsProvider({
   onLogout,
   user,
 }: HelloWorldScreenProps & { children: ReactNode }) {
-  const [dashboardData, setDashboardData] =
-    useState<DashboardData>(emptyDashboardData);
-  const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>(
-    {},
-  );
+  const [dashboardData, setDashboardData] = useState<DashboardData>(emptyDashboardData);
+  const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>({});
   const livePricesRef = useRef(livePrices);
-  const pricePollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
+  const pricePollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [isClosingTrade, setIsClosingTrade] = useState(false);
@@ -2604,8 +2306,7 @@ export function DashboardTabsProvider({
           return trade;
         }
 
-        const currentPrice =
-          trade.type === "buy" ? livePrice.bid : livePrice.ask;
+        const currentPrice = trade.type === 'buy' ? livePrice.bid : livePrice.ask;
 
         return {
           ...trade,
@@ -2639,9 +2340,7 @@ export function DashboardTabsProvider({
         closedTrades: data.closedTrades,
       };
     } catch (error) {
-      setDataError(
-        error instanceof Error ? error.message : "Unable to load account data",
-      );
+      setDataError(error instanceof Error ? error.message : 'Unable to load account data');
       return null;
     } finally {
       setIsLoadingData(false);
@@ -2705,8 +2404,8 @@ export function DashboardTabsProvider({
         );
       } catch (error) {
         Alert.alert(
-          "Unable to close trade",
-          error instanceof Error ? error.message : "Please try again.",
+          'Unable to close trade',
+          error instanceof Error ? error.message : 'Please try again.',
         );
       } finally {
         setIsClosingTrade(false);
@@ -2724,10 +2423,7 @@ export function DashboardTabsProvider({
   useEffect(() => {
     livePricesRef.current = livePrices;
 
-    if (
-      hasAllRequiredCryptoPrices(livePrices) &&
-      pricePollingIntervalRef.current
-    ) {
+    if (hasAllRequiredCryptoPrices(livePrices) && pricePollingIntervalRef.current) {
       clearInterval(pricePollingIntervalRef.current);
       pricePollingIntervalRef.current = null;
     }
@@ -2744,10 +2440,7 @@ export function DashboardTabsProvider({
     socket.onmessage = (event) => {
       try {
         const parsedMessage = JSON.parse(String(event.data));
-        const data =
-          typeof parsedMessage === "string"
-            ? JSON.parse(parsedMessage)
-            : parsedMessage;
+        const data = typeof parsedMessage === 'string' ? JSON.parse(parsedMessage) : parsedMessage;
 
         setLivePrices((previousPrices) => {
           const nextPrices = mergeLivePricePayloads(previousPrices, [data]);
@@ -2755,12 +2448,12 @@ export function DashboardTabsProvider({
           return nextPrices;
         });
       } catch (error) {
-        console.warn("Unable to parse live price update", error);
+        console.warn('Unable to parse live price update', error);
       }
     };
 
     socket.onerror = () => {
-      console.warn("Mobile price websocket connection failed");
+      console.warn('Mobile price websocket connection failed');
     };
 
     return () => {
@@ -2775,10 +2468,7 @@ export function DashboardTabsProvider({
     let requestInFlight = false;
 
     const stopPollingIfComplete = () => {
-      if (
-        hasAllRequiredCryptoPrices(livePricesRef.current) &&
-        pricePollingIntervalRef.current
-      ) {
+      if (hasAllRequiredCryptoPrices(livePricesRef.current) && pricePollingIntervalRef.current) {
         clearInterval(pricePollingIntervalRef.current);
         pricePollingIntervalRef.current = null;
       }
@@ -2793,15 +2483,12 @@ export function DashboardTabsProvider({
         const latestPrices = await fetchLatestPrices();
         if (isCancelled || latestPrices.length === 0) return;
 
-        const nextPrices = mergeLivePricePayloads(
-          livePricesRef.current,
-          latestPrices,
-        );
+        const nextPrices = mergeLivePricePayloads(livePricesRef.current, latestPrices);
         livePricesRef.current = nextPrices;
         setLivePrices(nextPrices);
         stopPollingIfComplete();
       } catch (error) {
-        console.warn("Unable to poll latest crypto prices", error);
+        console.warn('Unable to poll latest crypto prices', error);
       } finally {
         requestInFlight = false;
       }
@@ -2851,9 +2538,7 @@ export function DashboardTabsProvider({
   );
 
   return (
-    <DashboardTabsContext.Provider value={contextValue}>
-      {children}
-    </DashboardTabsContext.Provider>
+    <DashboardTabsContext.Provider value={contextValue}>{children}</DashboardTabsContext.Provider>
   );
 }
 
@@ -2862,7 +2547,7 @@ export function CryptoDetailsScreen() {
   const symbolParam = params.symbol;
   const symbol = useMemo(() => {
     const rawSymbol = Array.isArray(symbolParam) ? symbolParam[0] : symbolParam;
-    return rawSymbol ? decodeURIComponent(String(rawSymbol)) : "";
+    return rawSymbol ? decodeURIComponent(String(rawSymbol)) : '';
   }, [symbolParam]);
   const { data, livePrices, onTradeCreated } = useDashboardTabsContext();
   const market = useMemo(() => {
@@ -2886,9 +2571,9 @@ export function CryptoDetailsScreen() {
       return;
     }
 
-    router.replace("/wallet");
+    router.replace('/wallet');
   }, []);
-  const screenTitle = market ? getMarketName(market.symbol) : "Market";
+  const screenTitle = market ? getMarketName(market.symbol) : 'Market';
 
   if (!market) {
     const isWaitingForPrices = Object.keys(livePrices).length === 0;
@@ -2901,8 +2586,8 @@ export function CryptoDetailsScreen() {
             <ActivityIndicator color="#A594F7" />
             <Text className="mt-3 text-center text-[14px] font-bold text-[#9A9A9A]">
               {isWaitingForPrices
-                ? "Waiting for live crypto prices"
-                : "Market details are unavailable"}
+                ? 'Waiting for live crypto prices'
+                : 'Market details are unavailable'}
             </Text>
           </View>
         </DashboardTabFrame>
@@ -2924,8 +2609,7 @@ export function CryptoDetailsScreen() {
 }
 
 export function WalletDashboardTabScreen() {
-  const { data, isRefreshingData, livePrices, onRefresh, user } =
-    useDashboardTabsContext();
+  const { data, isRefreshingData, livePrices, onRefresh, user } = useDashboardTabsContext();
   const animationKey = useFocusedTabAnimationKey();
 
   return (
@@ -2964,15 +2648,8 @@ export function TradeDashboardTabScreen() {
 }
 
 export function ProfileDashboardTabScreen() {
-  const {
-    data,
-    errorMessage,
-    isLoadingData,
-    isRefreshingData,
-    onLogout,
-    onRefresh,
-    user,
-  } = useDashboardTabsContext();
+  const { data, errorMessage, isLoadingData, isRefreshingData, onLogout, onRefresh, user } =
+    useDashboardTabsContext();
   const animationKey = useFocusedTabAnimationKey();
 
   return (

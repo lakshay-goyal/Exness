@@ -1,18 +1,15 @@
-"use client";
+'use client';
 
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 interface GuestRouteProps {
   children: React.ReactNode;
   redirectTo?: string;
 }
 
-export const GuestRoute: React.FC<GuestRouteProps> = ({
-  children,
-  redirectTo = "/dashboard",
-}) => {
+export const GuestRoute: React.FC<GuestRouteProps> = ({ children, redirectTo = '/dashboard' }) => {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 

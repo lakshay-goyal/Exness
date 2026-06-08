@@ -1,10 +1,10 @@
-import type { Request } from "express";
-import { getEngineStreamClient } from "../../../infrastructure/redis/engine-stream.service.js";
+import type { Request } from 'express';
+import { getEngineStreamClient } from '../../../infrastructure/redis/engine-stream.service.js';
 
 class EngineUserService {
   async ensureEngineUser(req: Request, userId: string, userEmail: string) {
     const { response } = await getEngineStreamClient(req).request({
-      function: "createUser",
+      function: 'createUser',
       userId,
       userEmail,
     });

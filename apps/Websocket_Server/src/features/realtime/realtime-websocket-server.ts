@@ -1,6 +1,6 @@
-import "dotenv/config";
-import { WebSocketServer } from "ws";
-import { config, pubsubClient, constant } from "@repo/config";
+import 'dotenv/config';
+import { WebSocketServer } from 'ws';
+import { config, pubsubClient, constant } from '@repo/config';
 
 export class RealtimeWebsocketServer {
   private readonly server = new WebSocketServer({
@@ -11,12 +11,12 @@ export class RealtimeWebsocketServer {
   async start() {
     await this.pubsub.connect();
 
-    this.server.on("connection", async (socket) => {
+    this.server.on('connection', async (socket) => {
       await this.pubsub.subscriber(constant.pubsubKey, (data: any) => {
         socket.send(JSON.stringify(data));
       });
 
-      socket.on("close", () => {});
+      socket.on('close', () => {});
     });
   }
 }

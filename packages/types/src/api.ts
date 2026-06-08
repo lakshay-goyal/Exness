@@ -6,7 +6,7 @@ import type {
   ClosedOrderResponse,
   CreateTradePayload,
   LatestPrice,
-} from "./trading";
+} from './trading';
 
 export type AuthenticatedUser = {
   id: string;
@@ -32,7 +32,7 @@ export type MobileSessionResponse = {
 };
 
 export type BalanceResponse = {
-  status?: "success" | "error";
+  status?: 'success' | 'error';
   message?: number | string;
 };
 

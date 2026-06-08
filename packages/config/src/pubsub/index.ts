@@ -1,13 +1,11 @@
-import { createClient, type RedisClientType } from "redis";
+import { createClient, type RedisClientType } from 'redis';
 
 class PubsubClient {
   private client: RedisClientType;
 
   constructor(private url: string) {
     this.client = createClient({ url: url });
-    this.client.on("error", (err) =>
-      console.error(`Error creating clinet: ${err}`),
-    );
+    this.client.on('error', (err) => console.error(`Error creating clinet: ${err}`));
   }
 
   async connect() {
@@ -33,7 +31,7 @@ class PubsubClient {
           const data = JSON.parse(message);
           callback(data);
         } catch (err) {
-          console.error("Failed to parse message:", err);
+          console.error('Failed to parse message:', err);
         }
       });
     }

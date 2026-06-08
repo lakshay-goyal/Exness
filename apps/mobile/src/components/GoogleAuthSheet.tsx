@@ -1,44 +1,36 @@
-import { useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { useState } from 'react';
+import { Modal, Pressable, Text, View } from 'react-native';
 
-import { PressableScaleMotion } from "@/components/PressMotion";
-import { getAuthErrorMessage, logAuthEvent } from "@/lib/auth-logger";
-import { signInWithGoogleInBrowser } from "@/lib/google-auth-flow";
-import {
-  MobileSessionResponse,
-  syncMobileSession,
-} from "@/lib/mobile-auth-api";
-import { playSubtleTapHaptic } from "@/lib/trade-haptics";
+import { PressableScaleMotion } from '@/components/PressMotion';
+import { getAuthErrorMessage, logAuthEvent } from '@/lib/auth-logger';
+import { signInWithGoogleInBrowser } from '@/lib/google-auth-flow';
+import { MobileSessionResponse, syncMobileSession } from '@/lib/mobile-auth-api';
+import { playSubtleTapHaptic } from '@/lib/trade-haptics';
 
 type GoogleAuthSheetProps = {
-  mode: "login" | "create";
+  mode: 'login' | 'create';
   visible: boolean;
   onClose: () => void;
-  onAuthenticated: (user: MobileSessionResponse["user"]) => void;
+  onAuthenticated: (user: MobileSessionResponse['user']) => void;
 };
 
-export function GoogleAuthSheet({
-  mode,
-  visible,
-  onClose,
-  onAuthenticated,
-}: GoogleAuthSheetProps) {
+export function GoogleAuthSheet({ mode, visible, onClose, onAuthenticated }: GoogleAuthSheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const title = mode === "login" ? "Login with Google" : "Create with Google";
+  const [error, setError] = useState('');
+  const title = mode === 'login' ? 'Login with Google' : 'Create with Google';
 
   async function handleContinue() {
     playSubtleTapHaptic();
     setIsLoading(true);
-    setError("");
-    logAuthEvent("google_sheet_continue_pressed", { mode });
+    setError('');
+    logAuthEvent('google_sheet_continue_pressed', { mode });
 
     try {
-      logAuthEvent("google_social_sign_in_started", { mode });
+      logAuthEvent('google_social_sign_in_started', { mode });
       await signInWithGoogleInBrowser();
-      logAuthEvent("google_social_sign_in_completed", { mode });
+      logAuthEvent('google_social_sign_in_completed', { mode });
       const session = await syncMobileSession();
-      logAuthEvent("google_mobile_session_ready", {
+      logAuthEvent('google_mobile_session_ready', {
         mode,
         userId: session.user.id,
         email: session.user.email,
@@ -47,29 +39,24 @@ export function GoogleAuthSheet({
       onClose();
       onAuthenticated(session.user);
     } catch (err) {
-      const message = getAuthErrorMessage(err, "Google authentication failed.");
+      const message = getAuthErrorMessage(err, 'Google authentication failed.');
       logAuthEvent(
-        "google_auth_flow_failed",
+        'google_auth_flow_failed',
         {
           mode,
           error: message,
         },
-        "error",
+        'error',
       );
       setError(message);
     } finally {
       setIsLoading(false);
-      logAuthEvent("google_auth_flow_finished", { mode });
+      logAuthEvent('google_auth_flow_finished', { mode });
     }
   }
 
   return (
-    <Modal
-      animationType="slide"
-      transparent
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
       <View className="flex-1 justify-end">
         <Pressable
           accessibilityLabel="Close Google authentication"
@@ -89,8 +76,8 @@ export function GoogleAuthSheet({
             {title}
           </Text>
           <Text className="mx-auto mt-2 max-w-[310px] text-center text-[15px] leading-6 text-[#9A9A9A]">
-            Continue in Google's secure sign-in sheet. After login, we will take
-            you straight to your home screen.
+            Continue in Google's secure sign-in sheet. After login, we will take you straight to
+            your home screen.
           </Text>
 
           {error ? (
@@ -105,13 +92,13 @@ export function GoogleAuthSheet({
             <PressableScaleMotion
               accessibilityRole="button"
               className={`h-14 flex-row items-center justify-center rounded-full ${
-                isLoading ? "bg-[#6C629F]" : "bg-[#A594F7]"
+                isLoading ? 'bg-[#6C629F]' : 'bg-[#A594F7]'
               }`}
               disabled={isLoading}
               onPress={handleContinue}
             >
               <Text className="text-[16px] font-extrabold tracking-normal text-[#151515]">
-                {isLoading ? "Opening Google..." : "Continue with Google"}
+                {isLoading ? 'Opening Google...' : 'Continue with Google'}
               </Text>
             </PressableScaleMotion>
 
@@ -121,9 +108,7 @@ export function GoogleAuthSheet({
               disabled={isLoading}
               onPress={onClose}
             >
-              <Text className="text-[14px] font-bold text-[#A6A6A6]">
-                Choose another option
-              </Text>
+              <Text className="text-[14px] font-bold text-[#A6A6A6]">Choose another option</Text>
             </PressableScaleMotion>
           </View>
         </View>

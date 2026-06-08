@@ -1,24 +1,17 @@
-import {
-  supportedSymbols,
-  type SupportedMarketAsset,
-  type SupportedSymbol,
-} from "@repo/types";
+import { supportedSymbols, type SupportedMarketAsset, type SupportedSymbol } from '@repo/types';
 
 export class MarketSymbolMapper {
-  private readonly symbolToAsset: Record<
-    SupportedSymbol,
-    SupportedMarketAsset
-  > = {
-    btc: "BTC_USDC_PERP",
-    eth: "ETH_USDC_PERP",
-    sol: "SOL_USDC_PERP",
+  private readonly symbolToAsset: Record<SupportedSymbol, SupportedMarketAsset> = {
+    btc: 'BTC_USDC_PERP',
+    eth: 'ETH_USDC_PERP',
+    sol: 'SOL_USDC_PERP',
   };
 
   normalizeSymbol(symbol: string): SupportedSymbol | string {
     const symbolUpper = symbol.toUpperCase();
-    if (symbolUpper.includes("BTC")) return "btc";
-    if (symbolUpper.includes("ETH")) return "eth";
-    if (symbolUpper.includes("SOL")) return "sol";
+    if (symbolUpper.includes('BTC')) return 'btc';
+    if (symbolUpper.includes('ETH')) return 'eth';
+    if (symbolUpper.includes('SOL')) return 'sol';
     return symbol.toLowerCase();
   }
 
@@ -33,17 +26,16 @@ export class MarketSymbolMapper {
 
   getPriceAssetName(symbol: string): string {
     const normalized = this.normalizeSymbol(symbol);
-    if (this.isSupportedSymbol(normalized))
-      return this.symbolToAsset[normalized];
+    if (this.isSupportedSymbol(normalized)) return this.symbolToAsset[normalized];
     return symbol.toUpperCase();
   }
 
   getMarketCode(symbol: string): string {
     const symbolUpper = symbol.toUpperCase();
-    if (symbolUpper.includes("BTC")) return "BTC";
-    if (symbolUpper.includes("ETH")) return "ETH";
-    if (symbolUpper.includes("SOL")) return "SOL";
-    return symbolUpper.replace(/[^A-Z0-9]/g, "");
+    if (symbolUpper.includes('BTC')) return 'BTC';
+    if (symbolUpper.includes('ETH')) return 'ETH';
+    if (symbolUpper.includes('SOL')) return 'SOL';
+    return symbolUpper.replace(/[^A-Z0-9]/g, '');
   }
 
   getCanonicalLiveAssetSymbol(symbol: string): string {
@@ -52,9 +44,9 @@ export class MarketSymbolMapper {
 
   getMarketName(symbol: string): string {
     const marketCode = this.getMarketCode(symbol);
-    if (marketCode === "BTC") return "Bitcoin";
-    if (marketCode === "ETH") return "Ethereum";
-    if (marketCode === "SOL") return "Solana";
+    if (marketCode === 'BTC') return 'Bitcoin';
+    if (marketCode === 'ETH') return 'Ethereum';
+    if (marketCode === 'SOL') return 'Solana';
     return marketCode;
   }
 
