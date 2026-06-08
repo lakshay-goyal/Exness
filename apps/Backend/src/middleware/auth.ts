@@ -1,6 +1,6 @@
 import type { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { config } from "@repo/config";
+import { config, HTTP_HEADERS, TOKEN_TYPES, MESSAGES } from "@repo/config";
 import { prisma } from "@repo/db";
 import ResponseWriter from "../utils/response-writer.js";
 import type { AuthenticatedRequest } from "../features/auth/types/auth-request.js";
@@ -11,14 +11,11 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    const authHeader = req.header("Authorization");
-    const token = authHeader?.replace("Bearer ", "");
+    const authHeader = req.header(HTTP_HEADERS.AUTHORIZATION);
+    const token = authHeader?.replace(HTTP_HEADERS.BEARER_PREFIX, "");
 
     if (!token) {
-      return ResponseWriter.unauthorized(
-        res,
-        "Access denied. No token provided.",
-      );
+      return ResponseWriter.unauthorized(res, MESSAGES.ACCESS_DENIED_NO_TOKEN);
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as {
@@ -29,16 +26,13 @@ export const authMiddleware = async (
       lastName?: string;
     };
 
-    if (decoded.type === "refresh") {
-      return ResponseWriter.unauthorized(res, "Invalid token type.");
+    if (decoded.type === TOKEN_TYPES.REFRESH) {
+      return ResponseWriter.unauthorized(res, MESSAGES.INVALID_TOKEN_TYPE);
     }
 
     const userId = decoded.userId;
     if (!userId) {
-      return ResponseWriter.unauthorized(
-        res,
-        "Invalid token: userId not found.",
-      );
+      return ResponseWriter.unauthorized(res, MESSAGES.INVALID_TOKEN_NO_USER_ID);
     }
 
     const user = await prisma.user.findFirst({
@@ -48,10 +42,7 @@ export const authMiddleware = async (
     });
 
     if (!user) {
-      return ResponseWriter.unauthorized(
-        res,
-        "User not found in database. Please login again.",
-      );
+      return ResponseWriter.unauthorized(res, MESSAGES.USER_NOT_FOUND);
     }
 
     req.user = {
@@ -63,6 +54,6 @@ export const authMiddleware = async (
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);
-    ResponseWriter.unauthorized(res, "Invalid token.");
+    ResponseWriter.unauthorized(res, MESSAGES.INVALID_TOKEN);
   }
 };

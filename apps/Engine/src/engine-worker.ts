@@ -1,12 +1,21 @@
-import { config, redisStreams, constant } from "@repo/config";
+import {
+  config,
+  redisStreams,
+  constant,
+  ENGINE_CONFIG,
+  REDIS_STREAMS,
+} from "@repo/config";
 import { tradeFunction } from "./features/dispatcher/trade-dispatcher.js";
 
 export class EngineWorker {
   private readonly redisStreamsClient = redisStreams(config.REDIS_URL);
-  private readonly concurrencyLimit = 10;
-  private readonly workerCount = Math.min(this.concurrencyLimit, 5);
-  private readonly consumerGroup = "engine-group";
-  private readonly consumerName = `engine-${process.pid}-${Date.now()}`;
+  private readonly concurrencyLimit = ENGINE_CONFIG.CONCURRENCY_LIMIT;
+  private readonly workerCount = Math.min(
+    this.concurrencyLimit,
+    ENGINE_CONFIG.MAX_WORKERS,
+  );
+  private readonly consumerGroup = ENGINE_CONFIG.CONSUMER_GROUP;
+  private readonly consumerName = `${ENGINE_CONFIG.CONSUMER_NAME_PREFIX}-${process.pid}-${Date.now()}`;
   private activeTasks = 0;
   private readonly taskQueue: Array<() => Promise<void>> = [];
 
@@ -42,7 +51,9 @@ export class EngineWorker {
           });
         }
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise((resolve) =>
+          setTimeout(resolve, ENGINE_CONFIG.POLLING_TIMEOUT_MS),
+        );
       }
     }
   }
@@ -51,7 +62,7 @@ export class EngineWorker {
     while (true) {
       try {
         const result = await this.redisStreamsClient.readNextFromRedisStream(
-          constant.redisStream,
+          REDIS_STREAMS.EXNESS,
           0,
           {
             consumerGroup: this.consumerGroup,
@@ -64,7 +75,9 @@ export class EngineWorker {
         }
       } catch (error) {
         console.error("Error reading from Redis stream:", error);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) =>
+          setTimeout(resolve, ENGINE_CONFIG.ERROR_RETRY_DELAY_MS),
+        );
       }
     }
   }

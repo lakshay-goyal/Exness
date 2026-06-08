@@ -1,7 +1,10 @@
-import { redisStreams, config, constant } from "@repo/config";
+import {
+  redisStreams,
+  config,
+  REDIS_STREAMS,
+  DEFAULTS,
+} from "@repo/config";
 import { prisma } from "@repo/db";
-
-const INITIAL_USER_BALANCE = 500000;
 
 // Lazy initialization of Redis streams for sending responses
 let RedisStreamsInstance: ReturnType<typeof redisStreams> | null = null;
@@ -99,7 +102,7 @@ export async function dbStorageFunction(result: any) {
       console.error("getCloseOrders: Missing userId");
       try {
         const RedisStreams = await getRedisStreams();
-        await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+        await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
           function: "getCloseOrders",
           message: JSON.stringify([]),
           requestId,
@@ -142,7 +145,7 @@ export async function dbStorageFunction(result: any) {
         status: "closed",
       }));
 
-      await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+      await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
         function: "getCloseOrders",
         message: JSON.stringify(formattedCloseOrders),
         requestId,
@@ -151,7 +154,7 @@ export async function dbStorageFunction(result: any) {
     } catch (error) {
       console.error("Error fetching closeOrders:", error);
       const RedisStreams = await getRedisStreams();
-      await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+      await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
         function: "getCloseOrders",
         message: JSON.stringify([]),
         requestId,
@@ -196,7 +199,7 @@ export async function dbStorageFunction(result: any) {
               data: {
                 userID: userId,
                 email: userEmail,
-                balance: INITIAL_USER_BALANCE,
+                balance: DEFAULTS.INITIAL_USER_BALANCE,
               },
             });
           }

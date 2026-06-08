@@ -1,8 +1,8 @@
-import { supportedAssets } from "../../../constant/assets.js";
+import { SUPPORTED_ASSETS } from "@repo/config";
 
 class AssetsService {
   getSupportedAssets() {
-    return supportedAssets;
+    return SUPPORTED_ASSETS;
   }
 }
 

@@ -4,7 +4,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
 import { toNodeHandler } from "better-auth/node";
-import { config, redisStreams } from "@repo/config";
+import { config, redisStreams, API_ROUTES, MESSAGES } from "@repo/config";
 
 import { auth } from "../features/auth/services/better-auth.js";
 import { candlesService } from "../features/candles/services/candles.service.js";
@@ -15,7 +15,10 @@ import candleRouter from "../routes/candles.routes.js";
 import pricesRouter from "../routes/prices.routes.js";
 import tradeRouter from "../features/trading/trade.routes.js";
 import ResponseWriter from "../utils/response-writer.js";
-import { globalErrorHandler, notFoundHandler } from "../validation/error-handler.js";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from "../validation/error-handler.js";
 
 export class BackendApplication {
   readonly app: Express;
@@ -60,7 +63,7 @@ export class BackendApplication {
   }
 
   private configureAuthAdapter() {
-    this.app.all("/api/auth/*splat", toNodeHandler(auth));
+    this.app.all(`${API_ROUTES.AUTH_BASE}/*splat`, toNodeHandler(auth));
   }
 
   private configureBodyParsing() {
@@ -80,15 +83,15 @@ export class BackendApplication {
   }
 
   private configureRoutes() {
-    this.app.use("/api/v1/auth", authRouter);
-    this.app.use("/api/v1/balance", balanceRouter);
-    this.app.use("/api/v1/supportedAssets", assetRouter);
-    this.app.use("/api/v1/candles", candleRouter);
-    this.app.use("/api/v1/prices", pricesRouter);
-    this.app.use("/api/v1/trade", tradeRouter);
+    this.app.use(API_ROUTES.AUTH, authRouter);
+    this.app.use(API_ROUTES.BALANCE, balanceRouter);
+    this.app.use(API_ROUTES.ASSETS, assetRouter);
+    this.app.use(API_ROUTES.CANDLES, candleRouter);
+    this.app.use(API_ROUTES.PRICES, pricesRouter);
+    this.app.use(API_ROUTES.TRADE, tradeRouter);
 
     this.app.get("/", (_req, res) => {
-      ResponseWriter.success(res, "Server Running");
+      ResponseWriter.success(res, MESSAGES.SERVER_RUNNING);
     });
   }
 

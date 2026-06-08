@@ -1,8 +1,11 @@
 import { users } from "../state/users.js";
 import { closeOrders, openOrders } from "../state/orders.js";
-import { redisStreams, config, constant } from "@repo/config";
-
-const INITIAL_USER_BALANCE = 500000;
+import {
+  redisStreams,
+  config,
+  REDIS_STREAMS,
+  DEFAULTS,
+} from "@repo/config";
 
 // connect redis streams
 const RedisStreams = redisStreams(config.REDIS_URL);
@@ -17,7 +20,7 @@ export async function createUserFunction(result: any) {
     const newUser = {
       userId: result.userId,
       userEmail: result.userEmail,
-      balance: INITIAL_USER_BALANCE,
+      balance: DEFAULTS.INITIAL_USER_BALANCE,
     };
 
     users.push(newUser);
@@ -37,12 +40,12 @@ export async function createUserFunction(result: any) {
     }
   }
 
-  await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+  await RedisStreams.addToRedisStream(REDIS_STREAMS.DB_STORAGE, {
     function: "createUser",
     message: result,
   });
 
-  await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+  await RedisStreams.addToRedisStream(REDIS_STREAMS.EXNESS_RECEIVE, {
     function: "createUser",
     message: result.userId,
     requestId: result.requestId || result.correlationId, // Pass through correlation ID

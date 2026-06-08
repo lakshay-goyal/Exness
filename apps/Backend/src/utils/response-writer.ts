@@ -1,12 +1,13 @@
 import type { Response } from "express";
+import { HTTP_STATUS, MESSAGES } from "@repo/config";
 
 export default class ResponseWriter {
   static success<T>(
     res: Response,
     data: T,
-    message: string = "Success",
+    message: string = MESSAGES.SUCCESS,
   ): Response {
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       success: true,
       data,
       message,
@@ -16,7 +17,7 @@ export default class ResponseWriter {
   static error(
     res: Response,
     statusCode: number,
-    message: string = "Error",
+    message: string = MESSAGES.ERROR,
   ): Response {
     return res.status(statusCode).json({
       success: false,
@@ -27,46 +28,46 @@ export default class ResponseWriter {
 
   static unauthorized(
     res: Response,
-    message: string = "Unauthorized",
+    message: string = MESSAGES.UNAUTHORIZED,
   ): Response {
-    return res.status(401).json({
+    return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
-      statusCode: 401,
+      statusCode: HTTP_STATUS.UNAUTHORIZED,
       message,
     });
   }
 
-  static forbidden(res: Response, message: string = "Forbidden"): Response {
-    return res.status(403).json({
+  static forbidden(res: Response, message: string = MESSAGES.FORBIDDEN): Response {
+    return res.status(HTTP_STATUS.FORBIDDEN).json({
       success: false,
-      statusCode: 403,
+      statusCode: HTTP_STATUS.FORBIDDEN,
       message,
     });
   }
 
-  static notFound(res: Response, message: string = "Not Found"): Response {
-    return res.status(404).json({
+  static notFound(res: Response, message: string = MESSAGES.NOT_FOUND): Response {
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
       success: false,
-      statusCode: 404,
+      statusCode: HTTP_STATUS.NOT_FOUND,
       message,
     });
   }
 
-  static badRequest(res: Response, message: string = "Bad Request"): Response {
-    return res.status(400).json({
+  static badRequest(res: Response, message: string = MESSAGES.BAD_REQUEST): Response {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
       success: false,
-      statusCode: 400,
+      statusCode: HTTP_STATUS.BAD_REQUEST,
       message,
     });
   }
 
   static internalServerError(
     res: Response,
-    message: string = "Internal Server Error",
+    message: string = MESSAGES.INTERNAL_SERVER_ERROR,
   ): Response {
-    return res.status(500).json({
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      statusCode: 500,
+      statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       message,
     });
   }
