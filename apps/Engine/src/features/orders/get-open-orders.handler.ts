@@ -1,3 +1,4 @@
+import type { GetUserOrdersCommand, TradingUser } from '@repo/types';
 import { users } from '../state/users.js';
 import { openOrders } from '../state/orders.js';
 import { prices } from '../state/prices.js';
@@ -8,9 +9,9 @@ import { orderCalculator, priceNormalizer } from '@repo/trading-core';
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
-export async function getOpenOrderFunction(result: any) {
+export async function getOpenOrderFunction(result: GetUserOrdersCommand) {
   // Check if a user with the same userId already exists
-  if (users.some((user: any) => user.userId === result.userId)) {
+  if (users.some((user: TradingUser) => user.userId === result.userId)) {
     // Filter open orders for this user
     const userOpenOrders = openOrders.filter((order) => order.userId === result.userId);
 

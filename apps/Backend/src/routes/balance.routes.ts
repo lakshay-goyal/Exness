@@ -4,6 +4,6 @@ import { balanceController } from '../features/balance/controllers/balance.contr
 
 const balanceRouter = express.Router();
 
-balanceRouter.get('/', authMiddleware as any, balanceController.getBalance);
+balanceRouter.get('/', authMiddleware, balanceController.getBalance);
 
 export default balanceRouter;

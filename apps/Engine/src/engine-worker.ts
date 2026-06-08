@@ -1,4 +1,5 @@
 import { config, redisStreams, constant, ENGINE_CONFIG, REDIS_STREAMS } from '@repo/config';
+import type { EngineCommand } from '@repo/types';
 import { tradeFunction } from './features/dispatcher/trade-dispatcher.js';
 
 export class EngineWorker {
@@ -20,9 +21,9 @@ export class EngineWorker {
     await this.consume();
   }
 
-  private async processMessage(result: any) {
+  private async processMessage(result: unknown) {
     try {
-      await tradeFunction(result);
+      await tradeFunction(result as EngineCommand);
     } catch (error) {
       console.error('Error processing message:', error);
     }

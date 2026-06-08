@@ -1,3 +1,4 @@
+import type { CreateUserCommand } from '@repo/types';
 import { users } from '../state/users.js';
 import { closeOrders, openOrders } from '../state/orders.js';
 import { redisStreams, config, REDIS_STREAMS, DEFAULTS } from '@repo/config';
@@ -6,7 +7,7 @@ import { redisStreams, config, REDIS_STREAMS, DEFAULTS } from '@repo/config';
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
-export async function createUserFunction(result: any) {
+export async function createUserFunction(result: CreateUserCommand) {
   let user = users.find((u) => u.userId === result.userId || u.userEmail === result.userEmail);
 
   if (!user) {

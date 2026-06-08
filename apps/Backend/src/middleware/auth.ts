@@ -1,11 +1,11 @@
-import type { Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { config, HTTP_HEADERS, TOKEN_TYPES, MESSAGES } from '@repo/config';
 import { prisma } from '@repo/db';
 import ResponseWriter from '../utils/response-writer.js';
 import type { AuthenticatedRequest } from '../features/auth/types/auth-request.js';
 
-export const authMiddleware = async (
+const authMiddlewareFunc = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
@@ -56,4 +56,8 @@ export const authMiddleware = async (
     console.error('Auth middleware error:', error);
     ResponseWriter.unauthorized(res, MESSAGES.INVALID_TOKEN);
   }
+};
+
+export const authMiddleware: RequestHandler = (req, res, next) => {
+  return authMiddlewareFunc(req as AuthenticatedRequest, res, next);
 };

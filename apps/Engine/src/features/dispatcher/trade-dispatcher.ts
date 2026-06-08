@@ -1,4 +1,5 @@
 import { config } from '@repo/config';
+import type { EngineCommand } from '@repo/types';
 import { createUserFunction } from '../users/create-user.handler.js';
 import { createOrderFunction } from '../orders/create-order.handler.js';
 import { getOpenOrderFunction } from '../orders/get-open-orders.handler.js';
@@ -6,7 +7,7 @@ import { getCloseOrdersFunction } from '../orders/get-closed-orders.handler.js';
 import { createCloseOrderFunction } from '../orders/close-order.handler.js';
 import { pricePollerFunction } from '../market-data/price-poller.handler.js';
 
-export async function tradeFunction(result: any) {
+export async function tradeFunction(result: EngineCommand) {
   if (result.function === 'createCloseOrder') {
     await createCloseOrderFunction(result);
   }

@@ -1,9 +1,9 @@
+import type { CloseOrderCommand, CloseReason, TradingUser } from '@repo/types';
 import { redisStreams, config, constant } from '@repo/config';
 import { users } from '../state/users.js';
 import { closeOrders, openOrders } from '../state/orders.js';
 import { prices } from '../state/prices.js';
 import { prisma } from '@repo/db';
-import type { CloseReason } from '@repo/types';
 import { marketSymbolMapper, orderCalculator, priceNormalizer } from '@repo/trading-core';
 
 // connect redis streams
@@ -85,7 +85,7 @@ export async function closeOpenOrder({
       select: { balance: true },
     });
 
-    const inMemoryUser = users.find((user: any) => user.userId === userId);
+    const inMemoryUser = users.find((user: TradingUser) => user.userId === userId);
     if (inMemoryUser) {
       inMemoryUser.balance = updatedUser.balance;
     }
@@ -135,8 +135,8 @@ export async function closeOpenOrder({
   return { success: true, order: orderResult };
 }
 
-export async function createCloseOrderFunction(result: any) {
-  if (!users.some((user: any) => user.userId === result.userId)) {
+export async function createCloseOrderFunction(result: CloseOrderCommand) {
+  if (!users.some((user: TradingUser) => user.userId === result.userId)) {
     const requestId = result.requestId || result.correlationId;
     await sendCloseResponse(requestId, {
       error: 'User not found',

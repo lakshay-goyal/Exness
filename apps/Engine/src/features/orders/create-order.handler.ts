@@ -1,3 +1,4 @@
+import type { CreateOrderCommand, TradingUser } from '@repo/types';
 import { redisStreams, config, constant } from '@repo/config';
 import { v4 as uuid } from 'uuid';
 import { users } from '../state/users.js';
@@ -15,7 +16,7 @@ import {
 const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
-async function sendCreateOrderResponse(result: any, message: Record<string, unknown>) {
+async function sendCreateOrderResponse(result: CreateOrderCommand, message: Record<string, unknown>) {
   const requestId = result.requestId || result.correlationId;
   await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
     function: 'createOrder',
@@ -32,10 +33,10 @@ function removeOpenOrder(orderId: string) {
   }
 }
 
-export async function createOrderFunction(result: any) {
+export async function createOrderFunction(result: CreateOrderCommand) {
   try {
     // Check if user exists
-    const user = users.find((user: any) => user.userId === result.userId);
+    const user = users.find((user: TradingUser) => user.userId === result.userId);
 
     if (!user) {
       console.error('User not found:', result.userId);
@@ -344,7 +345,7 @@ export async function createOrderFunction(result: any) {
       const newBalance = refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
 
       // Also update in-memory user balance
-      const inMemoryUser = users.find((u: any) => u.userId === result.userId);
+      const inMemoryUser = users.find((u: TradingUser) => u.userId === result.userId);
       if (inMemoryUser) {
         inMemoryUser.balance = newBalance;
       }
@@ -365,10 +366,11 @@ export async function createOrderFunction(result: any) {
       userId: result.userId,
       message: 'Order created successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in createOrderFunction:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
     await sendCreateOrderResponse(result, {
-      error: error?.message || 'Failed to create order',
+      error: errorMessage,
       success: false,
     });
   }

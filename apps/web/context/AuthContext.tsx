@@ -9,7 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { backendRequestHeaders, getBackendUrl } from '@/lib/backend-api';
 
 interface User {
@@ -132,18 +132,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         return false;
-      } catch (error: any) {
-        if (
-          error.response?.status === 401 ||
-          error.response?.status === 403 ||
-          error.response?.status === 404
-        ) {
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          delete axios.defaults.headers.common['Authorization'];
-          return false;
+      } catch (error: unknown) {
+        if (error instanceof AxiosError) {
+          if (error.response?.status === 401 ||
+            error.response?.status === 403 ||
+            error.response?.status === 404
+          ) {
+            localStorage.removeItem('token');
+            setToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            delete axios.defaults.headers.common['Authorization'];
+            return false;
+          }
         }
 
         console.error('Error verifying token:', error);
@@ -255,10 +256,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Balance is unavailable:', response.data.message);
         setBalance(null);
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.response?.data?.error || error.message;
-      console.warn('Balance is unavailable:', message);
-      setBalance(null);
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        const message = error.response?.data?.message || error.response?.data?.error || error.message;
+        console.warn('Balance is unavailable:', message);
+        setBalance(null);
+      } else {
+        console.warn('Balance is unavailable:', error);
+        setBalance(null);
+      }
     } finally {
       setBalanceLoading(false);
     }

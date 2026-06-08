@@ -1,3 +1,4 @@
+import type { PricePollerCommand } from '@repo/types';
 import { prices, type Prices } from '../state/prices.js';
 import { openOrders } from '../state/orders.js';
 import { closeOpenOrder } from '../orders/close-order.handler.js';
@@ -32,7 +33,7 @@ async function closeTriggeredOrders(updatedAssets: Set<string>) {
   }
 }
 
-export async function pricePollerFunction(payload: any) {
+export async function pricePollerFunction(payload: PricePollerCommand) {
   const results: Prices[] = JSON.parse(payload.message);
   updatePrices(results);
   await closeTriggeredOrders(new Set(results.map((result) => result.asset)));

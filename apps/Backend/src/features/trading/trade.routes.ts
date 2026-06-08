@@ -14,28 +14,28 @@ tradeRouter.get('/', tradeController.hello);
 
 tradeRouter.post(
   '/create',
-  authMiddleware as any,
+  authMiddleware,
   validateBody(CreateOrderSchema),
   tradeController.createOrder,
 );
 
 tradeRouter.get(
   '/open',
-  authMiddleware as any,
+  authMiddleware,
   validateQuery(GetOrdersQuerySchema),
   tradeController.getOpenOrders,
 );
 
 tradeRouter.post(
   '/close',
-  authMiddleware as any,
+  authMiddleware,
   validateBody(CloseOrderSchema),
   tradeController.closeOrder,
 );
 
 tradeRouter.get(
   '/close',
-  authMiddleware as any,
+  authMiddleware,
   validateQuery(GetOrdersQuerySchema),
   tradeController.getCloseOrders,
 );

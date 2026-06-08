@@ -1,7 +1,9 @@
-import { constant } from '@repo/config';
+import { constant, redisStreams } from '@repo/config';
+
+type RedisStreamsType = ReturnType<typeof redisStreams>;
 
 class EngineStreamClient {
-  constructor(private readonly redisStreams: any) {}
+  constructor(private readonly redisStreams: RedisStreamsType) {}
 
   async sendToEngine(command: Record<string, unknown>) {
     const streamResult = await this.redisStreams.addToRedisStream(constant.redisStream, command);
@@ -27,6 +29,18 @@ class EngineStreamClient {
   }
 }
 
-export function getEngineStreamClient(req: { app: { locals: Record<string, any> } }) {
+interface ExpressAppLocals {
+  redisStreams: RedisStreamsType;
+}
+
+interface ExpressApp {
+  locals: ExpressAppLocals;
+}
+
+interface ExpressRequestWithApp {
+  app: ExpressApp;
+}
+
+export function getEngineStreamClient(req: ExpressRequestWithApp) {
   return new EngineStreamClient(req.app.locals.redisStreams);
 }
