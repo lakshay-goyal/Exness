@@ -1,9 +1,10 @@
-import express, { type Request, type Response } from "express";
-import { supportedAssets } from "../constant/assets.js";
+import express from "express";
+import { assetsController } from "../features/assets/controllers/assets.controller.js";
+
 const assetRouter = express.Router();
 
-assetRouter.get("/", async (req: Request, res: Response) => {
-  res.json(supportedAssets);
-});
+assetRouter.get("/", (req, res) =>
+  assetsController.getSupportedAssets(req, res),
+);
 
 export default assetRouter;

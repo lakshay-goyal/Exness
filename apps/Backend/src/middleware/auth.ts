@@ -1,7 +1,8 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "@repo/config";
 import { prisma } from "@repo/db";
+import ResponseWriter from "../utils/response-writer.js";
 import type { AuthenticatedRequest } from "../features/auth/types/auth-request.js";
 
 export const authMiddleware = async (
@@ -11,13 +12,13 @@ export const authMiddleware = async (
 ) => {
   try {
     const authHeader = req.header("Authorization");
-
     const token = authHeader?.replace("Bearer ", "");
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ error: "Access denied. No token provided." });
+      return ResponseWriter.unauthorized(
+        res,
+        "Access denied. No token provided.",
+      );
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as {
@@ -29,14 +30,15 @@ export const authMiddleware = async (
     };
 
     if (decoded.type === "refresh") {
-      return res.status(401).json({ error: "Invalid token type." });
+      return ResponseWriter.unauthorized(res, "Invalid token type.");
     }
 
     const userId = decoded.userId;
     if (!userId) {
-      return res
-        .status(401)
-        .json({ error: "Invalid token: userId not found." });
+      return ResponseWriter.unauthorized(
+        res,
+        "Invalid token: userId not found.",
+      );
     }
 
     const user = await prisma.user.findFirst({
@@ -46,9 +48,10 @@ export const authMiddleware = async (
     });
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ error: "User not found in database. Please login again." });
+      return ResponseWriter.unauthorized(
+        res,
+        "User not found in database. Please login again.",
+      );
     }
 
     req.user = {
@@ -60,6 +63,6 @@ export const authMiddleware = async (
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);
-    res.status(401).json({ error: "Invalid token." });
+    ResponseWriter.unauthorized(res, "Invalid token.");
   }
 };

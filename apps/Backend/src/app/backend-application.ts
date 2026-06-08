@@ -7,12 +7,14 @@ import { toNodeHandler } from "better-auth/node";
 import { config, redisStreams } from "@repo/config";
 
 import { auth } from "../features/auth/services/better-auth.js";
+import { candlesService } from "../features/candles/services/candles.service.js";
 import authRouter from "../routes/auth.routes.js";
 import balanceRouter from "../routes/balance.routes.js";
 import assetRouter from "../routes/assets.routes.js";
 import candleRouter from "../routes/candles.routes.js";
 import pricesRouter from "../routes/prices.routes.js";
 import tradeRouter from "../features/trading/trade.routes.js";
+import ResponseWriter from "../utils/response-writer.js";
 
 export class BackendApplication {
   readonly app: Express;
@@ -26,6 +28,7 @@ export class BackendApplication {
     this.configureAuthAdapter();
     this.configureBodyParsing();
     await this.configureRedisStreams();
+    await this.configureDatabases();
     this.configureRoutes();
     return this;
   }
@@ -70,6 +73,10 @@ export class BackendApplication {
     this.app.locals.redisStreams = redisStreamClient;
   }
 
+  private async configureDatabases() {
+    await candlesService.initDatabase();
+  }
+
   private configureRoutes() {
     this.app.use("/api/v1/auth", authRouter);
     this.app.use("/api/v1/balance", balanceRouter);
@@ -78,8 +85,8 @@ export class BackendApplication {
     this.app.use("/api/v1/prices", pricesRouter);
     this.app.use("/api/v1/trade", tradeRouter);
 
-    this.app.get("/", (req, res) => {
-      res.send("Server Running");
+    this.app.get("/", (_req, res) => {
+      ResponseWriter.success(res, "Server Running");
     });
   }
 }
