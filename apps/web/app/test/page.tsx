@@ -15,7 +15,7 @@ export default function LandingPage(): ReactElement {
   return (
     <main className="flex min-h-screen flex-col">
       {/* Navbar */}
-      <header className="flex items-center justify-between px-8 py-4 border-b bg-background/70 backdrop-blur-md sticky top-0 z-50">
+      <header className="bg-background/70 sticky top-0 z-50 flex items-center justify-between border-b px-8 py-4 backdrop-blur-md">
         <h1 className="text-2xl font-bold">BetterAuth</h1>
         <nav className="flex items-center gap-6 text-sm font-medium">
           <a href="#features" className="hover:text-primary transition-colors">
@@ -32,11 +32,11 @@ export default function LandingPage(): ReactElement {
       </header>
 
       {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center text-center py-24 px-8">
-        <h2 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+      <section className="flex flex-col items-center justify-center px-8 py-24 text-center">
+        <h2 className="mb-6 text-4xl font-extrabold leading-tight md:text-6xl">
           Simplify Authentication for Your Apps
         </h2>
-        <p className="max-w-2xl text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-8 max-w-2xl">
           BetterAuth makes login simple, secure, and scalable. Integrate
           passwordless and OAuth effortlessly.
         </p>
@@ -53,7 +53,7 @@ export default function LandingPage(): ReactElement {
       {/* Features Section */}
       <section
         id="features"
-        className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8 py-16 max-w-6xl mx-auto"
+        className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-8 py-16 md:grid-cols-3"
       >
         {[
           {
@@ -69,7 +69,7 @@ export default function LandingPage(): ReactElement {
             desc: "JWT-based authentication ensures end-to-end security.",
           },
         ].map((feature) => (
-          <Card key={feature.title} className="shadow-sm border">
+          <Card key={feature.title} className="border shadow-sm">
             <CardHeader>
               <CardTitle>{feature.title}</CardTitle>
             </CardHeader>
@@ -83,19 +83,19 @@ export default function LandingPage(): ReactElement {
       <Separator className="my-8" />
 
       {/* CTA Section */}
-      <section id="contact" className="text-center py-20 px-8 bg-muted/30">
-        <h3 className="text-3xl font-bold mb-4">Stay Updated</h3>
+      <section id="contact" className="bg-muted/30 px-8 py-20 text-center">
+        <h3 className="mb-4 text-3xl font-bold">Stay Updated</h3>
         <p className="text-muted-foreground mb-6">
           Join our newsletter to get the latest updates.
         </p>
-        <form className="flex flex-col sm:flex-row justify-center items-center gap-3 max-w-md mx-auto">
+        <form className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 sm:flex-row">
           <Input placeholder="Enter your email" type="email" />
           <Button type="submit">Subscribe</Button>
         </form>
       </section>
 
       {/* Footer */}
-      <footer className="text-center py-6 text-sm text-muted-foreground border-t">
+      <footer className="text-muted-foreground border-t py-6 text-center text-sm">
         © {new Date().getFullYear()} BetterAuth. All rights reserved.
       </footer>
     </main>

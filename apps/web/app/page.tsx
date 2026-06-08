@@ -13,30 +13,30 @@ import { Navbar } from "@/components/Navbar";
 
 export default function Page(): ReactElement {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 text-foreground font-bricolage">
+    <div className="from-background via-background to-accent/10 text-foreground font-bricolage min-h-screen bg-gradient-to-br">
       <Navbar />
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="overflow-hidden px-4 pb-20 pt-32 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl text-center">
           <div className="animate-fade-in">
-            <h1 className="text-6xl md:text-8xl font-bold mb-8 leading-[0.9] tracking-tight">
+            <h1 className="mb-8 text-6xl font-bold leading-[0.9] tracking-tight md:text-8xl">
               Trade Crypto CFDs with
-              <span className="block bg-gradient-to-r from-foreground via-primary to-muted-foreground bg-clip-text text-transparent mt-2">
+              <span className="from-foreground via-primary to-muted-foreground mt-2 block bg-gradient-to-r bg-clip-text text-transparent">
                 Precision & Power
               </span>
             </h1>
           </div>
           <div className="animate-slide-up">
-            <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed font-medium">
+            <p className="text-muted-foreground mx-auto mb-12 max-w-4xl text-xl font-medium leading-relaxed md:text-2xl">
               Access the world's largest cryptocurrency markets through CFDs.
               Trade on price differences without owning the underlying assets.
               Leverage up to 1:100 with institutional-grade execution.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-scale-in">
+          <div className="animate-scale-in flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Button
               size="lg"
-              className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              className="transform px-8 py-6 text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
               asChild
             >
               <Link href="/login">Start Trading Now</Link>
@@ -44,42 +44,42 @@ export default function Page(): ReactElement {
             <Button
               variant="outline"
               size="lg"
-              className="px-8 py-6 text-lg font-semibold border-2 hover:bg-accent/50 transition-all duration-300"
+              className="hover:bg-accent/50 border-2 px-8 py-6 text-lg font-semibold transition-all duration-300"
             >
               Watch Demo
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 pt-12 border-t border-border/50">
+          <div className="border-border/50 mt-20 grid grid-cols-2 gap-8 border-t pt-12 md:grid-cols-4">
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+              <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 $2.4B+
               </div>
-              <div className="text-muted-foreground font-medium mt-2">
+              <div className="text-muted-foreground mt-2 font-medium">
                 Daily Volume
               </div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+              <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 50K+
               </div>
-              <div className="text-muted-foreground font-medium mt-2">
+              <div className="text-muted-foreground mt-2 font-medium">
                 Active Traders
               </div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+              <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 100+
               </div>
-              <div className="text-muted-foreground font-medium mt-2">
+              <div className="text-muted-foreground mt-2 font-medium">
                 Crypto Pairs
               </div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+              <div className="from-primary to-foreground bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
                 0.01s
               </div>
-              <div className="text-muted-foreground font-medium mt-2">
+              <div className="text-muted-foreground mt-2 font-medium">
                 Execution Speed
               </div>
             </div>
@@ -89,25 +89,25 @@ export default function Page(): ReactElement {
 
       <section
         id="features"
-        className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-accent/5 to-background"
+        className="from-accent/5 to-background bg-gradient-to-b px-4 py-24 sm:px-6 lg:px-8"
       >
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-bold mb-8 tracking-tight">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-20 text-center">
+            <h2 className="mb-8 text-5xl font-bold tracking-tight md:text-6xl">
               Advanced Trading Features
             </h2>
-            <p className="text-xl text-muted-foreground max-w-4xl mx-auto font-medium leading-relaxed">
+            <p className="text-muted-foreground mx-auto max-w-4xl text-xl font-medium leading-relaxed">
               Professional-grade tools and features designed for serious crypto
               traders
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -133,11 +133,11 @@ export default function Page(): ReactElement {
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -162,11 +162,11 @@ export default function Page(): ReactElement {
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -191,11 +191,11 @@ export default function Page(): ReactElement {
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -220,11 +220,11 @@ export default function Page(): ReactElement {
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -249,11 +249,11 @@ export default function Page(): ReactElement {
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-2xl transition-all duration-500 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50">
+            <Card className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-500 hover:shadow-2xl">
               <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="from-primary to-primary/60 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
                   <svg
-                    className="w-7 h-7 text-primary-foreground"
+                    className="text-primary-foreground h-7 w-7"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -281,24 +281,24 @@ export default function Page(): ReactElement {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+      <section id="how-it-works" className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-16 text-center">
+            <h2 className="mb-6 text-4xl font-bold md:text-5xl">
               How CFD Trading Works
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-muted-foreground mx-auto max-w-3xl text-xl">
               Simple steps to start trading cryptocurrency CFDs and profit from
               market movements
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12 items-center">
+          <div className="grid items-center gap-12 md:grid-cols-3">
             <div className="text-center">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold mx-auto mb-6">
+              <div className="bg-primary text-primary-foreground mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold">
                 1
               </div>
-              <h3 className="text-2xl font-semibold mb-4">Choose Your Asset</h3>
+              <h3 className="mb-4 text-2xl font-semibold">Choose Your Asset</h3>
               <p className="text-muted-foreground">
                 Select from 100+ cryptocurrency pairs including Bitcoin,
                 Ethereum, and emerging altcoins.
@@ -306,10 +306,10 @@ export default function Page(): ReactElement {
             </div>
 
             <div className="text-center">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold mx-auto mb-6">
+              <div className="bg-primary text-primary-foreground mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold">
                 2
               </div>
-              <h3 className="text-2xl font-semibold mb-4">Predict Direction</h3>
+              <h3 className="mb-4 text-2xl font-semibold">Predict Direction</h3>
               <p className="text-muted-foreground">
                 Go long if you think the price will rise, or go short if you
                 expect it to fall. No need to own the crypto.
@@ -317,10 +317,10 @@ export default function Page(): ReactElement {
             </div>
 
             <div className="text-center">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold mx-auto mb-6">
+              <div className="bg-primary text-primary-foreground mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold">
                 3
               </div>
-              <h3 className="text-2xl font-semibold mb-4">
+              <h3 className="mb-4 text-2xl font-semibold">
                 Profit from Difference
               </h3>
               <p className="text-muted-foreground">
@@ -330,16 +330,16 @@ export default function Page(): ReactElement {
             </div>
           </div>
 
-          <div className="mt-16 p-8 bg-accent/20 rounded-2xl border border-border">
-            <h3 className="text-2xl font-bold mb-4 text-center">
+          <div className="bg-accent/20 border-border mt-16 rounded-2xl border p-8">
+            <h3 className="mb-4 text-center text-2xl font-bold">
               CFD vs Direct Crypto Purchase
             </h3>
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid gap-8 md:grid-cols-2">
               <div>
-                <h4 className="text-lg font-semibold mb-3 text-foreground">
+                <h4 className="text-foreground mb-3 text-lg font-semibold">
                   CFD Trading
                 </h4>
-                <ul className="space-y-2 text-muted-foreground">
+                <ul className="text-muted-foreground space-y-2">
                   <li>• No need to own the underlying crypto</li>
                   <li>• Trade with leverage up to 1:100</li>
                   <li>• Profit from both rising and falling markets</li>
@@ -348,10 +348,10 @@ export default function Page(): ReactElement {
                 </ul>
               </div>
               <div>
-                <h4 className="text-lg font-semibold mb-3 text-foreground">
+                <h4 className="text-foreground mb-3 text-lg font-semibold">
                   Direct Purchase
                 </h4>
-                <ul className="space-y-2 text-muted-foreground">
+                <ul className="text-muted-foreground space-y-2">
                   <li>• You own the actual cryptocurrency</li>
                   <li>• No leverage available</li>
                   <li>• Only profit when prices rise</li>
@@ -364,19 +364,19 @@ export default function Page(): ReactElement {
         </div>
       </section>
 
-      <section id="markets" className="py-20 px-4 sm:px-6 lg:px-8 bg-accent/20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+      <section id="markets" className="bg-accent/20 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-16 text-center">
+            <h2 className="mb-6 text-4xl font-bold md:text-5xl">
               Available Markets
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-muted-foreground mx-auto max-w-3xl text-xl">
               Trade the most popular cryptocurrencies with competitive spreads
               and deep liquidity
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 name: "Bitcoin",
@@ -437,10 +437,10 @@ export default function Page(): ReactElement {
             ].map((crypto, index) => (
               <Card
                 key={index}
-                className="group hover:shadow-xl transition-all duration-300 border-border/50 hover:border-primary/20 bg-gradient-to-br from-card to-card/50"
+                className="border-border/50 hover:border-primary/20 from-card to-card/50 group bg-gradient-to-br transition-all duration-300 hover:shadow-xl"
               >
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="mb-4 flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg font-bold">
                         {crypto.name}
@@ -449,8 +449,8 @@ export default function Page(): ReactElement {
                         {crypto.symbol}
                       </CardDescription>
                     </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-sm font-bold text-primary">
+                    <div className="from-primary/10 to-primary/5 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br transition-transform duration-300 group-hover:scale-110">
+                      <span className="text-primary text-sm font-bold">
                         {crypto.symbol.charAt(0)}
                       </span>
                     </div>
@@ -469,7 +469,7 @@ export default function Page(): ReactElement {
             ))}
           </div>
 
-          <div className="text-center mt-12">
+          <div className="mt-12 text-center">
             <Button size="lg" asChild>
               <Link href="/login">View All Markets</Link>
             </Button>
@@ -477,14 +477,14 @@ export default function Page(): ReactElement {
         </div>
       </section>
 
-      <section id="security" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section id="security" className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid items-center gap-16 lg:grid-cols-2">
             <div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-8">
+              <h2 className="mb-8 text-4xl font-bold md:text-5xl">
                 Bank-Grade Security
               </h2>
-              <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-muted-foreground mb-8 text-xl leading-relaxed">
                 Your funds and data are protected by military-grade encryption
                 and multi-layer security protocols. We're regulated by top-tier
                 financial authorities worldwide.
@@ -492,9 +492,9 @@ export default function Page(): ReactElement {
 
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1">
+                  <div className="bg-primary mt-1 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -517,9 +517,9 @@ export default function Page(): ReactElement {
                 </div>
 
                 <div className="flex items-start space-x-4">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1">
+                  <div className="bg-primary mt-1 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -542,9 +542,9 @@ export default function Page(): ReactElement {
                 </div>
 
                 <div className="flex items-start space-x-4">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1">
+                  <div className="bg-primary mt-1 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -567,11 +567,11 @@ export default function Page(): ReactElement {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-accent/20 to-accent/5 p-8 rounded-2xl border border-border">
+            <div className="from-accent/20 to-accent/5 border-border rounded-2xl border bg-gradient-to-br p-8">
               <div className="text-center">
-                <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="bg-primary mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full">
                   <svg
-                    className="w-12 h-12 text-primary-foreground"
+                    className="text-primary-foreground h-12 w-12"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -584,7 +584,7 @@ export default function Page(): ReactElement {
                     />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">
+                <h3 className="mb-4 text-2xl font-bold">
                   $100M Insurance Coverage
                 </h3>
                 <p className="text-muted-foreground mb-6">
@@ -615,20 +615,20 @@ export default function Page(): ReactElement {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary text-primary-foreground">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-8">
+      <section className="bg-primary text-primary-foreground px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="mb-8 text-4xl font-bold md:text-5xl">
             Ready to Start Trading?
           </h2>
-          <p className="text-xl mb-12 opacity-90">
+          <p className="mb-12 text-xl opacity-90">
             Join thousands of traders who trust CryptoCFD for their
             cryptocurrency trading needs. Start with a demo account or go live
             in minutes.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+          <div className="flex flex-col justify-center gap-6 sm:flex-row">
             <Button
               size="lg"
-              className="px-8 py-6 text-lg font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 px-8 py-6 text-lg font-semibold"
               asChild
             >
               <Link href="/login">Open Live Account</Link>
@@ -636,7 +636,7 @@ export default function Page(): ReactElement {
             <Button
               variant="ghost"
               size="lg"
-              className="px-8 py-6 text-lg font-semibold border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"
+              className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 border-2 px-8 py-6 text-lg font-semibold"
             >
               Try Demo Account
             </Button>
@@ -644,30 +644,30 @@ export default function Page(): ReactElement {
         </div>
       </section>
 
-      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-accent/20 border-t border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
+      <footer className="bg-accent/20 border-border border-t px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 md:grid-cols-4">
             <div>
-              <h3 className="text-2xl font-bold mb-6">CryptoCFD</h3>
+              <h3 className="mb-6 text-2xl font-bold">CryptoCFD</h3>
               <p className="text-muted-foreground mb-4">
                 The world's leading platform for cryptocurrency CFD trading.
               </p>
               <div className="flex space-x-4">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
                   <span className="text-primary-foreground text-sm">T</span>
                 </div>
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
                   <span className="text-primary-foreground text-sm">F</span>
                 </div>
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
                   <span className="text-primary-foreground text-sm">L</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <h4 className="text-lg font-semibold mb-4">Trading</h4>
-              <ul className="space-y-2 text-muted-foreground">
+              <h4 className="mb-4 text-lg font-semibold">Trading</h4>
+              <ul className="text-muted-foreground space-y-2">
                 <li>
                   <a
                     href="#"
@@ -704,8 +704,8 @@ export default function Page(): ReactElement {
             </div>
 
             <div>
-              <h4 className="text-lg font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-muted-foreground">
+              <h4 className="mb-4 text-lg font-semibold">Company</h4>
+              <ul className="text-muted-foreground space-y-2">
                 <li>
                   <a
                     href="#"
@@ -742,8 +742,8 @@ export default function Page(): ReactElement {
             </div>
 
             <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-muted-foreground">
+              <h4 className="mb-4 text-lg font-semibold">Support</h4>
+              <ul className="text-muted-foreground space-y-2">
                 <li>
                   <a
                     href="#"
@@ -780,11 +780,11 @@ export default function Page(): ReactElement {
             </div>
           </div>
 
-          <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <div className="border-border mt-12 flex flex-col items-center justify-between border-t pt-8 md:flex-row">
             <p className="text-muted-foreground text-sm">
               © 2024 CryptoCFD. All rights reserved.
             </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
+            <div className="mt-4 flex space-x-6 md:mt-0">
               <a
                 href="#"
                 className="text-muted-foreground hover:text-foreground text-sm transition-colors"
@@ -806,8 +806,8 @@ export default function Page(): ReactElement {
             </div>
           </div>
 
-          <div className="mt-8 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
-            <p className="font-semibold mb-2">Risk Warning:</p>
+          <div className="bg-muted text-muted-foreground mt-8 rounded-lg p-4 text-sm">
+            <p className="mb-2 font-semibold">Risk Warning:</p>
             <p>
               CFDs are complex instruments and come with a high risk of losing
               money rapidly due to leverage. 76% of retail investor accounts

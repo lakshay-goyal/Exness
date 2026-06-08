@@ -6,7 +6,6 @@ const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function getCloseOrdersFunction(result: any) {
-
   const requestId = result.requestId || result.correlationId;
 
   if (!users.some((user: any) => user.userId === result.userId)) {

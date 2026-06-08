@@ -1,1 +1,1 @@
-export * from './timescale/index.ts'
+export * from "./timescale/index.ts";

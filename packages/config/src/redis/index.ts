@@ -6,7 +6,7 @@ class RedisClient {
   constructor(private url: string) {
     this.client = createClient({ url: url });
     this.client.on("error", (err) =>
-      console.error(`Error creating clinet: ${err}`)
+      console.error(`Error creating clinet: ${err}`),
     );
   }
 

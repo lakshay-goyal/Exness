@@ -9,48 +9,47 @@ const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function getOpenOrderFunction(result: any) {
-
   // Check if a user with the same userId already exists
   if (users.some((user: any) => user.userId === result.userId)) {
-    
     // Filter open orders for this user
-    const userOpenOrders = openOrders.filter((order) => order.userId === result.userId);
-    
+    const userOpenOrders = openOrders.filter(
+      (order) => order.userId === result.userId,
+    );
+
     // Enhance each order with current price from prices data
     const enhancedOrders = userOpenOrders.map((order) => {
-      const priceData = priceNormalizer.findPriceForSymbol(prices, order.symbol);
-      const currentPrice = orderCalculator.getCurrentOpenOrderPrice(order, priceData);
-      
+      const priceData = priceNormalizer.findPriceForSymbol(
+        prices,
+        order.symbol,
+      );
+      const currentPrice = orderCalculator.getCurrentOpenOrderPrice(
+        order,
+        priceData,
+      );
+
       return {
         ...order,
         currentPrice,
-        status: "open"
+        status: "open",
       };
     });
 
-    
     const requestId = result.requestId || result.correlationId;
-    await RedisStreams.addToRedisStream(
-      constant.secondaryRedisStream,
-      { 
-        function:"getOpenOrder", 
-        message: JSON.stringify(enhancedOrders),
-        requestId: requestId,
-        correlationId: requestId
-      }
-    );
+    await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+      function: "getOpenOrder",
+      message: JSON.stringify(enhancedOrders),
+      requestId: requestId,
+      correlationId: requestId,
+    });
     return;
   } else {
     const requestId = result.requestId || result.correlationId;
-    await RedisStreams.addToRedisStream(
-      constant.secondaryRedisStream,
-      { 
-        function:"getOpenOrder", 
-        message: JSON.stringify([]),
-        requestId: requestId,
-        correlationId: requestId
-      }
-    );
+    await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+      function: "getOpenOrder",
+      message: JSON.stringify([]),
+      requestId: requestId,
+      correlationId: requestId,
+    });
     return;
   }
 }

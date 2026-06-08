@@ -31,8 +31,7 @@ export class BackendApplication {
   }
 
   start(port = config.PORT) {
-    this.app.listen(port, () => {
-    });
+    this.app.listen(port, () => {});
   }
 
   private configureSecurity() {

@@ -217,7 +217,7 @@ const isCanceledRequest = (error: unknown) => {
 };
 
 const EmptyState = ({ label }: { label: string }) => (
-  <div className="flex h-full min-h-24 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
+  <div className="text-muted-foreground flex h-full min-h-24 items-center justify-center rounded-md border border-dashed text-sm">
     {label}
   </div>
 );
@@ -1121,7 +1121,10 @@ const Dashboard = () => {
           label: "Take profit",
           value: formatMarketPrice(selectedTrade.takeProfit),
         },
-        { label: "Stop loss", value: formatMarketPrice(selectedTrade.stopLoss) },
+        {
+          label: "Stop loss",
+          value: formatMarketPrice(selectedTrade.stopLoss),
+        },
         {
           label: "Slippage",
           value:
@@ -1130,7 +1133,10 @@ const Dashboard = () => {
               ? "--"
               : `${formatNumber(selectedTrade.slippage)}%`,
         },
-        { label: "Reserved margin", value: formatCurrency(selectedTradeMargin) },
+        {
+          label: "Reserved margin",
+          value: formatCurrency(selectedTradeMargin),
+        },
         { label: "Open time", value: formatDateTime(selectedTrade.openTime) },
         ...(selectedTrade.status === "closed"
           ? [
@@ -1149,7 +1155,7 @@ const Dashboard = () => {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden">
         <Navbar showNavLinks={false} />
 
         <div className="mt-16 flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1165,14 +1171,14 @@ const Dashboard = () => {
                         maxSize={34}
                         className="min-w-0"
                       >
-                        <aside className="flex h-full min-w-0 flex-col border-r bg-card/35">
+                        <aside className="bg-card/35 flex h-full min-w-0 flex-col border-r">
                           <div className="shrink-0 border-b p-3">
                             <div className="mb-3 flex items-center justify-between gap-2">
                               <div className="min-w-0">
                                 <h2 className="truncate text-sm font-semibold uppercase tracking-wide">
                                   Instruments
                                 </h2>
-                                <p className="truncate text-xs text-muted-foreground">
+                                <p className="text-muted-foreground truncate text-xs">
                                   {marketCount} streaming markets
                                 </p>
                               </div>
@@ -1196,7 +1202,7 @@ const Dashboard = () => {
                                 cryptoAssets.map((crypto) => (
                                   <button
                                     key={crypto.symbol}
-                                    className={`w-full rounded-lg border p-3 text-left transition hover:bg-accent/50 ${
+                                    className={`hover:bg-accent/50 w-full rounded-lg border p-3 text-left transition ${
                                       selectedCrypto?.symbol === crypto.symbol
                                         ? "border-primary/50 bg-primary/10"
                                         : "bg-background"
@@ -1268,8 +1274,8 @@ const Dashboard = () => {
                     minSize={34}
                     className="min-w-0"
                   >
-                    <main className="flex h-full min-w-0 flex-col overflow-hidden bg-muted/20">
-                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card/60 px-3 py-3">
+                    <main className="bg-muted/20 flex h-full min-w-0 flex-col overflow-hidden">
+                      <div className="bg-card/60 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
                         <div className="min-w-0">
                           <div className="flex min-w-0 items-center gap-2">
                             {!sidebarOpen && (
@@ -1315,13 +1321,13 @@ const Dashboard = () => {
                                   )} (${formatNumber(selectedCrypto.changePercent)}%)`
                                 : "--"}
                             </span>
-                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                            <span className="bg-background text-muted-foreground rounded-md px-2 py-1 font-mono text-xs">
                               Bid {formatMarketPrice(selectedCrypto?.bid)}
                             </span>
-                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                            <span className="bg-background text-muted-foreground rounded-md px-2 py-1 font-mono text-xs">
                               Ask {formatMarketPrice(selectedCrypto?.ask)}
                             </span>
-                            <span className="rounded-md bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+                            <span className="bg-background text-muted-foreground rounded-md px-2 py-1 font-mono text-xs">
                               Spread {formatMarketPrice(spread)}
                             </span>
                           </div>
@@ -1364,14 +1370,14 @@ const Dashboard = () => {
                         maxSize={34}
                         className="min-w-0"
                       >
-                        <aside className="flex h-full min-w-0 flex-col border-l bg-card/35">
+                        <aside className="bg-card/35 flex h-full min-w-0 flex-col border-l">
                           <div className="shrink-0 border-b p-3">
                             <div className="mb-3 flex items-center justify-between gap-2">
                               <div className="min-w-0">
                                 <h2 className="truncate text-sm font-semibold uppercase tracking-wide">
                                   Trading Panel
                                 </h2>
-                                <p className="truncate text-xs text-muted-foreground">
+                                <p className="text-muted-foreground truncate text-xs">
                                   {selectedCrypto?.symbol || "Select a market"}
                                 </p>
                               </div>
@@ -1418,7 +1424,7 @@ const Dashboard = () => {
                           <div className="min-h-0 flex-1 overflow-y-auto p-3">
                             <div className="space-y-4">
                               <div>
-                                <label className="mb-2 block text-xs text-muted-foreground">
+                                <label className="text-muted-foreground mb-2 block text-xs">
                                   Volume
                                 </label>
                                 <div className="flex items-center gap-2">
@@ -1463,7 +1469,7 @@ const Dashboard = () => {
                               </div>
 
                               <div>
-                                <label className="mb-2 block text-xs text-muted-foreground">
+                                <label className="text-muted-foreground mb-2 block text-xs">
                                   Leverage
                                 </label>
                                 <div className="flex items-center gap-2">
@@ -1513,7 +1519,7 @@ const Dashboard = () => {
                               </div>
 
                               <div>
-                                <label className="mb-2 block text-xs text-muted-foreground">
+                                <label className="text-muted-foreground mb-2 block text-xs">
                                   Take Profit
                                 </label>
                                 <Input
@@ -1531,7 +1537,7 @@ const Dashboard = () => {
                               </div>
 
                               <div>
-                                <label className="mb-2 block text-xs text-muted-foreground">
+                                <label className="text-muted-foreground mb-2 block text-xs">
                                   Stop Loss
                                 </label>
                                 <Input
@@ -1549,7 +1555,7 @@ const Dashboard = () => {
                               </div>
 
                               <div>
-                                <label className="mb-2 block text-xs text-muted-foreground">
+                                <label className="text-muted-foreground mb-2 block text-xs">
                                   Slippage (%)
                                 </label>
                                 <Input
@@ -1566,7 +1572,7 @@ const Dashboard = () => {
                                 />
                               </div>
 
-                              <Card className="rounded-lg bg-accent/30 py-0 shadow-none">
+                              <Card className="bg-accent/30 rounded-lg py-0 shadow-none">
                                 <CardContent className="space-y-2 p-3 text-xs">
                                   <div className="flex justify-between gap-3">
                                     <span className="text-muted-foreground">
@@ -1614,7 +1620,7 @@ const Dashboard = () => {
               <ResizableHandle withHandle />
 
               <ResizablePanel defaultSize={28} minSize={16} maxSize={46}>
-                <section className="flex h-full min-h-0 flex-col border-t bg-card/35">
+                <section className="bg-card/35 flex h-full min-h-0 flex-col border-t">
                   <Tabs
                     value={activeTab}
                     onValueChange={setActiveTab}
@@ -1653,9 +1659,9 @@ const Dashboard = () => {
 
                     <div className="min-h-0 flex-1 overflow-hidden">
                       <TabsContent value="open" className="m-0 h-full p-3">
-                        <div className="h-full overflow-auto rounded-md border bg-background">
+                        <div className="bg-background h-full overflow-auto rounded-md border">
                           <div className="min-w-[980px]">
-                            <div className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                            <div className="bg-muted/50 text-muted-foreground grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 border-b px-3 py-2 text-xs font-medium">
                               <div>Symbol</div>
                               <div>Type</div>
                               <div>Volume</div>
@@ -1667,7 +1673,7 @@ const Dashboard = () => {
                               <div>Action</div>
                             </div>
                             {openOrdersLoading ? (
-                              <div className="p-6 text-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground p-6 text-center text-sm">
                                 Loading open orders
                               </div>
                             ) : openActiveOrders.length > 0 ? (
@@ -1676,7 +1682,7 @@ const Dashboard = () => {
                                   key={order.id}
                                   role="button"
                                   tabIndex={0}
-                                  className="grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+                                  className="hover:bg-accent/30 focus:bg-accent/30 grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-3 px-3 py-2 text-sm focus:outline-none"
                                   onClick={() =>
                                     setSelectedTradeRef({
                                       id: order.id,
@@ -1740,7 +1746,7 @@ const Dashboard = () => {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="size-7 text-muted-foreground hover:text-destructive"
+                                      className="text-muted-foreground hover:text-destructive size-7"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         handleCloseOrder(order.id);
@@ -1758,7 +1764,7 @@ const Dashboard = () => {
                                 </div>
                               ))
                             ) : (
-                              <div className="p-6 text-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground p-6 text-center text-sm">
                                 No open orders
                               </div>
                             )}
@@ -1767,9 +1773,9 @@ const Dashboard = () => {
                       </TabsContent>
 
                       <TabsContent value="closed" className="m-0 h-full p-3">
-                        <div className="h-full overflow-auto rounded-md border bg-background">
+                        <div className="bg-background h-full overflow-auto rounded-md border">
                           <div className="min-w-[1240px]">
-                            <div className="grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                            <div className="bg-muted/50 text-muted-foreground grid grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 border-b px-3 py-2 text-xs font-medium">
                               <div>Symbol</div>
                               <div>Type</div>
                               <div>Volume</div>
@@ -1783,7 +1789,7 @@ const Dashboard = () => {
                               <div>Closed By</div>
                             </div>
                             {closedOrdersLoading ? (
-                              <div className="p-6 text-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground p-6 text-center text-sm">
                                 Loading closed orders
                               </div>
                             ) : closeOrdersData.length > 0 ? (
@@ -1792,7 +1798,7 @@ const Dashboard = () => {
                                   key={order.id}
                                   role="button"
                                   tabIndex={0}
-                                  className="grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+                                  className="hover:bg-accent/30 focus:bg-accent/30 grid cursor-pointer grid-cols-[1fr_0.65fr_0.65fr_1fr_1fr_1fr_1fr_1.25fr_1.25fr_0.8fr_0.9fr] gap-3 px-3 py-2 text-sm focus:outline-none"
                                   onClick={() =>
                                     setSelectedTradeRef({
                                       id: order.id,
@@ -1869,7 +1875,7 @@ const Dashboard = () => {
                                 </div>
                               ))
                             ) : (
-                              <div className="p-6 text-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground p-6 text-center text-sm">
                                 No closed orders
                               </div>
                             )}
@@ -1938,7 +1944,7 @@ const Dashboard = () => {
             onClick={() => setSelectedTradeRef(null)}
           >
             <div
-              className="w-full max-w-2xl overflow-hidden rounded-lg border bg-background shadow-2xl"
+              className="bg-background w-full max-w-2xl overflow-hidden rounded-lg border shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-4 border-b p-4">
@@ -1963,7 +1969,7 @@ const Dashboard = () => {
                   <h3 className="truncate text-lg font-semibold">
                     {selectedTrade.symbol} {selectedTrade.type}
                   </h3>
-                  <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                  <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
                     {selectedTrade.id}
                   </p>
                 </div>
@@ -1980,14 +1986,14 @@ const Dashboard = () => {
 
               <div className="max-h-[70vh] overflow-y-auto p-4">
                 <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">Open</p>
+                  <div className="bg-muted/30 rounded-md border p-3">
+                    <p className="text-muted-foreground text-xs">Open</p>
                     <p className="truncate font-mono text-sm font-medium">
                       {formatMarketPrice(selectedTrade.openPrice)}
                     </p>
                   </div>
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="bg-muted/30 rounded-md border p-3">
+                    <p className="text-muted-foreground text-xs">
                       {selectedTrade.status === "open" ? "Current" : "Close"}
                     </p>
                     <p className="truncate font-mono text-sm font-medium">
@@ -1996,8 +2002,8 @@ const Dashboard = () => {
                         : formatMarketPrice(selectedTrade.closePrice)}
                     </p>
                   </div>
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">P/L</p>
+                  <div className="bg-muted/30 rounded-md border p-3">
+                    <p className="text-muted-foreground text-xs">P/L</p>
                     <p
                       className={`truncate font-mono text-sm font-medium ${
                         selectedTrade.pnl >= 0
@@ -2009,8 +2015,8 @@ const Dashboard = () => {
                       {formatCurrency(selectedTrade.pnl)}
                     </p>
                   </div>
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">Margin</p>
+                  <div className="bg-muted/30 rounded-md border p-3">
+                    <p className="text-muted-foreground text-xs">Margin</p>
                     <p className="truncate font-mono text-sm font-medium">
                       {formatCurrency(selectedTradeMargin)}
                     </p>
@@ -2021,9 +2027,9 @@ const Dashboard = () => {
                   {selectedTradeDetails.map((item) => (
                     <div
                       key={item.label}
-                      className="flex min-w-0 justify-between gap-3 rounded-md border bg-card/40 px-3 py-2"
+                      className="bg-card/40 flex min-w-0 justify-between gap-3 rounded-md border px-3 py-2"
                     >
-                      <span className="shrink-0 text-sm text-muted-foreground">
+                      <span className="text-muted-foreground shrink-0 text-sm">
                         {item.label}
                       </span>
                       <span className="min-w-0 truncate text-right font-mono text-sm">

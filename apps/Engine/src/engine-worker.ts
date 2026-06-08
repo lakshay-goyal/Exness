@@ -17,7 +17,6 @@ export class EngineWorker {
       void this.worker();
     }
 
-
     await this.consume();
   }
 
@@ -31,7 +30,10 @@ export class EngineWorker {
 
   private async worker() {
     while (true) {
-      if (this.taskQueue.length > 0 && this.activeTasks < this.concurrencyLimit) {
+      if (
+        this.taskQueue.length > 0 &&
+        this.activeTasks < this.concurrencyLimit
+      ) {
         const task = this.taskQueue.shift();
         if (task) {
           this.activeTasks++;

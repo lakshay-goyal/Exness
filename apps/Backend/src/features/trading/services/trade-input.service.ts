@@ -19,8 +19,11 @@ export type ValidatedCreateTradeInput =
     };
 
 export class TradeInputService {
-  validateCreateOrder(body: Record<string, unknown>): ValidatedCreateTradeInput {
-    const { symbol, type, quantity, leverage, slippage, takeProfit, stopLoss } = body;
+  validateCreateOrder(
+    body: Record<string, unknown>,
+  ): ValidatedCreateTradeInput {
+    const { symbol, type, quantity, leverage, slippage, takeProfit, stopLoss } =
+      body;
 
     if (!symbol || !type || !quantity || !leverage) {
       return {
@@ -44,18 +47,36 @@ export class TradeInputService {
       return { ok: false, error: "Leverage must be a positive whole number" };
     }
 
-    const slippageValue = tradeInputValidator.parseOptionalNonNegativeNumber(slippage);
-    if (slippage !== undefined && slippage !== null && slippage !== "" && slippageValue === null) {
+    const slippageValue =
+      tradeInputValidator.parseOptionalNonNegativeNumber(slippage);
+    if (
+      slippage !== undefined &&
+      slippage !== null &&
+      slippage !== "" &&
+      slippageValue === null
+    ) {
       return { ok: false, error: "Slippage must be zero or a positive number" };
     }
 
-    const takeProfitValue = tradeInputValidator.parseOptionalPositiveNumber(takeProfit);
-    if (takeProfit !== undefined && takeProfit !== null && takeProfit !== "" && takeProfitValue === null) {
+    const takeProfitValue =
+      tradeInputValidator.parseOptionalPositiveNumber(takeProfit);
+    if (
+      takeProfit !== undefined &&
+      takeProfit !== null &&
+      takeProfit !== "" &&
+      takeProfitValue === null
+    ) {
       return { ok: false, error: "Take profit must be greater than 0" };
     }
 
-    const stopLossValue = tradeInputValidator.parseOptionalPositiveNumber(stopLoss);
-    if (stopLoss !== undefined && stopLoss !== null && stopLoss !== "" && stopLossValue === null) {
+    const stopLossValue =
+      tradeInputValidator.parseOptionalPositiveNumber(stopLoss);
+    if (
+      stopLoss !== undefined &&
+      stopLoss !== null &&
+      stopLoss !== "" &&
+      stopLossValue === null
+    ) {
       return { ok: false, error: "Stop loss must be greater than 0" };
     }
 

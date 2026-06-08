@@ -6,7 +6,10 @@ export class OrderCalculator {
     return (quantity * price) / leverage;
   }
 
-  getProfitLoss(order: Pick<OpenOrder, "type" | "quantity" | "openPrice">, closePrice: number) {
+  getProfitLoss(
+    order: Pick<OpenOrder, "type" | "quantity" | "openPrice">,
+    closePrice: number,
+  ) {
     return order.type === "buy"
       ? (closePrice - order.openPrice) * order.quantity
       : (order.openPrice - closePrice) * order.quantity;

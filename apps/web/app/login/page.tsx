@@ -39,14 +39,14 @@ const Login: React.FC = () => {
   if (isSubmitted) {
     return (
       <GuestRoute>
-        <div className="min-h-screen bg-background">
+        <div className="bg-background min-h-screen">
           <Navbar showNavLinks={false} />
-          <div className="flex items-center justify-center min-h-screen px-4 pt-16">
-            <div className="max-w-md w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-16">
+            <div className="w-full max-w-md">
               <div className="text-center">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="bg-primary mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full">
                   <svg
-                    className="w-8 h-8 text-primary-foreground"
+                    className="text-primary-foreground h-8 w-8"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -59,7 +59,7 @@ const Login: React.FC = () => {
                     />
                   </svg>
                 </div>
-                <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
+                <h1 className="mb-4 text-3xl font-bold">Check Your Email</h1>
                 <p className="text-muted-foreground mb-8">
                   We've sent a trading account setup link to{" "}
                   <strong>{email}</strong>. Click the link in the email to
@@ -71,13 +71,13 @@ const Login: React.FC = () => {
                       setIsSubmitted(false);
                       setEmail("");
                     }}
-                    className="w-full px-6 py-3 border border-border rounded-lg font-medium hover:bg-accent transition-colors"
+                    className="border-border hover:bg-accent w-full rounded-lg border px-6 py-3 font-medium transition-colors"
                   >
                     Use Different Email
                   </button>
                   <Link
                     href="/"
-                    className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90 transition-colors"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 block w-full rounded-lg px-6 py-3 text-center font-medium transition-colors"
                   >
                     Back to Home
                   </Link>
@@ -92,24 +92,24 @@ const Login: React.FC = () => {
 
   return (
     <GuestRoute>
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <Navbar showNavLinks={false} />
 
-        <div className="flex items-center justify-center min-h-screen px-4 pt-16">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold mb-4">Start Trading Today</h1>
-              <p className="text-xl text-muted-foreground">
+        <div className="flex min-h-screen items-center justify-center px-4 pt-16">
+          <div className="w-full max-w-md">
+            <div className="mb-8 text-center">
+              <h1 className="mb-4 text-4xl font-bold">Start Trading Today</h1>
+              <p className="text-muted-foreground text-xl">
                 Enter your email to get started with crypto CFD trading
               </p>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+            <div className="bg-card border-border rounded-2xl border p-8 shadow-lg">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label
                     htmlFor="email"
-                    className="block text-sm font-medium mb-2"
+                    className="mb-2 block text-sm font-medium"
                   >
                     Email Address
                   </label>
@@ -118,7 +118,7 @@ const Login: React.FC = () => {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
+                    className="bg-background border-input focus:ring-ring w-full rounded-lg border px-4 py-3 transition-colors focus:border-transparent focus:outline-none focus:ring-2"
                     placeholder="Enter your email address"
                     required
                   />
@@ -127,12 +127,12 @@ const Login: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!email || isLoading}
-                  className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center rounded-lg px-6 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
                       <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5"
+                        className="-ml-1 mr-3 h-5 w-5 animate-spin"
                         fill="none"
                         viewBox="0 0 24 24"
                       >
@@ -158,13 +158,13 @@ const Login: React.FC = () => {
                 </button>
               </form>
 
-              <div className="mt-6 pt-6 border-t border-border">
+              <div className="border-border mt-6 border-t pt-6">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-muted-foreground mb-4 text-sm">
                     By continuing, you agree to our Terms of Service and Privacy
                     Policy
                   </p>
-                  <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground flex items-center justify-center space-x-4 text-xs">
                     <span>✓ No hidden fees</span>
                     <span>✓ Bank-grade security</span>
                     <span>✓ 24/7 support</span>
@@ -174,15 +174,15 @@ const Login: React.FC = () => {
             </div>
 
             <div className="mt-12 space-y-4">
-              <h3 className="text-lg font-semibold text-center mb-6">
+              <h3 className="mb-6 text-center text-lg font-semibold">
                 Why Choose CryptoCFD?
               </h3>
 
               <div className="grid gap-4">
-                <div className="flex items-start space-x-3 p-4 bg-accent/20 rounded-lg border border-border">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-0.5">
+                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
+                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -195,16 +195,16 @@ const Login: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold">High Leverage Trading</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Trade with up to 1:100 leverage on major cryptocurrencies
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3 p-4 bg-accent/20 rounded-lg border border-border">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-0.5">
+                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
+                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -217,16 +217,16 @@ const Login: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold">Instant Execution</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Lightning-fast order execution with 0.01s latency
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3 p-4 bg-accent/20 rounded-lg border border-border">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-0.5">
+                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
+                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
                     <svg
-                      className="w-3 h-3 text-primary-foreground"
+                      className="text-primary-foreground h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -239,7 +239,7 @@ const Login: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold">Regulated & Secure</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       FCA, CySEC regulated with $100M insurance coverage
                     </p>
                   </div>
@@ -247,8 +247,8 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-8 p-4 bg-muted rounded-lg">
-              <p className="text-xs text-muted-foreground">
+            <div className="bg-muted mt-8 rounded-lg p-4">
+              <p className="text-muted-foreground text-xs">
                 <strong>Risk Warning:</strong> CFDs are complex instruments and
                 come with a high risk of losing money rapidly due to leverage.
                 76% of retail investor accounts lose money when trading CFDs.

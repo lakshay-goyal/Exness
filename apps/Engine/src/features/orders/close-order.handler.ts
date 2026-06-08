@@ -24,7 +24,7 @@ type CloseOpenOrderOptions = {
 
 async function sendCloseResponse(
   requestId: string | undefined,
-  message: Record<string, unknown>
+  message: Record<string, unknown>,
 ) {
   await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
     function: "createCloseOrder",
@@ -59,14 +59,27 @@ export async function closeOpenOrder({
     return { success: false, error: "Order not found" };
   }
 
-  const priceAssetName = marketSymbolMapper.getPriceAssetName(order.symbol || "");
-  const priceData = priceNormalizer.findPriceForSymbol(prices, order.symbol || "");
+  const priceAssetName = marketSymbolMapper.getPriceAssetName(
+    order.symbol || "",
+  );
+  const priceData = priceNormalizer.findPriceForSymbol(
+    prices,
+    order.symbol || "",
+  );
 
   if (!priceData) {
-    console.error(`Price data not found for symbol: ${order.symbol} (expected asset: ${priceAssetName})`);
-    console.error("Available price assets:", prices.map((p) => p.asset));
+    console.error(
+      `Price data not found for symbol: ${order.symbol} (expected asset: ${priceAssetName})`,
+    );
+    console.error(
+      "Available price assets:",
+      prices.map((p) => p.asset),
+    );
     if (sendResponse) {
-      await sendCloseResponse(requestId, { error: "Price data not found", orderId });
+      await sendCloseResponse(requestId, {
+        error: "Price data not found",
+        orderId,
+      });
     }
     return { success: false, error: "Price data not found" };
   }
@@ -74,7 +87,11 @@ export async function closeOpenOrder({
   // For buy orders, close at bid price. For sell orders, close at ask price.
   const closePrice = priceNormalizer.getExitPrice(order, priceData);
   const profitLoss = orderCalculator.getProfitLoss(order, closePrice);
-  const reservedMargin = orderCalculator.getMargin(order.quantity, order.openPrice, order.leverage);
+  const reservedMargin = orderCalculator.getMargin(
+    order.quantity,
+    order.openPrice,
+    order.leverage,
+  );
   const balanceAdjustment = reservedMargin + profitLoss;
 
   try {
@@ -88,11 +105,16 @@ export async function closeOpenOrder({
     if (inMemoryUser) {
       inMemoryUser.balance = updatedUser.balance;
     }
-
   } catch (balanceUpdateError) {
-    console.error("Failed to update user balance while closing order:", balanceUpdateError);
+    console.error(
+      "Failed to update user balance while closing order:",
+      balanceUpdateError,
+    );
     if (sendResponse) {
-      await sendCloseResponse(requestId, { error: "Failed to update balance", orderId });
+      await sendCloseResponse(requestId, {
+        error: "Failed to update balance",
+        orderId,
+      });
     }
     return { success: false, error: "Failed to update balance" };
   }
@@ -120,7 +142,6 @@ export async function closeOpenOrder({
 
   closeOrders.unshift(orderResult);
 
-
   await RedisStreams.addToRedisStream(constant.dbStorageStream, {
     function: "createCloseOrder",
     message: orderResult,
@@ -134,10 +155,12 @@ export async function closeOpenOrder({
 }
 
 export async function createCloseOrderFunction(result: any) {
-
   if (!users.some((user: any) => user.userId === result.userId)) {
     const requestId = result.requestId || result.correlationId;
-    await sendCloseResponse(requestId, { error: "User not found", userId: result.userId });
+    await sendCloseResponse(requestId, {
+      error: "User not found",
+      userId: result.userId,
+    });
     return;
   }
 

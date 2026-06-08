@@ -35,9 +35,10 @@ export class TradeBatchUploader {
   }
 
   private async insertTrade(trade: any) {
-
     let timestamp =
-      typeof trade.data.T === "string" ? parseInt(trade.data.T, 10) : trade.data.T;
+      typeof trade.data.T === "string"
+        ? parseInt(trade.data.T, 10)
+        : trade.data.T;
 
     if (timestamp > 4102444800000) {
       timestamp = Math.floor(timestamp / 1000);
@@ -45,8 +46,14 @@ export class TradeBatchUploader {
 
     const time = new Date(timestamp);
 
-    if (isNaN(time.getTime()) || time.getFullYear() < 2020 || time.getFullYear() > 2100) {
-      console.error(`⚠️ Invalid timestamp for trade: ${trade.data.T}, parsed as: ${time.toISOString()}`);
+    if (
+      isNaN(time.getTime()) ||
+      time.getFullYear() < 2020 ||
+      time.getFullYear() > 2100
+    ) {
+      console.error(
+        `⚠️ Invalid timestamp for trade: ${trade.data.T}, parsed as: ${time.toISOString()}`,
+      );
       console.error("Full trade data:", JSON.stringify(trade.data));
       return;
     }

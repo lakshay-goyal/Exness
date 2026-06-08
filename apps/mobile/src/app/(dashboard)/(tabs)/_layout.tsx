@@ -32,10 +32,7 @@ export default function DashboardTabsLayout() {
         <NativeTabs.Trigger.Label>Wallet</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="trade">
-        <NativeTabs.Trigger.Icon
-          md="swap_horiz"
-          sf="arrow.left.arrow.right"
-        />
+        <NativeTabs.Trigger.Icon md="swap_horiz" sf="arrow.left.arrow.right" />
         <NativeTabs.Trigger.Label>Trade</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">

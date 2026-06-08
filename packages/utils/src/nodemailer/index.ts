@@ -1,11 +1,11 @@
 import "dotenv/config";
 import nodemailer from "nodemailer";
-import {config} from "@repo/config";
+import { config } from "@repo/config";
 
 export async function nodemailerSender(email: string, token: string) {
   const transporter = nodemailer.createTransport({
-    service:"gmail",
-    auth: { 
+    service: "gmail",
+    auth: {
       user: config.USER_EMAIL,
       pass: config.USER_PASSWORD,
     },
@@ -21,5 +21,4 @@ export async function nodemailerSender(email: string, token: string) {
     html: `<p>The verification link is:</p>
            <a href="${verificationUrl}">${verificationUrl}</a>`,
   });
-
 }

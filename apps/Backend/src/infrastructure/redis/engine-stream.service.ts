@@ -9,9 +9,7 @@ export class EngineStreamClient {
       command,
     );
     const requestId =
-      streamResult?.requestId ||
-      command.requestId ||
-      command.correlationId;
+      streamResult?.requestId || command.requestId || command.correlationId;
 
     if (!requestId || typeof requestId !== "string") {
       throw new Error("Failed to generate request ID");
@@ -35,6 +33,8 @@ export class EngineStreamClient {
   }
 }
 
-export function getEngineStreamClient(req: { app: { locals: Record<string, any> } }) {
+export function getEngineStreamClient(req: {
+  app: { locals: Record<string, any> };
+}) {
   return new EngineStreamClient(req.app.locals.redisStreams);
 }

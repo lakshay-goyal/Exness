@@ -15,7 +15,7 @@ function updatePrices(newData: Prices[]) {
 
 async function closeTriggeredOrders(updatedAssets: Set<string>) {
   const ordersToCheck = [...openOrders].filter((order) =>
-    updatedAssets.has(marketSymbolMapper.getPriceAssetName(order.symbol))
+    updatedAssets.has(marketSymbolMapper.getPriceAssetName(order.symbol)),
   );
 
   for (const order of ordersToCheck) {
@@ -27,7 +27,6 @@ async function closeTriggeredOrders(updatedAssets: Set<string>) {
     const closeReason = orderCalculator.getCloseReason(order, triggerPrice);
     if (!closeReason) continue;
 
-
     await closeOpenOrder({
       orderId: order.orderId,
       userId: order.userId,
@@ -38,7 +37,6 @@ async function closeTriggeredOrders(updatedAssets: Set<string>) {
 }
 
 export async function pricePollerFunction(payload: any) {
-
   const results: Prices[] = JSON.parse(payload.message);
   updatePrices(results);
   await closeTriggeredOrders(new Set(results.map((result) => result.asset)));

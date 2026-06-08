@@ -206,12 +206,14 @@ const getWebSocketUrl = () => {
 const normalizeMarketPrice = (value?: number | string | null) =>
   priceNormalizer.normalizeStreamPriceValue(value);
 
-const getMarketCode = (symbol: string) => marketSymbolMapper.getMarketCode(symbol);
+const getMarketCode = (symbol: string) =>
+  marketSymbolMapper.getMarketCode(symbol);
 
 const getCanonicalLiveAssetSymbol = (symbol: string) =>
   marketSymbolMapper.getCanonicalLiveAssetSymbol(symbol);
 
-const getMarketName = (symbol: string) => marketSymbolMapper.getMarketName(symbol);
+const getMarketName = (symbol: string) =>
+  marketSymbolMapper.getMarketName(symbol);
 
 const getLiveAssetCandidates = (symbol: string) =>
   marketSymbolMapper.getLiveAssetCandidates(symbol);
@@ -730,12 +732,12 @@ function Header({
 }) {
   return (
     <View className="flex-row items-center justify-between px-6 pt-3">
-      <View className="flex-row justify-center items-center gap-3">
+      <View className="flex-row items-center justify-center gap-3">
         <Avatar user={user} />
         <View>
           <Text
             numberOfLines={1}
-            className="max-w-[210px] text-[15px] font-black text-[#8D9290] text-center"
+            className="max-w-[210px] text-center text-[15px] font-black text-[#8D9290]"
           >
             @
             {user?.name?.replace(/\s+/g, "").toLowerCase() || "alexsmithmobbin"}
@@ -799,11 +801,7 @@ function MarketLogo({ symbol }: { symbol: string }) {
   );
 }
 
-function LiveCryptoRow({
-  market,
-}: {
-  market: LiveMarketPrice;
-}) {
+function LiveCryptoRow({ market }: { market: LiveMarketPrice }) {
   const isUp = market.change >= 0;
   const priceDigits = getPriceDigits(market.marketPrice);
   const spread = Math.max(market.ask - market.bid, 0);
@@ -1282,9 +1280,7 @@ function MarketTradeDetailsView({
                   <View className="items-end">
                     <Text
                       className={`text-[16px] font-black ${
-                        market.change >= 0
-                          ? "text-[#28E978]"
-                          : "text-[#FF5366]"
+                        market.change >= 0 ? "text-[#28E978]" : "text-[#FF5366]"
                       }`}
                     >
                       {formatPercent(market.changePercent)}
@@ -1745,10 +1741,7 @@ function WalletTab({
           </View>
         </TabEaseItem>
 
-        <TabEaseItem
-          className="flex-row flex-wrap gap-3 px-6 pt-12"
-          delay={90}
-        >
+        <TabEaseItem className="flex-row flex-wrap gap-3 px-6 pt-12" delay={90}>
           {accountStats.map((stat) => (
             <View key={stat.label} className="w-[36%] flex-1 basis-[47%]">
               <InfoCard {...stat} />
@@ -2931,13 +2924,8 @@ export function CryptoDetailsScreen() {
 }
 
 export function WalletDashboardTabScreen() {
-  const {
-    data,
-    isRefreshingData,
-    livePrices,
-    onRefresh,
-    user,
-  } = useDashboardTabsContext();
+  const { data, isRefreshingData, livePrices, onRefresh, user } =
+    useDashboardTabsContext();
   const animationKey = useFocusedTabAnimationKey();
 
   return (

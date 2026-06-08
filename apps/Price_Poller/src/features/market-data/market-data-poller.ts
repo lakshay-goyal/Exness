@@ -1,6 +1,12 @@
 import "dotenv/config";
 import WebSocket from "ws";
-import { pubsubClient, config, redisClient, redisStreams, constant } from "@repo/config";
+import {
+  pubsubClient,
+  config,
+  redisClient,
+  redisStreams,
+  constant,
+} from "@repo/config";
 import type { PriceUpdate } from "@repo/types";
 
 export class MarketDataPoller {
@@ -9,9 +15,14 @@ export class MarketDataPoller {
   private readonly redis = redisClient(config.REDIS_URL);
   private readonly streams = redisStreams(config.REDIS_URL);
   private readonly priceUpdates: PriceUpdate[] = [];
-  private readonly cryptoTrades = ["ETH_USDC_PERP", "SOL_USDC_PERP", "BTC_USDC_PERP"];
+  private readonly cryptoTrades = [
+    "ETH_USDC_PERP",
+    "SOL_USDC_PERP",
+    "BTC_USDC_PERP",
+  ];
   private readonly binanceSymbols = ["ethusdt", "solusdt", "btcusdt"];
-  private readonly usesBinanceStreams = config.BINANCE_WS_URL.includes("binance");
+  private readonly usesBinanceStreams =
+    config.BINANCE_WS_URL.includes("binance");
 
   async start() {
     await this.pubsub.connect();
@@ -35,8 +46,14 @@ export class MarketDataPoller {
 
   private subscribe() {
     const params = this.usesBinanceStreams
-      ? this.binanceSymbols.flatMap((symbol) => [`${symbol}@trade`, `${symbol}@bookTicker`])
-      : this.cryptoTrades.flatMap((asset) => [`trade.${asset}`, `bookTicker.${asset}`]);
+      ? this.binanceSymbols.flatMap((symbol) => [
+          `${symbol}@trade`,
+          `${symbol}@bookTicker`,
+        ])
+      : this.cryptoTrades.flatMap((asset) => [
+          `trade.${asset}`,
+          `bookTicker.${asset}`,
+        ]);
 
     this.ws.send(JSON.stringify({ method: "SUBSCRIBE", params, id: 4 }));
     this.ws.on("message", async (data) => this.handleMessage(data));
@@ -61,7 +78,12 @@ export class MarketDataPoller {
         if (!this.priceUpdates.some((update) => update.asset === asset)) {
           const tradePrice = Number(eventData.p);
           const fallbackSpread = tradePrice * 0.0001;
-          this.upsertPrice(asset, tradePrice, tradePrice - fallbackSpread, tradePrice + fallbackSpread);
+          this.upsertPrice(
+            asset,
+            tradePrice,
+            tradePrice - fallbackSpread,
+            tradePrice + fallbackSpread,
+          );
         }
 
         return;
@@ -92,11 +114,18 @@ export class MarketDataPoller {
     return symbolUpper;
   }
 
-  private upsertPrice(asset: string, price: number, bidValue: number, askValue: number) {
+  private upsertPrice(
+    asset: string,
+    price: number,
+    bidValue: number,
+    askValue: number,
+  ) {
     if (![price, bidValue, askValue].every(Number.isFinite)) return;
 
     const decimal = 8;
-    const index = this.priceUpdates.findIndex((update) => update.asset === asset);
+    const index = this.priceUpdates.findIndex(
+      (update) => update.asset === asset,
+    );
     const update = { asset, price, bidValue, askValue, decimal };
 
     if (index !== -1) {

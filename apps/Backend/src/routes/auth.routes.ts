@@ -40,7 +40,11 @@ async function getTradingUserForEmail(email: string) {
   return null;
 }
 
-async function ensureEngineUser(req: Request, userId: string, userEmail: string) {
+async function ensureEngineUser(
+  req: Request,
+  userId: string,
+  userEmail: string,
+) {
   return engineUserService.ensureEngineUser(req, userId, userEmail);
 }
 
@@ -124,7 +128,10 @@ authRouter.post(
       try {
         await ensureEngineUser(req, tradingUser.userID, tradingUser.email);
       } catch (error) {
-        console.error("Failed to ensure refreshed mobile user in Engine:", error);
+        console.error(
+          "Failed to ensure refreshed mobile user in Engine:",
+          error,
+        );
       }
 
       return res.json({
@@ -289,7 +296,6 @@ authRouter.post("/verify-user", async (req: Request, res: Response) => {
     }
 
     if (!user) {
-
       try {
         const result = await ensureEngineUser(req, userId, userEmail);
 
@@ -362,7 +368,6 @@ authRouter.post("/ensure-user", async (req: Request, res: Response) => {
       },
     });
     const canonicalUserId = existingUser?.userID || userId;
-
 
     try {
       const result = await ensureEngineUser(req, canonicalUserId, userEmail);

@@ -36,8 +36,14 @@ export class TradingApiClient {
     const token = await this.getAccessToken();
     const [balanceResponse, openResponse, closedResponse] = await Promise.all([
       this.authenticatedRequest<BalanceResponse>("/api/v1/balance", token),
-      this.authenticatedRequest<OpenOrdersResponse>("/api/v1/trade/open", token),
-      this.authenticatedRequest<ClosedOrdersResponse>("/api/v1/trade/close", token),
+      this.authenticatedRequest<OpenOrdersResponse>(
+        "/api/v1/trade/open",
+        token,
+      ),
+      this.authenticatedRequest<ClosedOrdersResponse>(
+        "/api/v1/trade/close",
+        token,
+      ),
     ]);
 
     const balanceValue = Number(balanceResponse.message);
@@ -51,15 +57,24 @@ export class TradingApiClient {
 
   async createTrade(payload: CreateTradePayload) {
     const token = await this.getAccessToken();
-    return this.mutate<CreateTradeResponse>("/api/v1/trade/create", token, payload);
+    return this.mutate<CreateTradeResponse>(
+      "/api/v1/trade/create",
+      token,
+      payload,
+    );
   }
 
   async closeTrade(orderId: string) {
     const token = await this.getAccessToken();
-    return this.mutate<CloseTradeResponse>("/api/v1/trade/close", token, { orderId });
+    return this.mutate<CloseTradeResponse>("/api/v1/trade/close", token, {
+      orderId,
+    });
   }
 
-  async fetchCandles(symbol: string, interval: CandleInterval): Promise<Candle[]> {
+  async fetchCandles(
+    symbol: string,
+    interval: CandleInterval,
+  ): Promise<Candle[]> {
     const response = await this.publicRequest<CandlesResponse>(
       `/api/v1/candles?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`,
     );
@@ -68,13 +83,16 @@ export class TradingApiClient {
   }
 
   async fetchLatestPrices(): Promise<LatestPrice[]> {
-    const response = await this.publicRequest<LatestPricesResponse>("/api/v1/prices/latest");
+    const response = await this.publicRequest<LatestPricesResponse>(
+      "/api/v1/prices/latest",
+    );
     return Array.isArray(response.data) ? response.data : [];
   }
 
   private async getAccessToken() {
     const { accessToken } = this.options;
-    const token = typeof accessToken === "function" ? await accessToken() : accessToken;
+    const token =
+      typeof accessToken === "function" ? await accessToken() : accessToken;
 
     if (!token) {
       throw new Error("No active access token");
@@ -95,7 +113,11 @@ export class TradingApiClient {
     return this.request<T>(path);
   }
 
-  private async mutate<T>(path: string, token: string, body: Record<string, unknown>) {
+  private async mutate<T>(
+    path: string,
+    token: string,
+    body: Record<string, unknown>,
+  ) {
     return this.request<T>(path, {
       method: "POST",
       headers: {
@@ -117,7 +139,9 @@ export class TradingApiClient {
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      throw new Error(body?.message || body?.error || `Backend request failed: ${path}`);
+      throw new Error(
+        body?.message || body?.error || `Backend request failed: ${path}`,
+      );
     }
 
     return (await response.json()) as T;

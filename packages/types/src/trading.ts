@@ -14,7 +14,15 @@ export type OrderSide = (typeof orderSides)[number];
 export const closeReasons = ["manual", "take_profit", "stop_loss"] as const;
 export type CloseReason = (typeof closeReasons)[number];
 
-export const candleIntervals = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"] as const;
+export const candleIntervals = [
+  "1m",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "4h",
+  "1d",
+] as const;
 export type CandleInterval = (typeof candleIntervals)[number];
 
 export type TradingUser = {
@@ -76,7 +84,10 @@ export type ClosedOrder = {
   closeReason?: CloseReason;
 };
 
-export type ClosedOrderResponse = Omit<ClosedOrder, "openTime" | "closeTime"> & {
+export type ClosedOrderResponse = Omit<
+  ClosedOrder,
+  "openTime" | "closeTime"
+> & {
   openTime: string | Date;
   closeTime: string | Date;
   status?: "closed";

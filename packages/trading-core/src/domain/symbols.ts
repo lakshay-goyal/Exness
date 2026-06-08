@@ -5,7 +5,10 @@ import {
 } from "@repo/types";
 
 export class MarketSymbolMapper {
-  private readonly symbolToAsset: Record<SupportedSymbol, SupportedMarketAsset> = {
+  private readonly symbolToAsset: Record<
+    SupportedSymbol,
+    SupportedMarketAsset
+  > = {
     btc: "BTC_USDC_PERP",
     eth: "ETH_USDC_PERP",
     sol: "SOL_USDC_PERP",
@@ -30,7 +33,8 @@ export class MarketSymbolMapper {
 
   getPriceAssetName(symbol: string): string {
     const normalized = this.normalizeSymbol(symbol);
-    if (this.isSupportedSymbol(normalized)) return this.symbolToAsset[normalized];
+    if (this.isSupportedSymbol(normalized))
+      return this.symbolToAsset[normalized];
     return symbol.toUpperCase();
   }
 

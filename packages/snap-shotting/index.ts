@@ -21,7 +21,10 @@ async function connectToMongoDB(): Promise<void> {
   }
 }
 
-function getCollections(): { usersCollection: Collection; ordersCollection: Collection } {
+function getCollections(): {
+  usersCollection: Collection;
+  ordersCollection: Collection;
+} {
   if (!db) {
     throw new Error("Database not connected. Call connectToMongoDB() first.");
   }
@@ -34,12 +37,11 @@ function getCollections(): { usersCollection: Collection; ordersCollection: Coll
 async function clearMongoDBData(): Promise<void> {
   try {
     const { usersCollection, ordersCollection } = getCollections();
-    
+
     await Promise.all([
       usersCollection.deleteMany({}),
       ordersCollection.deleteMany({}),
     ]);
-    
   } catch (error) {
     console.error("Error clearing MongoDB data:", error);
     throw error;
@@ -49,14 +51,14 @@ async function clearMongoDBData(): Promise<void> {
 async function dumpDataToMongoDB(): Promise<void> {
   try {
     const { usersCollection, ordersCollection } = getCollections();
-    
+
     const usersData = users.map((user) => ({
       userId: user.userId,
       userEmail: user.userEmail,
       balance: user.balance,
       snapshotTime: new Date(),
     }));
-    
+
     const ordersData = openOrders.map((order) => ({
       userId: order.userId,
       orderId: order.orderId,
@@ -71,17 +73,16 @@ async function dumpDataToMongoDB(): Promise<void> {
       openTime: order.openTime,
       snapshotTime: new Date(),
     }));
-    
+
     if (usersData.length > 0) {
       await usersCollection.insertMany(usersData);
     } else {
     }
-    
+
     if (ordersData.length > 0) {
       await ordersCollection.insertMany(ordersData);
     } else {
     }
-    
   } catch (error) {
     console.error("Error dumping data to MongoDB:", error);
     throw error;
@@ -90,11 +91,9 @@ async function dumpDataToMongoDB(): Promise<void> {
 
 async function performSnapshot(): Promise<void> {
   try {
-    
     await clearMongoDBData();
-    
+
     await dumpDataToMongoDB();
-    
   } catch (error) {
     console.error("Error performing snapshot:", error);
   }
@@ -103,23 +102,22 @@ async function performSnapshot(): Promise<void> {
 async function main() {
   try {
     await connectToMongoDB();
-    
+
     await performSnapshot();
-    
+
     const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-    
+
     setInterval(async () => {
       await performSnapshot();
     }, SNAPSHOT_INTERVAL_MS);
-    
-    
+
     process.on("SIGINT", async () => {
       if (client) {
         await client.close();
       }
       process.exit(0);
     });
-    
+
     process.on("SIGTERM", async () => {
       if (client) {
         await client.close();

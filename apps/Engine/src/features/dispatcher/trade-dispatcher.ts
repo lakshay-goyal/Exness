@@ -6,9 +6,7 @@ import { getCloseOrdersFunction } from "../orders/get-closed-orders.handler.js";
 import { createCloseOrderFunction } from "../orders/close-order.handler.js";
 import { pricePollerFunction } from "../market-data/price-poller.handler.js";
 
-
 export async function tradeFunction(result: any) {
-
   if (result.function === "createCloseOrder") {
     await createCloseOrderFunction(result);
   }
@@ -27,5 +25,4 @@ export async function tradeFunction(result: any) {
   if (result.function === "pricePoller") {
     await pricePollerFunction(result);
   }
-
 }

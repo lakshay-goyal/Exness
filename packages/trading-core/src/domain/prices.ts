@@ -6,15 +6,19 @@ export class PriceNormalizer {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return null;
 
-    if (scale === "trade" && numericValue > 1_000_000) return numericValue / 10_000;
-    if (scale === "quote" && numericValue > 10_000_000) return numericValue / 100_000_000;
+    if (scale === "trade" && numericValue > 1_000_000)
+      return numericValue / 10_000;
+    if (scale === "quote" && numericValue > 10_000_000)
+      return numericValue / 100_000_000;
     return numericValue;
   }
 
   normalizeStreamPriceValue(value: unknown) {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return null;
-    return numericValue > 10_000_000 ? numericValue / 100_000_000 : numericValue;
+    return numericValue > 10_000_000
+      ? numericValue / 100_000_000
+      : numericValue;
   }
 
   normalizePriceUpdate(item: PriceUpdate): PriceUpdate {
@@ -28,7 +32,9 @@ export class PriceNormalizer {
 
   upsertPrice(prices: PriceUpdate[], item: PriceUpdate) {
     const normalizedItem = this.normalizePriceUpdate(item);
-    const index = prices.findIndex((price) => price.asset === normalizedItem.asset);
+    const index = prices.findIndex(
+      (price) => price.asset === normalizedItem.asset,
+    );
     if (index !== -1) {
       prices[index] = normalizedItem;
     } else {
@@ -39,11 +45,14 @@ export class PriceNormalizer {
   findPriceForSymbol(prices: PriceUpdate[], symbol: string) {
     const normalizedSymbol = marketSymbolMapper.normalizeSymbol(symbol);
     const priceAssetName = marketSymbolMapper.getPriceAssetName(symbol);
-    return prices.find((price) => {
-      if (price.asset === priceAssetName) return true;
-      if (price.asset === symbol) return true;
-      return price.asset?.toUpperCase() === priceAssetName.toUpperCase();
-    }) ?? prices.find((price) => price.asset?.toLowerCase() === normalizedSymbol);
+    return (
+      prices.find((price) => {
+        if (price.asset === priceAssetName) return true;
+        if (price.asset === symbol) return true;
+        return price.asset?.toUpperCase() === priceAssetName.toUpperCase();
+      }) ??
+      prices.find((price) => price.asset?.toLowerCase() === normalizedSymbol)
+    );
   }
 
   getExitPrice(order: OpenOrder, priceData: PriceUpdate) {

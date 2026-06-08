@@ -36,11 +36,10 @@ function removeOpenOrder(orderId: string) {
 }
 
 export async function createOrderFunction(result: any) {
-
   try {
     // Check if user exists
     const user = users.find((user: any) => user.userId === result.userId);
-    
+
     if (!user) {
       console.error("User not found:", result.userId);
       await sendCreateOrderResponse(result, {
@@ -50,17 +49,21 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
-
     // Normalize symbol (convert BTCUSDT to btc, etc.)
     const normalizedSymbol = marketSymbolMapper.normalizeSymbol(result.symbol);
-    const priceAssetName = marketSymbolMapper.getPriceAssetName(normalizedSymbol);
+    const priceAssetName =
+      marketSymbolMapper.getPriceAssetName(normalizedSymbol);
 
     const priceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
-    
 
     if (!priceData) {
-      console.error(`Price data not found for symbol: ${result.symbol} (normalized: ${normalizedSymbol}, expected asset: ${priceAssetName})`);
-      console.error(`Available price assets:`, prices.map(p => p.asset));
+      console.error(
+        `Price data not found for symbol: ${result.symbol} (normalized: ${normalizedSymbol}, expected asset: ${priceAssetName})`,
+      );
+      console.error(
+        `Available price assets:`,
+        prices.map((p) => p.asset),
+      );
       await sendCreateOrderResponse(result, {
         error: `Price data not found for symbol: ${result.symbol}. Please ensure price data is available.`,
         success: false,
@@ -104,14 +107,18 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
-    const marginRequired = orderCalculator.getMargin(quantity, expectedPrice, leverage);
+    const marginRequired = orderCalculator.getMargin(
+      quantity,
+      expectedPrice,
+      leverage,
+    );
 
     // Fetch user balance from database
     let dbUser;
     try {
       dbUser = await prisma.user.findUnique({
         where: { userID: result.userId },
-        select: { balance: true }
+        select: { balance: true },
       });
     } catch (dbError) {
       console.error("Error fetching user balance from database:", dbError);
@@ -131,10 +138,11 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
-    
     // Validate sufficient balance
     if (dbUser.balance < marginRequired) {
-      console.error(`Insufficient balance. Required: ${marginRequired}, Available: ${dbUser.balance}`);
+      console.error(
+        `Insufficient balance. Required: ${marginRequired}, Available: ${dbUser.balance}`,
+      );
       await sendCreateOrderResponse(result, {
         error: `Insufficient balance. Required: $${marginRequired.toFixed(2)}, Available: $${dbUser.balance.toFixed(2)}`,
         success: false,
@@ -142,13 +150,25 @@ export async function createOrderFunction(result: any) {
       return;
     }
 
-    const parsedTakeProfit = tradeInputValidator.parseOptionalPositiveNumber(result.takeProfit);
-    const parsedStopLoss = tradeInputValidator.parseOptionalPositiveNumber(result.stopLoss);
-    const parsedSlippage = tradeInputValidator.parseOptionalNonNegativeNumber(result.slippage);
+    const parsedTakeProfit = tradeInputValidator.parseOptionalPositiveNumber(
+      result.takeProfit,
+    );
+    const parsedStopLoss = tradeInputValidator.parseOptionalPositiveNumber(
+      result.stopLoss,
+    );
+    const parsedSlippage = tradeInputValidator.parseOptionalNonNegativeNumber(
+      result.slippage,
+    );
 
     if (
-      (result.takeProfit !== undefined && result.takeProfit !== null && result.takeProfit !== "" && parsedTakeProfit === null) ||
-      (result.stopLoss !== undefined && result.stopLoss !== null && result.stopLoss !== "" && parsedStopLoss === null)
+      (result.takeProfit !== undefined &&
+        result.takeProfit !== null &&
+        result.takeProfit !== "" &&
+        parsedTakeProfit === null) ||
+      (result.stopLoss !== undefined &&
+        result.stopLoss !== null &&
+        result.stopLoss !== "" &&
+        parsedStopLoss === null)
     ) {
       await sendCreateOrderResponse(result, {
         error: "Take profit and stop loss must be positive numbers",
@@ -194,7 +214,10 @@ export async function createOrderFunction(result: any) {
 
     // Check slippage after order creation
     // Re-fetch current price to check if it has moved beyond slippage tolerance
-    const currentPriceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
+    const currentPriceData = priceNormalizer.findPriceForSymbol(
+      prices,
+      result.symbol,
+    );
 
     if (!currentPriceData) {
       console.error("Price data not found during slippage check");
@@ -207,7 +230,10 @@ export async function createOrderFunction(result: any) {
     }
 
     // Get current execution price
-    const currentExecutionPrice = priceNormalizer.getEntryPrice(orderType, currentPriceData);
+    const currentExecutionPrice = priceNormalizer.getEntryPrice(
+      orderType,
+      currentPriceData,
+    );
 
     const invalidTakeProfit =
       takeProfitValue !== undefined &&
@@ -241,11 +267,12 @@ export async function createOrderFunction(result: any) {
       const priceDifference = Math.abs(currentExecutionPrice - expectedPrice);
       const priceDifferencePercent = (priceDifference / expectedPrice) * 100;
 
-
       // If slippage exceeds tolerance, cancel the order
       if (priceDifferencePercent > slippageValue) {
-        console.warn(`Slippage exceeded! ${priceDifferencePercent.toFixed(4)}% > ${slippageValue}%. Cancelling order.`);
-        
+        console.warn(
+          `Slippage exceeded! ${priceDifferencePercent.toFixed(4)}% > ${slippageValue}%. Cancelling order.`,
+        );
+
         removeOpenOrder(orderId);
 
         await sendCreateOrderResponse(result, {
@@ -257,13 +284,17 @@ export async function createOrderFunction(result: any) {
     }
 
     // Update order with actual execution price (in case it changed slightly but within slippage)
-    const orderIndex = openOrders.findIndex(o => o.orderId === orderId);
+    const orderIndex = openOrders.findIndex((o) => o.orderId === orderId);
     if (orderIndex !== -1 && openOrders[orderIndex]) {
       openOrders[orderIndex].openPrice = currentExecutionPrice;
     }
 
     // Recalculate margin with actual execution price
-    const actualMarginRequired = orderCalculator.getMargin(quantity, currentExecutionPrice, leverage);
+    const actualMarginRequired = orderCalculator.getMargin(
+      quantity,
+      currentExecutionPrice,
+      leverage,
+    );
 
     // Re-check balance with actual margin (in case price changed significantly within slippage tolerance)
     // Fetch fresh balance from database to ensure we have the latest value
@@ -271,7 +302,7 @@ export async function createOrderFunction(result: any) {
     try {
       updatedDbUser = await prisma.user.findUnique({
         where: { userID: result.userId },
-        select: { balance: true }
+        select: { balance: true },
       });
     } catch (dbError) {
       console.error("Error re-fetching user balance:", dbError);
@@ -294,7 +325,9 @@ export async function createOrderFunction(result: any) {
     }
 
     if (updatedDbUser.balance < actualMarginRequired) {
-      console.error(`Insufficient balance for actual execution price. Required: ${actualMarginRequired}, Available: ${updatedDbUser.balance}`);
+      console.error(
+        `Insufficient balance for actual execution price. Required: ${actualMarginRequired}, Available: ${updatedDbUser.balance}`,
+      );
       removeOpenOrder(orderId);
       await sendCreateOrderResponse(result, {
         error: `Insufficient balance for actual execution price. Required: $${actualMarginRequired.toFixed(2)}, Available: $${updatedDbUser.balance.toFixed(2)}`,
@@ -305,7 +338,6 @@ export async function createOrderFunction(result: any) {
 
     // Deduct margin from user balance and update database
     try {
-
       const balanceUpdate = await prisma.user.updateMany({
         where: {
           userID: result.userId,
@@ -329,9 +361,9 @@ export async function createOrderFunction(result: any) {
         where: { userID: result.userId },
         select: { balance: true },
       });
-      const newBalance = refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
+      const newBalance =
+        refreshedUser?.balance ?? updatedDbUser.balance - actualMarginRequired;
 
-      
       // Also update in-memory user balance
       const inMemoryUser = users.find((u: any) => u.userId === result.userId);
       if (inMemoryUser) {
@@ -346,7 +378,6 @@ export async function createOrderFunction(result: any) {
       });
       return;
     }
-
 
     // Send success response
     await sendCreateOrderResponse(result, {

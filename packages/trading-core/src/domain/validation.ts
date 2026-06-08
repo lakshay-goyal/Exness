@@ -7,12 +7,14 @@ export class TradeInputValidator {
   }
 
   parsePositiveNumber(value: unknown) {
-    const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
+    const parsed =
+      typeof value === "number" ? value : Number.parseFloat(String(value));
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
   parseNonNegativeNumber(value: unknown) {
-    const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
+    const parsed =
+      typeof value === "number" ? value : Number.parseFloat(String(value));
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
 

@@ -7,12 +7,12 @@ const client = timeScaleDB();
 const allowedIntervals = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"];
 
 const symbolMapping: Record<string, string> = {
-  'BTCUSDT': 'BTC_USDC_PERP',
-  'ETHUSDT': 'ETH_USDC_PERP',
-  'SOLUSDT': 'SOL_USDC_PERP',
-  'BTC_USDC_PERP': 'BTC_USDC_PERP',
-  'ETH_USDC_PERP': 'ETH_USDC_PERP',
-  'SOL_USDC_PERP': 'SOL_USDC_PERP',
+  BTCUSDT: "BTC_USDC_PERP",
+  ETHUSDT: "ETH_USDC_PERP",
+  SOLUSDT: "SOL_USDC_PERP",
+  BTC_USDC_PERP: "BTC_USDC_PERP",
+  ETH_USDC_PERP: "ETH_USDC_PERP",
+  SOL_USDC_PERP: "SOL_USDC_PERP",
 };
 
 async function initDB() {
@@ -67,25 +67,25 @@ function getTimeRange(interval: string) {
 // Helper function to get interval in PostgreSQL interval format
 function getIntervalPostgresFormat(interval: string): string {
   const intervalMap: Record<string, string> = {
-    '1m': '1 minute',
-    '5m': '5 minutes',
-    '15m': '15 minutes',
-    '30m': '30 minutes',
-    '1h': '1 hour',
-    '4h': '4 hours',
-    '1d': '1 day',
+    "1m": "1 minute",
+    "5m": "5 minutes",
+    "15m": "15 minutes",
+    "30m": "30 minutes",
+    "1h": "1 hour",
+    "4h": "4 hours",
+    "1d": "1 day",
   };
-  return intervalMap[interval] || '1 minute';
+  return intervalMap[interval] || "1 minute";
 }
 
 async function retrieveDataFromTrades(
   symbol: string,
   interval: string,
   from: string,
-  to: string
+  to: string,
 ) {
   const intervalFormat = getIntervalPostgresFormat(interval);
-  
+
   const query = `
     SELECT 
       time_bucket('${intervalFormat}', time) AS time,
@@ -103,7 +103,7 @@ async function retrieveDataFromTrades(
   `;
 
   const result = await client.getClient().query(query, [symbol, from, to]);
-  
+
   if (result.rows.length === 0) {
     const queryNoDate = `
       SELECT 
@@ -125,7 +125,7 @@ async function retrieveDataFromTrades(
       return resultNoDate.rows.reverse();
     }
   }
-  
+
   return result.rows;
 }
 
@@ -133,7 +133,7 @@ async function retrieveData(
   symbol: string,
   interval: string,
   from: string,
-  to: string
+  to: string,
 ) {
   try {
     const table = `candles_${interval}`;
@@ -142,10 +142,13 @@ async function retrieveData(
         .getClient()
         .query(
           `CALL refresh_continuous_aggregate('candles_${interval}', $1::timestamptz, $2::timestamptz);`,
-          [from, to]
+          [from, to],
         );
     } catch (e: any) {
-      console.warn(`⚠️ Refresh aggregate failed for ${table}:`, e?.message || e);
+      console.warn(
+        `⚠️ Refresh aggregate failed for ${table}:`,
+        e?.message || e,
+      );
     }
 
     const query = `
@@ -159,11 +162,11 @@ async function retrieveData(
 
     const values = [symbol, from, to];
     const result = await client.getClient().query(query, values);
-    
+
     if (result.rows.length > 0) {
       return result.rows;
     }
-    
+
     const queryNoDate = `
       SELECT bucket AS time,
              open, high, low, close, volume, trade_count
@@ -176,25 +179,33 @@ async function retrieveData(
     if (resultNoDate.rows.length > 0) {
       return resultNoDate.rows.reverse();
     }
-    
+
     const checkQuery = `
       SELECT COUNT(*) as count, MIN(time) as min_time, MAX(time) as max_time
       FROM trades
       WHERE UPPER(symbol) = UPPER($1);
     `;
     const checkResult = await client.getClient().query(checkQuery, [symbol]);
-    const fallbackData = await retrieveDataFromTrades(symbol, interval, from, to);
+    const fallbackData = await retrieveDataFromTrades(
+      symbol,
+      interval,
+      from,
+      to,
+    );
     if (fallbackData.length > 0) {
       return fallbackData;
     }
-    
+
     return [];
   } catch (err: any) {
     console.error("Error retrieving candle data:", err?.message || err);
     try {
       return await retrieveDataFromTrades(symbol, interval, from, to);
     } catch (fallbackErr: any) {
-      console.error("Fallback query also failed:", fallbackErr?.message || fallbackErr);
+      console.error(
+        "Fallback query also failed:",
+        fallbackErr?.message || fallbackErr,
+      );
       throw err;
     }
   }
@@ -204,30 +215,25 @@ export const getCandles = async (req: Request, res: Response) => {
   const { symbol, interval } = req.query;
 
   if (!symbol || !interval) {
-    return res.status(400).json({ error: "Missing required query parameters: symbol and interval" });
+    return res.status(400).json({
+      error: "Missing required query parameters: symbol and interval",
+    });
   }
 
   if (!allowedIntervals.includes(interval as string)) {
-    return res.status(400).json({ 
-      error: "Invalid interval value", 
-      allowedIntervals 
+    return res.status(400).json({
+      error: "Invalid interval value",
+      allowedIntervals,
     });
   }
 
   try {
     const inputSymbol = (symbol as string).toUpperCase();
     const dbSymbol = symbolMapping[inputSymbol] || inputSymbol;
-    
-    
-    const { from, to } = getTimeRange(interval as string);
-    
-    const data = await retrieveData(
-      dbSymbol,
-      interval as string,
-      from,
-      to
-    );
 
+    const { from, to } = getTimeRange(interval as string);
+
+    const data = await retrieveData(dbSymbol, interval as string, from, to);
 
     return res.json({
       symbol: inputSymbol,
@@ -240,38 +246,40 @@ export const getCandles = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("Error in getCandles handler:", err?.message || err);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Internal server error",
-      message: err?.message || "Unknown error"
+      message: err?.message || "Unknown error",
     });
   }
 };
 
 export const getDiagnostics = async (req: Request, res: Response) => {
   try {
-    const totalResult = await client.getClient().query(`SELECT COUNT(*) as total FROM trades;`);
-    
+    const totalResult = await client
+      .getClient()
+      .query(`SELECT COUNT(*) as total FROM trades;`);
+
     const symbolsResult = await client.getClient().query(`
       SELECT symbol, COUNT(*) as count, MIN(time) as earliest, MAX(time) as latest
       FROM trades
       GROUP BY symbol
       ORDER BY symbol;
     `);
-    
+
     const aggregatesResult = await client.getClient().query(`
       SELECT view_name, materialized_only
       FROM timescaledb_information.continuous_aggregates
       WHERE view_name LIKE 'candles_%'
       ORDER BY view_name;
     `);
-    
+
     const sampleResult = await client.getClient().query(`
       SELECT time, symbol, price, volume
       FROM trades
       ORDER BY time DESC
       LIMIT 5;
     `);
-    
+
     return res.json({
       totalTrades: totalResult.rows[0]?.total || 0,
       symbols: symbolsResult.rows,
@@ -283,7 +291,7 @@ export const getDiagnostics = async (req: Request, res: Response) => {
     return res.status(500).json({ error: err?.message || "Unknown error" });
   }
 };
-  
+
 export const refreshAggregates = async (req: Request, res: Response) => {
   try {
     const result = await client.refreshAllContinuousAggregates();
@@ -294,9 +302,9 @@ export const refreshAggregates = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("Error refreshing aggregates:", err);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Failed to refresh aggregates",
-      message: err?.message || "Unknown error"
+      message: err?.message || "Unknown error",
     });
   }
 };

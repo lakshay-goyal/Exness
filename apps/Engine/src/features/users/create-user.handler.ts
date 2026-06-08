@@ -9,8 +9,9 @@ const RedisStreams = redisStreams(config.REDIS_URL);
 await RedisStreams.connect();
 
 export async function createUserFunction(result: any) {
-  
-  let user = users.find(u => u.userId === result.userId || u.userEmail === result.userEmail);
+  let user = users.find(
+    (u) => u.userId === result.userId || u.userEmail === result.userEmail,
+  );
 
   if (!user) {
     const newUser = {
@@ -18,7 +19,7 @@ export async function createUserFunction(result: any) {
       userEmail: result.userEmail,
       balance: INITIAL_USER_BALANCE,
     };
-    
+
     users.push(newUser);
   } else {
     if (user.userId !== result.userId) {
@@ -36,18 +37,15 @@ export async function createUserFunction(result: any) {
     }
   }
 
-  await RedisStreams.addToRedisStream(
-    constant.dbStorageStream,
-    { function:"createUser", message: result }
-  );
+  await RedisStreams.addToRedisStream(constant.dbStorageStream, {
+    function: "createUser",
+    message: result,
+  });
 
-  await RedisStreams.addToRedisStream(
-    constant.secondaryRedisStream,
-    { 
-      function:"createUser", 
-      message: result.userId,
-      requestId: result.requestId || result.correlationId, // Pass through correlation ID
-      correlationId: result.requestId || result.correlationId
-    }
-  );
+  await RedisStreams.addToRedisStream(constant.secondaryRedisStream, {
+    function: "createUser",
+    message: result.userId,
+    requestId: result.requestId || result.correlationId, // Pass through correlation ID
+    correlationId: result.requestId || result.correlationId,
+  });
 }

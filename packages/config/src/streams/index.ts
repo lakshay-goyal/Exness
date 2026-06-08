@@ -8,7 +8,7 @@ class RedisStreams {
   constructor(private url: string) {
     this.client = createClient({ url: url });
     this.client.on("error", (err) =>
-      console.error(`Error creating client: ${err}`)
+      console.error(`Error creating client: ${err}`),
     );
   }
 
@@ -29,7 +29,7 @@ class RedisStreams {
         streamName,
         groupName,
         "0", // Start from beginning
-        { MKSTREAM: true } // Create stream if it doesn't exist
+        { MKSTREAM: true }, // Create stream if it doesn't exist
       );
     } catch (error: any) {
       // Group might already exist, which is fine
@@ -38,7 +38,7 @@ class RedisStreams {
         console.error(`Error creating consumer group:`, error);
       }
     }
-    
+
     this.consumerGroupInitialized.add(`${streamName}:${groupName}`);
   }
 
@@ -48,11 +48,11 @@ class RedisStreams {
       if (!data.requestId && !data.correlationId) {
         data.requestId = uuidv4();
       }
-      
+
       const messageId = await this.client.xAdd(
         streamName,
         "*", // Let Redis assign an ID automatically
-        { message: JSON.stringify(data) }
+        { message: JSON.stringify(data) },
       );
       return { messageId, requestId: data.requestId || data.correlationId };
     } catch (e) {
@@ -63,7 +63,7 @@ class RedisStreams {
 
   async readRedisStream(
     STREAM_KEY: string,
-    callbackFunction: (msg: any) => void
+    callbackFunction: (msg: any) => void,
   ) {
     try {
       while (true) {
@@ -72,7 +72,7 @@ class RedisStreams {
         let lastId = "$"; // start from beginning. Use "$" to only read new ones.
         const response = await this.client.xRead(
           [{ key: STREAM_KEY, id: lastId }],
-          { BLOCK: 0, COUNT: 1 } // wait max 5s, read up to 10 msgs
+          { BLOCK: 0, COUNT: 1 }, // wait max 5s, read up to 10 msgs
         );
 
         if (response && response.length > 0 && response[0]) {
@@ -109,7 +109,7 @@ class RedisStreams {
       requestId?: string; // Filter by correlation ID
       consumerGroup?: string; // Use consumer group
       consumerName?: string; // Consumer name for consumer group
-    }
+    },
   ): Promise<any | null> {
     try {
       if (!this.client.isOpen) {
@@ -119,24 +119,31 @@ class RedisStreams {
       // If using consumer group
       if (options?.consumerGroup && options?.consumerName) {
         await this.ensureConsumerGroup(streamName, options.consumerGroup);
-        
+
         // First try to read pending messages (messages that were sent before consumer joined)
         // "0" means read from the beginning of pending messages for this consumer
-        let response = await this.client.xReadGroup(
-          options.consumerGroup,
-          options.consumerName,
-          [{ key: streamName, id: "0" }], // "0" means read pending messages from beginning
-          { BLOCK: 0, COUNT: 1 }
-        ).catch(() => null);
+        let response = await this.client
+          .xReadGroup(
+            options.consumerGroup,
+            options.consumerName,
+            [{ key: streamName, id: "0" }], // "0" means read pending messages from beginning
+            { BLOCK: 0, COUNT: 1 },
+          )
+          .catch(() => null);
 
         // If no pending messages, read new messages
         // ">" means: deliver messages that were never delivered to any consumer in this group
-        if (!response || response.length === 0 || !response[0] || response[0].messages.length === 0) {
+        if (
+          !response ||
+          response.length === 0 ||
+          !response[0] ||
+          response[0].messages.length === 0
+        ) {
           response = await this.client.xReadGroup(
             options.consumerGroup,
             options.consumerName,
             [{ key: streamName, id: ">" }], // ">" means new messages for this consumer
-            { BLOCK: blockMs, COUNT: 1 }
+            { BLOCK: blockMs, COUNT: 1 },
           );
         }
 
@@ -150,11 +157,19 @@ class RedisStreams {
         }
 
         const msg = messages[0];
-        if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+        if (
+          !msg ||
+          typeof msg !== "object" ||
+          !("id" in msg) ||
+          !("message" in msg)
+        ) {
           return null;
         }
-        
-        const { id, message } = msg as { id: string; message: Record<string, any> };
+
+        const { id, message } = msg as {
+          id: string;
+          message: Record<string, any>;
+        };
         const payload: Record<string, any> = {};
         for (const key in message) {
           payload[key] = message[key];
@@ -162,14 +177,14 @@ class RedisStreams {
 
         const jsonString = Object.values(payload).join("");
         const result = JSON.parse(jsonString);
-        
+
         // Acknowledge the message
         try {
           await this.client.xAck(streamName, options.consumerGroup, id);
         } catch (ackError) {
           console.error("Error acknowledging message:", ackError);
         }
-        
+
         // Filter by requestId if provided
         if (options.requestId) {
           const resultRequestId = result.requestId || result.correlationId;
@@ -178,7 +193,7 @@ class RedisStreams {
             return this.readNextFromRedisStream(streamName, blockMs, options);
           }
         }
-        
+
         return result;
       }
 
@@ -187,15 +202,19 @@ class RedisStreams {
         // When filtering by requestId, we need to search through existing messages
         // First, try to read new messages (in case response arrives after we start)
         // Then search through existing messages from the beginning
-        
+
         // Step 1: Try reading new messages first (non-blocking quick check)
         try {
           const newMsgResponse = await this.client.xRead(
             [{ key: streamName, id: "$" }],
-            { BLOCK: 100, COUNT: 10 } // Quick check for new messages
+            { BLOCK: 100, COUNT: 10 }, // Quick check for new messages
           );
-          
-          if (newMsgResponse && newMsgResponse.length > 0 && newMsgResponse[0]) {
+
+          if (
+            newMsgResponse &&
+            newMsgResponse.length > 0 &&
+            newMsgResponse[0]
+          ) {
             for (const msg of newMsgResponse[0].messages) {
               const payload: Record<string, any> = {};
               for (const key in msg.message) {
@@ -222,7 +241,7 @@ class RedisStreams {
         while (attempts < maxAttempts) {
           const response = await this.client.xRead(
             [{ key: streamName, id: lastId }],
-            { BLOCK: blockMs > 0 ? Math.min(blockMs, 1000) : 0, COUNT: 10 } // Read up to 10 at a time for efficiency
+            { BLOCK: blockMs > 0 ? Math.min(blockMs, 1000) : 0, COUNT: 10 }, // Read up to 10 at a time for efficiency
           );
 
           if (!response || response.length === 0 || !response[0]) {
@@ -241,7 +260,12 @@ class RedisStreams {
             }
             seenIds.add(msg.id);
 
-            if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+            if (
+              !msg ||
+              typeof msg !== "object" ||
+              !("id" in msg) ||
+              !("message" in msg)
+            ) {
               continue;
             }
 
@@ -264,9 +288,13 @@ class RedisStreams {
           if (messages.length === 0) {
             return null; // No more messages to read
           }
-          
+
           const lastMessage = messages[messages.length - 1];
-          if (lastMessage && typeof lastMessage === 'object' && 'id' in lastMessage) {
+          if (
+            lastMessage &&
+            typeof lastMessage === "object" &&
+            "id" in lastMessage
+          ) {
             lastId = lastMessage.id as string;
           } else {
             return null; // Invalid message structure
@@ -279,7 +307,7 @@ class RedisStreams {
         // No requestId filtering - just read next new message
         const response = await this.client.xRead(
           [{ key: streamName, id: "$" }],
-          { BLOCK: blockMs, COUNT: 1 }
+          { BLOCK: blockMs, COUNT: 1 },
         );
 
         if (!response || response.length === 0 || !response[0]) {
@@ -292,7 +320,12 @@ class RedisStreams {
         }
 
         const msg = messages[0];
-        if (!msg || typeof msg !== "object" || !("id" in msg) || !("message" in msg)) {
+        if (
+          !msg ||
+          typeof msg !== "object" ||
+          !("id" in msg) ||
+          !("message" in msg)
+        ) {
           return null;
         }
 
