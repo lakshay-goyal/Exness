@@ -58,7 +58,7 @@ services:
       dockerfile: apps/docker/Backend.Dockerfile
     container_name: exness-prisma-studio
     env_file:
-      - .env
+      - apps/docker/env/.env.Backend
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -86,7 +86,7 @@ services:
       dockerfile: apps/docker/Backend.Dockerfile
     container_name: exness-db-migrate
     env_file:
-      - .env
+      - apps/docker/env/.env.Backend
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -117,7 +117,7 @@ services:
       dockerfile: apps/docker/Backend.Dockerfile
     container_name: exness-backend
     env_file:
-      - .env
+      - apps/docker/env/.env.Backend
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -142,7 +142,7 @@ services:
       dockerfile: apps/docker/Engine.Dockerfile
     container_name: exness-engine
     env_file:
-      - .env
+      - apps/docker/env/.env.Engine
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -165,7 +165,7 @@ services:
       dockerfile: apps/docker/Snap_Shotting.Dockerfile
     container_name: exness-snap-shotting
     env_file:
-      - .env
+      - apps/docker/env/.env.Snap_Shotting
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -187,7 +187,7 @@ services:
       dockerfile: apps/docker/Price_Poller.Dockerfile
     container_name: exness-price-poller
     env_file:
-      - .env
+      - apps/docker/env/.env.Price_Poller
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -206,7 +206,7 @@ services:
       dockerfile: apps/docker/Websocket_Server.Dockerfile
     container_name: exness-websocket-server
     env_file:
-      - .env
+      - apps/docker/env/.env.Websocket_Server
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -227,7 +227,7 @@ services:
       dockerfile: apps/docker/DBstorage.Dockerfile
     container_name: exness-dbstorage
     env_file:
-      - .env
+      - apps/docker/env/.env.DBstorage
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -255,7 +255,7 @@ services:
         NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:7070/
     container_name: exness-web
     env_file:
-      - .env
+      - apps/docker/env/.env.Web
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
@@ -279,7 +279,7 @@ services:
       dockerfile: apps/docker/docs.Dockerfile
     container_name: exness-docs
     env_file:
-      - .env
+      - apps/docker/env/.env.Docs
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
