@@ -6,29 +6,26 @@ import { ChevronDownIcon } from 'lucide-react';
 
 import { cn } from '@repo/ui/lib/utils';
 
-function Accordion({ ...props }: React.ComponentProps<typeof AccordionPrimitive.Root>) {
-  return <AccordionPrimitive.Root data-slot="accordion" {...props} />;
-}
+const Accordion = ({
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Root>): React.ReactElement => <AccordionPrimitive.Root data-slot="accordion" {...props} />;
 
-function AccordionItem({
+const AccordionItem = ({
   className,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Item>) {
-  return (
+}: React.ComponentProps<typeof AccordionPrimitive.Item>): React.ReactElement => (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
       className={cn('border-b last:border-b-0', className)}
       {...props}
     />
   );
-}
 
-function AccordionTrigger({
+const AccordionTrigger = ({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
-  return (
+}: React.ComponentProps<typeof AccordionPrimitive.Trigger>): React.ReactElement => (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
@@ -43,14 +40,12 @@ function AccordionTrigger({
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   );
-}
 
-function AccordionContent({
+const AccordionContent = ({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
-  return (
+}: React.ComponentProps<typeof AccordionPrimitive.Content>): React.ReactElement => (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
       className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
@@ -59,6 +54,5 @@ function AccordionContent({
       <div className={cn('pb-4 pt-0', className)}>{children}</div>
     </AccordionPrimitive.Content>
   );
-}
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };

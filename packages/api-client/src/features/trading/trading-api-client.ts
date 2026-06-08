@@ -18,12 +18,17 @@ import { parseArray } from '../../shared/parsing/parse-array';
 
 export type AccessTokenProvider = () => string | null | Promise<string | null>;
 
-export type TradingApiClientOptions = {
+export interface TradingApiClientOptions {
   baseUrl: string;
   accessToken?: string | AccessTokenProvider;
   fetcher?: typeof fetch;
   headers?: HeadersInit;
-};
+}
+
+interface ErrorResponse {
+  message?: string;
+  error?: string;
+}
 
 export class TradingApiClient {
   private readonly fetcher: typeof fetch;
@@ -49,12 +54,12 @@ export class TradingApiClient {
     };
   }
 
-  async createTrade(payload: CreateTradePayload) {
+  async createTrade(payload: CreateTradePayload): Promise<CreateTradeResponse> {
     const token = await this.getAccessToken();
     return this.mutate<CreateTradeResponse>('/api/v1/trade/create', token, payload);
   }
 
-  async closeTrade(orderId: string) {
+  async closeTrade(orderId: string): Promise<CloseTradeResponse> {
     const token = await this.getAccessToken();
     return this.mutate<CloseTradeResponse>('/api/v1/trade/close', token, {
       orderId,
@@ -74,52 +79,76 @@ export class TradingApiClient {
     return Array.isArray(response.data) ? response.data : [];
   }
 
-  private async getAccessToken() {
+  private async getAccessToken(): Promise<string> {
     const { accessToken } = this.options;
     const token = typeof accessToken === 'function' ? await accessToken() : accessToken;
 
-    if (!token) {
+    if (token === null || token === undefined || token === '') {
       throw new Error('No active access token');
     }
 
     return token;
   }
 
-  private async authenticatedRequest<T>(path: string, token: string) {
+  private async authenticatedRequest<T>(path: string, token: string): Promise<T> {
     return this.request<T>(path, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        authorization: `Bearer ${token}`,
       },
     });
   }
 
-  private async publicRequest<T>(path: string) {
+  private async publicRequest<T>(path: string): Promise<T> {
     return this.request<T>(path);
   }
 
-  private async mutate<T>(path: string, token: string, body: Record<string, unknown>) {
+  private async mutate<T>(path: string, token: string, body: Record<string, unknown>): Promise<T> {
     return this.request<T>(path, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        authorization: `Bearer ${token}`,
+        contentType: 'application/json',
       },
       body: JSON.stringify(body),
     });
   }
 
-  private async request<T>(path: string, init: RequestInit = {}) {
+  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const headersInit: Record<string, string> = {};
+    
+    const { headers: optionsHeaders } = this.options;
+    if (optionsHeaders !== undefined && typeof optionsHeaders === 'object') {
+      if (Symbol.iterator in optionsHeaders) {
+        // Headers is iterable
+        for (const [key, value] of optionsHeaders as Iterable<[string, string]>) {
+          headersInit[key] = value;
+        }
+      } else {
+        // Plain object
+        Object.assign(headersInit, optionsHeaders);
+      }
+    }
+
+    const { headers: initHeaders } = init;
+    if (initHeaders !== undefined && typeof initHeaders === 'object') {
+      if (Symbol.iterator in initHeaders) {
+        for (const [key, value] of initHeaders as Iterable<[string, string]>) {
+          headersInit[key] = value;
+        }
+      } else {
+        Object.assign(headersInit, initHeaders);
+      }
+    }
+
     const response = await this.fetcher(`${this.options.baseUrl}${path}`, {
       ...init,
-      headers: {
-        ...this.options.headers,
-        ...init.headers,
-      },
+      headers: headersInit,
     });
 
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      throw new Error(body?.message || body?.error || `Backend request failed: ${path}`);
+      const body = (await response.json().catch(() => null)) as ErrorResponse | null;
+      const message = body?.message ?? body?.error ?? `Backend request failed: ${path}`;
+      throw new Error(message);
     }
 
     return (await response.json()) as T;

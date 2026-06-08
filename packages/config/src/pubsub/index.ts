@@ -1,34 +1,43 @@
 import { createClient, type RedisClientType } from 'redis';
 
 class PubsubClient {
-  private client: RedisClientType;
+  private readonly client: RedisClientType;
+  private readonly url: string;
 
-  constructor(private url: string) {
-    this.client = createClient({ url: url });
-    this.client.on('error', (err) => console.error(`Error creating clinet: ${err}`));
+  constructor(url: string) {
+    this.url = url;
+    this.client = createClient({ url });
+    this.client.on('error', (err: Error) => {
+      console.error(`Error creating client: ${String(err)}`);
+    });
   }
 
-  async connect() {
+  async connect(): Promise<void> {
     if (!this.client.isOpen) {
       await this.client.connect();
     }
   }
 
-  async publish(channel: string, message: string) {
+  async publish(channel: string, message: string): Promise<void> {
     if (this.client.isOpen) {
       await this.client.publish(channel, message);
     }
   }
 
-  async disconnect() {
-    if (this.client.isOpen) this.client.disconnect();
+  async disconnect(): Promise<void> {
+    if (this.client.isOpen) {
+      await this.client.quit();
+    }
   }
 
-  async subscriber(channel: string, callback: (data: any) => void) {
+  async subscriber(
+    channel: string,
+    callback: (data: unknown) => void,
+  ): Promise<void> {
     if (this.client.isOpen) {
-      await this.client.subscribe(channel, (message) => {
+      await this.client.subscribe(channel, (message: string) => {
         try {
-          const data = JSON.parse(message);
+          const data: unknown = JSON.parse(message);
           callback(data);
         } catch (err) {
           console.error('Failed to parse message:', err);
@@ -38,4 +47,4 @@ class PubsubClient {
   }
 }
 
-export const pubsubClient = (url: string) => new PubsubClient(url);
+export const pubsubClient = (url: string): PubsubClient => new PubsubClient(url);

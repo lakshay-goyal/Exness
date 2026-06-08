@@ -1,11 +1,22 @@
 import { constant, config, redisClient } from '@repo/config';
 import { timeScaleDB } from '@repo/timescaledb';
 
+interface TradeData {
+  data: {
+    T: string | number;
+    s: string;
+    p: string | number;
+    q: string | number;
+    t: string | number;
+    m: boolean;
+  };
+}
+
 export class TradeBatchUploader {
   private readonly db = timeScaleDB();
   private readonly batchLimit = 100;
 
-  async start() {
+  async start(): Promise<void> {
     await this.db.connect();
     await this.db.setupTimescale();
 
@@ -18,8 +29,8 @@ export class TradeBatchUploader {
       try {
         const msg = await redis.popData(constant.redisQueue);
 
-        if (msg) {
-          await this.insertTrade(JSON.parse(msg));
+        if (msg !== undefined && msg !== null) {
+          await this.insertTrade(JSON.parse(msg) as TradeData);
           batchSize++;
         } else {
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -34,7 +45,7 @@ export class TradeBatchUploader {
     }
   }
 
-  private async insertTrade(trade: any) {
+  private async insertTrade(trade: TradeData): Promise<void> {
     let timestamp = typeof trade.data.T === 'string' ? parseInt(trade.data.T, 10) : trade.data.T;
 
     if (timestamp > 4102444800000) {

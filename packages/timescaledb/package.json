@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun run --watch ./index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0"
   },
   "exports": {
     ".": "./index.ts"
@@ -14,6 +15,7 @@
     "@repo/config": "workspace:*"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"

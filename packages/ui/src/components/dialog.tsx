@@ -6,27 +6,18 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@repo/ui/lib/utils';
 
-function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
-}
+const Dialog = ({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) => <DialogPrimitive.Root data-slot="dialog" {...props} />
 
-function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
-}
+const DialogTrigger = ({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) => <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
 
-function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
-}
+const DialogPortal = ({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) => <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
 
-function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
-}
+const DialogClose = ({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) => <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 
-function DialogOverlay({
+const DialogOverlay = ({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
+}: React.ComponentProps<typeof DialogPrimitive.Overlay>) => (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
@@ -35,18 +26,16 @@ function DialogOverlay({
       )}
       {...props}
     />
-  );
-}
+  )
 
-function DialogContent({
+const DialogContent = ({
   className,
   children,
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
-}) {
-  return (
+}) => (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
@@ -69,51 +58,42 @@ function DialogContent({
         )}
       </DialogPrimitive.Content>
     </DialogPortal>
-  );
-}
+  )
 
-function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
+const DialogHeader = ({ className, ...props }: React.ComponentProps<'div'>) => (
     <div
       data-slot="dialog-header"
       className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
       {...props}
     />
-  );
-}
+  )
 
-function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
+const DialogFooter = ({ className, ...props }: React.ComponentProps<'div'>) => (
     <div
       data-slot="dialog-footer"
       className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
       {...props}
     />
-  );
-}
+  )
 
-function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
+const DialogTitle = ({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) => (
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn('text-lg font-semibold leading-none', className)}
       {...props}
     />
-  );
-}
+  )
 
-function DialogDescription({
+const DialogDescription = ({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return (
+}: React.ComponentProps<typeof DialogPrimitive.Description>) => (
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn('text-muted-foreground text-sm', className)}
       {...props}
     />
-  );
-}
+  )
 
 export {
   Dialog,

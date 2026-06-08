@@ -13,29 +13,29 @@ export type CloseReason = (typeof closeReasons)[number];
 export const candleIntervals = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'] as const;
 export type CandleInterval = (typeof candleIntervals)[number];
 
-export type TradingUser = {
+export interface TradingUser {
   userId: string;
   userEmail: string;
   balance: number;
-};
+}
 
-export type PriceUpdate = {
+export interface PriceUpdate {
   asset: string;
   price: number;
   bidValue: number;
   askValue: number;
   decimal: number;
-};
+}
 
-export type LatestPrice = {
+export interface LatestPrice {
   asset: string;
   price: number;
   bid: number;
   ask: number;
   decimal?: number;
-};
+}
 
-export type OpenOrder = {
+export interface OpenOrder {
   userId: string;
   orderId: string;
   symbol: SupportedSymbol;
@@ -47,14 +47,14 @@ export type OpenOrder = {
   stippage?: number | null;
   openPrice: number;
   openTime: Date;
-};
+}
 
-export type EnhancedOpenOrder = OpenOrder & {
+export interface EnhancedOpenOrder extends OpenOrder {
   currentPrice: number;
   status: 'open';
-};
+}
 
-export type ClosedOrder = {
+export interface ClosedOrder {
   orderId: string;
   userId: string;
   symbol: SupportedSymbol;
@@ -70,15 +70,15 @@ export type ClosedOrder = {
   closeTime: Date;
   profitLoss: number;
   closeReason?: CloseReason;
-};
+}
 
-export type ClosedOrderResponse = Omit<ClosedOrder, 'openTime' | 'closeTime'> & {
+export interface ClosedOrderResponse extends Omit<ClosedOrder, 'openTime' | 'closeTime'> {
   openTime: string | Date;
   closeTime: string | Date;
   status?: 'closed';
-};
+}
 
-export type BackendOpenTrade = {
+export interface BackendOpenTrade {
   orderId: string;
   symbol: string;
   type: OrderSide;
@@ -95,9 +95,9 @@ export type BackendOpenTrade = {
   slippage?: number | null;
   stippage?: number | null;
   status?: 'open';
-};
+}
 
-export type BackendClosedTrade = {
+export interface BackendClosedTrade {
   orderId: string;
   symbol: string;
   type: OrderSide;
@@ -114,19 +114,19 @@ export type BackendClosedTrade = {
   stippage?: number | null;
   closeReason?: string | null;
   status?: 'closed';
-};
+}
 
-export type Candle = {
+export interface Candle {
   time: string;
   open: string | number;
   high: string | number;
   low: string | number;
   close: string | number;
   volume?: string | number;
-  trade_count?: string | number;
-};
+  tradeCount?: string | number;
+}
 
-export type CreateTradePayload = {
+export interface CreateTradePayload {
   symbol: string;
   type: OrderSide;
   quantity: number;
@@ -134,10 +134,10 @@ export type CreateTradePayload = {
   slippage?: number;
   takeProfit?: number;
   stopLoss?: number;
-};
+}
 
-export type TradingProfileData = {
+export interface TradingProfileData {
   balance: number;
   openTrades: BackendOpenTrade[];
   closedTrades: BackendClosedTrade[];
-};
+}

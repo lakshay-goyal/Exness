@@ -6,24 +6,21 @@ import { CircleIcon } from 'lucide-react';
 
 import { cn } from '@repo/ui/lib/utils';
 
-function RadioGroup({
+const RadioGroup = ({
   className,
   ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
-  return (
+}: React.ComponentProps<typeof RadioGroupPrimitive.Root>): React.ReactElement => (
     <RadioGroupPrimitive.Root
       data-slot="radio-group"
       className={cn('grid gap-3', className)}
       {...props}
     />
-  );
-}
+  )
 
-function RadioGroupItem({
+const RadioGroupItem = ({
   className,
   ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
-  return (
+}: React.ComponentProps<typeof RadioGroupPrimitive.Item>): React.ReactElement => (
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
       className={cn(
@@ -39,7 +36,6 @@ function RadioGroupItem({
         <CircleIcon className="fill-primary absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
-  );
-}
+  )
 
 export { RadioGroup, RadioGroupItem };

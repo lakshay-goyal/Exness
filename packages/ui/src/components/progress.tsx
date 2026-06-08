@@ -5,12 +5,11 @@ import * as ProgressPrimitive from '@radix-ui/react-progress';
 
 import { cn } from '@repo/ui/lib/utils';
 
-function Progress({
+const Progress = ({
   className,
   value,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
-  return (
+}: React.ComponentProps<typeof ProgressPrimitive.Root>): React.ReactElement => (
     <ProgressPrimitive.Root
       data-slot="progress"
       className={cn('bg-primary/20 relative h-2 w-full overflow-hidden rounded-full', className)}
@@ -22,7 +21,6 @@ function Progress({
         style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
       />
     </ProgressPrimitive.Root>
-  );
-}
+  )
 
 export { Progress };

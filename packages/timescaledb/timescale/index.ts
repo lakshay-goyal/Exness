@@ -1,9 +1,23 @@
 import pkg from 'pg';
+
 const { Client } = pkg;
+
 import { config } from '@repo/config';
 
+interface IntervalConfig {
+  interval: string;
+  name: string;
+  start: string;
+}
+
+interface RefreshResult {
+  refreshed: string[];
+  errors: Array<{ aggregate: string; error: string }>;
+  timeRange?: { from: string; to: string };
+}
+
 class TimeScaleDB {
-  private client: pkg.Client;
+  private readonly client: pkg.Client;
 
   constructor() {
     this.client = new Client({
@@ -15,7 +29,7 @@ class TimeScaleDB {
     });
   }
 
-  async connect() {
+  async connect(): Promise<void> {
     try {
       await this.client.connect();
     } catch (error) {
@@ -24,11 +38,11 @@ class TimeScaleDB {
     }
   }
 
-  getClient() {
+  getClient(): pkg.Client {
     return this.client;
   }
 
-  async setupTimescale() {
+  async setupTimescale(): Promise<void> {
     try {
       // Enable TimescaleDB extension
       await this.client.query('CREATE EXTENSION IF NOT EXISTS timescaledb;');
@@ -74,7 +88,7 @@ class TimeScaleDB {
     `);
 
       // Define the intervals for continuous aggregates
-      const intervals = [
+      const intervals: IntervalConfig[] = [
         { interval: '1 minute', name: '1m', start: '7 days' },
         { interval: '5 minutes', name: '5m', start: '14 days' },
         { interval: '15 minutes', name: '15m', start: '1 month' },
@@ -122,7 +136,8 @@ class TimeScaleDB {
             AND j.config::text LIKE '%candles_${name}%';
         `);
 
-          if (policyCheck.rows[0]?.count === '0') {
+          const [policyCheckResult] = policyCheck.rows;
+          if (policyCheckResult !== undefined && policyCheckResult.count === '0') {
             // Policy doesn't exist, create it
             await this.client.query(`
             SELECT add_continuous_aggregate_policy('candles_${name}',
@@ -131,15 +146,18 @@ class TimeScaleDB {
               schedule_interval => INTERVAL '${interval}'
             );
           `);
-          } else {
           }
-        } catch (policyError: any) {
+        } catch (policyError: unknown) {
           // If adding policy fails, log but don't throw (policy might already exist)
-          if (policyError?.message?.includes('already exists') || policyError?.code === 'P0001') {
+          const errorMessage = policyError instanceof Error ? policyError.message : String(policyError);
+          const errorCode = (policyError as { code?: string }).code;
+          
+          if (errorMessage.includes('already exists') || errorCode === 'P0001') {
+            // Policy already exists, ignore
           } else {
             console.warn(
               `⚠️ Could not add refresh policy for candles_${name}:`,
-              policyError?.message || policyError,
+              errorMessage,
             );
           }
         }
@@ -149,11 +167,13 @@ class TimeScaleDB {
       const dataCheck = await this.client.query(
         'SELECT COUNT(*) as count, MIN(time) as min_time, MAX(time) as max_time FROM trades;',
       );
-      const tradeCount = parseInt(dataCheck.rows[0]?.count || '0', 10);
+      
+      const [dataCheckRow] = dataCheck.rows;
+      const tradeCount = parseInt(dataCheckRow?.count ?? '0', 10);
 
       if (tradeCount > 0) {
-        const minTime = dataCheck.rows[0]?.min_time;
-        const maxTime = dataCheck.rows[0]?.max_time;
+        const minTime = dataCheckRow?.min_time;
+        const maxTime = dataCheckRow?.max_time;
 
         // Refresh all aggregates with the available data range
         for (const { name } of intervals) {
@@ -162,14 +182,14 @@ class TimeScaleDB {
               `CALL refresh_continuous_aggregate('candles_${name}', $1::timestamptz, $2::timestamptz);`,
               [minTime, maxTime],
             );
-          } catch (refreshError: any) {
+          } catch (refreshError: unknown) {
+            const refreshErrorMessage = refreshError instanceof Error ? refreshError.message : String(refreshError);
             console.warn(
               `⚠️ Could not refresh candles_${name}:`,
-              refreshError?.message || refreshError,
+              refreshErrorMessage,
             );
           }
         }
-      } else {
       }
     } catch (error) {
       console.error('❌ Error setting up TimescaleDB:', error);
@@ -177,25 +197,29 @@ class TimeScaleDB {
   }
 
   // Method to manually refresh all continuous aggregates
-  async refreshAllContinuousAggregates(timeRange?: { from: string; to: string }) {
+  async refreshAllContinuousAggregates(timeRange?: { from: string; to: string }): Promise<RefreshResult> {
     try {
-      let from: string, to: string;
+      let from: string;
+      let to: string;
 
-      if (timeRange) {
-        from = timeRange.from;
-        to = timeRange.to;
+      if (timeRange !== undefined) {
+        ({ from, to } = timeRange);
       } else {
         // Get the full time range from trades table
         const timeRangeResult = await this.client.query(
           'SELECT MIN(time) as min_time, MAX(time) as max_time FROM trades;',
         );
 
-        if (!timeRangeResult.rows[0]?.min_time || !timeRangeResult.rows[0]?.max_time) {
+        const [timeRangeRow] = timeRangeResult.rows;
+        const minTime = timeRangeRow?.min_time;
+        const maxTime = timeRangeRow?.max_time;
+        
+        if (minTime === undefined || maxTime === undefined) {
           return { refreshed: [], errors: [] };
         }
 
-        from = timeRangeResult.rows[0].min_time;
-        to = timeRangeResult.rows[0].max_time;
+        from = minTime;
+        to = maxTime;
       }
 
       const intervals = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1mo', '1y'];
@@ -209,25 +233,27 @@ class TimeScaleDB {
             [from, to],
           );
           refreshed.push(`candles_${name}`);
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           errors.push({
             aggregate: `candles_${name}`,
-            error: error?.message || String(error),
+            error: errorMessage,
           });
-          console.warn(`⚠️ Failed to refresh candles_${name}:`, error?.message || error);
+          console.warn(`⚠️ Failed to refresh candles_${name}:`, errorMessage);
         }
       }
 
       return { refreshed, errors, timeRange: { from, to } };
-    } catch (error: any) {
-      console.error('❌ Error refreshing continuous aggregates:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error refreshing continuous aggregates:', errorMessage);
       throw error;
     }
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     await this.client.end();
   }
 }
 
-export const timeScaleDB = () => new TimeScaleDB();
+export const timeScaleDB = (): TimeScaleDB => new TimeScaleDB();

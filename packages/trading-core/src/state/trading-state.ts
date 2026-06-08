@@ -43,23 +43,30 @@ export class TradingStateStore {
     closeOrders?: ClosedOrder[];
     prices?: PriceUpdate[];
   }) {
-    this.users = state?.users ?? [...initialUsers];
-    this.openOrders = state?.openOrders ?? [...initialOpenOrders];
-    this.closeOrders = state?.closeOrders ?? [];
-    this.prices = state?.prices ?? [];
+    const {
+      users: usersParam,
+      openOrders: openOrdersParam,
+      closeOrders: closeOrdersParam,
+      prices: pricesParam,
+    } = state ?? {};
+    this.users = usersParam ?? [...initialUsers];
+    this.openOrders = openOrdersParam ?? [...initialOpenOrders];
+    this.closeOrders = closeOrdersParam ?? [];
+    this.prices = pricesParam ?? [];
   }
 
-  findUser(userId: string) {
+  findUser(userId: string): TradingUser | undefined {
     return this.users.find((user) => user.userId === userId);
   }
 
-  hasUser(userId: string) {
+  hasUser(userId: string): boolean {
     return this.users.some((user) => user.userId === userId);
   }
 }
 
-export const tradingState = new TradingStateStore();
-export const users = tradingState.users;
-export const openOrders = tradingState.openOrders;
-export const closeOrders = tradingState.closeOrders;
-export const prices = tradingState.prices;
+const tradingState = new TradingStateStore();
+
+export const {users} = tradingState;
+export const {openOrders} = tradingState;
+export const {closeOrders} = tradingState;
+export const {prices} = tradingState;

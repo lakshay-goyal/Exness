@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -10,7 +11,7 @@ import {
 import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ ...props }: ToasterProps): React.ReactElement => {
   const { theme = 'system' } = useTheme();
 
   return (

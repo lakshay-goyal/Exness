@@ -1,35 +1,47 @@
 import type { OrderSide } from '@repo/types';
 
-export class TradeInputValidator {
-  parseOrderSide(value: unknown): OrderSide | null {
-    const orderType = String(value ?? '').toLowerCase();
-    return orderType === 'buy' || orderType === 'sell' ? orderType : null;
+const parseOrderSide = (value: unknown): OrderSide | null => {
+  if (value === null || value === undefined) {
+    return null;
   }
-
-  parsePositiveNumber(value: unknown) {
-    const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  if (typeof value !== 'string' && (typeof value !== 'number' || Number.isFinite(value))) {
+    return null;
   }
+  const stringValue = typeof value === 'string' ? value : String(value);
+  const orderType = stringValue.toLowerCase();
+  return orderType === 'buy' || orderType === 'sell' ? orderType : null;
+};
 
-  parseNonNegativeNumber(value: unknown) {
-    const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-  }
+const parsePositiveNumber = (value: unknown): number | null => {
+  const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
 
-  parseOptionalPositiveNumber(value: unknown) {
-    if (value === undefined || value === null || value === '') return undefined;
-    return this.parsePositiveNumber(value);
-  }
+const parseNonNegativeNumber = (value: unknown): number | null => {
+  const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
 
-  parseOptionalNonNegativeNumber(value: unknown) {
-    if (value === undefined || value === null || value === '') return undefined;
-    return this.parseNonNegativeNumber(value);
-  }
+const parseOptionalPositiveNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  return parsePositiveNumber(value) ?? undefined;
+};
 
-  parsePositiveInteger(value: unknown) {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-  }
-}
+const parseOptionalNonNegativeNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  return parseNonNegativeNumber(value) ?? undefined;
+};
 
-export const tradeInputValidator = new TradeInputValidator();
+const parsePositiveInteger = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+export const tradeInputValidator = {
+  parseOrderSide,
+  parsePositiveNumber,
+  parseNonNegativeNumber,
+  parseOptionalPositiveNumber,
+  parseOptionalNonNegativeNumber,
+  parsePositiveInteger,
+};

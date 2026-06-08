@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@repo/config": "workspace:*",
@@ -12,6 +13,7 @@
     "mongodb": "^6.3.0"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"

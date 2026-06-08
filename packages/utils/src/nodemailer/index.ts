@@ -2,7 +2,10 @@ import 'dotenv/config';
 import nodemailer from 'nodemailer';
 import { config } from '@repo/config';
 
-export async function nodemailerSender(email: string, token: string) {
+export const nodemailerSender = async (
+  email: string,
+  token: string,
+): Promise<void> => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -13,7 +16,7 @@ export async function nodemailerSender(email: string, token: string) {
 
   const verificationUrl = `${config.BACKEND_URL}/api/v1/auth/verify?token=${token}`;
 
-  const info = await transporter.sendMail({
+  await transporter.sendMail({
     from: `"Exness Contest" <${config.USER_EMAIL}>`,
     to: email,
     subject: 'Exness Contest Verification Link',
@@ -21,4 +24,4 @@ export async function nodemailerSender(email: string, token: string) {
     html: `<p>The verification link is:</p>
            <a href="${verificationUrl}">${verificationUrl}</a>`,
   });
-}
+};

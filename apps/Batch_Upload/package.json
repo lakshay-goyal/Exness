@@ -5,13 +5,15 @@
   "private": true,
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@repo/config": "workspace:*",
     "@repo/timescaledb": "workspace:*"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.9.2"

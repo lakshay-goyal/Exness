@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 import { config, pubsubClient, constant } from '@repo/config';
 
@@ -8,15 +9,27 @@ export class RealtimeWebsocketServer {
   });
   private readonly pubsub = pubsubClient(config.REDIS_URL);
 
-  async start() {
+  async start(): Promise<void> {
     await this.pubsub.connect();
 
-    this.server.on('connection', async (socket) => {
-      await this.pubsub.subscriber(constant.pubsubKey, (data: any) => {
-        socket.send(JSON.stringify(data));
+    this.server.on('connection', (socket: WebSocket) => {
+      this.handleConnection(socket).catch((err: unknown) => {
+        console.error('WebSocket connection error:', err);
       });
-
-      socket.on('close', () => {});
     });
+  }
+
+  private async handleConnection(socket: WebSocket): Promise<void> {
+    await this.pubsub.subscriber(constant.pubsubKey, (data: unknown) => {
+      socket.send(JSON.stringify(data));
+    });
+
+    socket.on('close', () => {
+      RealtimeWebsocketServer.handleSocketClose();
+    });
+  }
+
+  private static handleSocketClose(): void {
+    // Socket closed, cleanup if needed
   }
 }

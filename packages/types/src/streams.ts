@@ -1,4 +1,4 @@
-import type { ClosedOrder, CloseReason, OrderSide } from './trading';
+import type { ClosedOrder, CloseReason } from './trading';
 
 export const streamFunctions = [
   'createUser',
@@ -11,45 +11,45 @@ export const streamFunctions = [
 
 export type StreamFunctionName = (typeof streamFunctions)[number];
 
-export type CorrelatedStreamMessage = {
+export interface CorrelatedStreamMessage {
   requestId?: string;
   correlationId?: string;
-};
+}
 
-export type CreateUserCommand = CorrelatedStreamMessage & {
+export interface CreateUserCommand extends CorrelatedStreamMessage {
   function: 'createUser';
   userId: string;
   userEmail: string;
-};
+}
 
-export type CreateOrderCommand = CorrelatedStreamMessage & {
+export interface CreateOrderCommand extends CorrelatedStreamMessage {
   function: 'createOrder';
   userId: string;
   symbol: string;
-  type: OrderSide | string;
+  type: string;
   quantity: number | string;
   leverage: number | string;
   slippage?: number | string;
   takeProfit?: number | string;
   stopLoss?: number | string;
-};
+}
 
-export type CloseOrderCommand = CorrelatedStreamMessage & {
+export interface CloseOrderCommand extends CorrelatedStreamMessage {
   function: 'createCloseOrder';
   orderId: string;
   userId: string;
   closeReason?: CloseReason;
-};
+}
 
-export type GetUserOrdersCommand = CorrelatedStreamMessage & {
+export interface GetUserOrdersCommand extends CorrelatedStreamMessage {
   function: 'getOpenOrder' | 'getCloseOrders';
   userId: string;
-};
+}
 
-export type PricePollerCommand = CorrelatedStreamMessage & {
+export interface PricePollerCommand extends CorrelatedStreamMessage {
   function: 'pricePoller';
   message: string;
-};
+}
 
 export type EngineCommand =
   | CreateUserCommand
@@ -71,7 +71,7 @@ export type DbStorageCommand =
       userId?: string;
     });
 
-export type StreamResponse = CorrelatedStreamMessage & {
-  function: StreamFunctionName | string;
+export interface StreamResponse extends CorrelatedStreamMessage {
+  function: string;
   message?: unknown;
-};
+}

@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, type Db, type Collection } from 'mongodb';
 import { config } from '@repo/config';
 import { openOrders, users } from '@repo/trading-core/state';
 
@@ -8,9 +8,9 @@ let db: Db | null = null;
 const USERS_COLLECTION = 'users';
 const ORDERS_COLLECTION = 'orders';
 
-async function connectToMongoDB(): Promise<void> {
+const connectToMongoDB = async (): Promise<void> => {
   try {
-    if (!client) {
+    if (client === null) {
       client = new MongoClient(config.MONGODB_URL);
       await client.connect();
       db = client.db('exness_snapshots');
@@ -19,22 +19,24 @@ async function connectToMongoDB(): Promise<void> {
     console.error('Error connecting to MongoDB:', error);
     throw error;
   }
-}
+};
 
-function getCollections(): {
+interface CollectionsResult {
   usersCollection: Collection;
   ordersCollection: Collection;
-} {
-  if (!db) {
+}
+
+const getCollections = (): CollectionsResult => {
+  if (db === null) {
     throw new Error('Database not connected. Call connectToMongoDB() first.');
   }
   return {
     usersCollection: db.collection(USERS_COLLECTION),
     ordersCollection: db.collection(ORDERS_COLLECTION),
   };
-}
+};
 
-async function clearMongoDBData(): Promise<void> {
+const clearMongoDBData = async (): Promise<void> => {
   try {
     const { usersCollection, ordersCollection } = getCollections();
 
@@ -43,9 +45,9 @@ async function clearMongoDBData(): Promise<void> {
     console.error('Error clearing MongoDB data:', error);
     throw error;
   }
-}
+};
 
-async function dumpDataToMongoDB(): Promise<void> {
+const dumpDataToMongoDB = async (): Promise<void> => {
   try {
     const { usersCollection, ordersCollection } = getCollections();
 
@@ -73,20 +75,18 @@ async function dumpDataToMongoDB(): Promise<void> {
 
     if (usersData.length > 0) {
       await usersCollection.insertMany(usersData);
-    } else {
     }
 
     if (ordersData.length > 0) {
       await ordersCollection.insertMany(ordersData);
-    } else {
     }
   } catch (error) {
     console.error('Error dumping data to MongoDB:', error);
     throw error;
   }
-}
+};
 
-async function performSnapshot(): Promise<void> {
+const performSnapshot = async (): Promise<void> => {
   try {
     await clearMongoDBData();
 
@@ -94,9 +94,9 @@ async function performSnapshot(): Promise<void> {
   } catch (error) {
     console.error('Error performing snapshot:', error);
   }
-}
+};
 
-async function main() {
+const main = async (): Promise<void> => {
   try {
     await connectToMongoDB();
 
@@ -104,30 +104,42 @@ async function main() {
 
     const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
-    setInterval(async () => {
-      await performSnapshot();
+    setInterval(() => {
+      performSnapshot().catch((error: unknown) => {
+        console.error('Error performing snapshot:', error);
+      });
     }, SNAPSHOT_INTERVAL_MS);
 
-    process.on('SIGINT', async () => {
-      if (client) {
-        await client.close();
-      }
-      process.exit(0);
+    process.on('SIGINT', () => {
+      (async (): Promise<void> => {
+        if (client !== null) {
+          await client.close();
+        }
+        process.exit(0);
+      })().catch((error: unknown) => {
+        console.error('Error handling SIGINT:', error);
+        process.exit(1);
+      });
     });
 
-    process.on('SIGTERM', async () => {
-      if (client) {
-        await client.close();
-      }
-      process.exit(0);
+    process.on('SIGTERM', () => {
+      (async (): Promise<void> => {
+        if (client !== null) {
+          await client.close();
+        }
+        process.exit(0);
+      })().catch((error: unknown) => {
+        console.error('Error handling SIGTERM:', error);
+        process.exit(1);
+      });
     });
   } catch (error) {
     console.error('Fatal error in snapshotting service:', error);
     process.exit(1);
   }
-}
+};
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error('Unhandled error:', error);
   process.exit(1);
 });

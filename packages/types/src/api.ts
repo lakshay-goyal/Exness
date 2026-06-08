@@ -8,15 +8,15 @@ import type {
   LatestPrice,
 } from './trading';
 
-export type AuthenticatedUser = {
+export interface AuthenticatedUser {
   id: string;
   email: string;
   name?: string;
   image?: string | null;
   hasMobilePin?: boolean;
-};
+}
 
-export type MobileSessionResponse = {
+export interface MobileSessionResponse {
   token: string;
   accessToken?: string;
   refreshToken?: string;
@@ -29,38 +29,38 @@ export type MobileSessionResponse = {
     image?: string | null;
     hasMobilePin: boolean;
   };
-};
+}
 
-export type BalanceResponse = {
+export interface BalanceResponse {
   status?: 'success' | 'error';
   message?: number | string;
-};
+}
 
-export type OpenOrdersResponse = {
+export interface OpenOrdersResponse {
   message?: string | BackendOpenTrade[];
-};
+}
 
-export type ClosedOrdersResponse = {
+export interface ClosedOrdersResponse {
   message?: BackendClosedTrade[] | string;
-};
+}
 
-export type CandlesResponse = {
+export interface CandlesResponse {
   data?: Candle[];
-};
+}
 
-export type LatestPricesResponse = {
+export interface LatestPricesResponse {
   data?: LatestPrice[];
-};
+}
 
-export type CreateTradeResponse = {
+export interface CreateTradeResponse {
   message?: string;
   orderId?: string;
-};
+}
 
-export type CloseTradeResponse = {
+export interface CloseTradeResponse {
   message?: string;
   order?: ClosedOrderResponse;
-};
+}
 
 export type {
   BackendClosedTrade,
