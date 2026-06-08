@@ -2,7 +2,7 @@
 
 ## Summary
 
-✅ **ALL 21 PACKAGES NOW PASS ESLINT**
+✅ **ALL PACKAGES NOW PASS ESLINT**
 
 The ESLint configuration has been successfully applied to the entire monorepo. All packages pass linting with zero warnings and zero errors.
 
@@ -21,7 +21,6 @@ The ESLint configuration has been successfully applied to the entire monorepo. A
 - ✅ `apps/Engine` - Trade engine with Redis stream handling
 - ✅ `apps/DBstorage` - Database storage worker with Prisma integration
 - ✅ `apps/Price_Poller` - Market data polling with Binance WebSocket
-- ✅ `apps/Batch_Upload` - Trade batch uploader with TimescaleDB
 - ✅ `apps/Websocket_Server` - WebSocket server for real-time data
 - ✅ `apps/Snap-shotting` - MongoDB snapshotting service
 - ✅ `apps/web` - Next.js web application
@@ -30,7 +29,6 @@ The ESLint configuration has been successfully applied to the entire monorepo. A
 
 ### 3. Infrastructure Packages
 - ✅ `@repo/ui` - UI component library with shadcn/radix patterns
-- ✅ `@repo/timescaledb` - TimescaleDB client with proper types
 
 ## Approach Taken
 

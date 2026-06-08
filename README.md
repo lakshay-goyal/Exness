@@ -16,7 +16,6 @@ The platform follows a distributed microservices architecture with the following
 - **WebSocket Server**: Real-time data distribution to frontend clients
 - **Price Poller**: Fetches live market data from Binance WebSocket API
 - **Database Storage**: Handles user data and transaction persistence
-- **Batch Upload**: Processes and stores historical market data in TimeScaleDB
 
 ## 📦 Applications
 
@@ -57,18 +56,12 @@ The platform follows a distributed microservices architecture with the following
   - Binance WebSocket integration
   - Real-time price processing
   - Bid/Ask calculation with spreads
-  - Redis queue management
+  - Publishes live prices via Redis streams/pub-sub
 
 - **`DBstorage`**: Database operations service
   - User data persistence
   - Transaction logging
   - Order history management
-
-- **`Batch_Upload`**: Historical data processing
-  - TimeScaleDB integration
-  - Batch data insertion
-  - Candle data generation
-  - Data compression and retention policies
 
 ## 📚 Shared Packages
 
@@ -101,11 +94,6 @@ The platform follows a distributed microservices architecture with the following
   - Database client management
   - Type-safe database operations
 
-- **`@repo/timescaledb`**: Time-series database integration
-  - TimeScaleDB client wrapper
-  - Hypertable management
-  - Continuous aggregates for candles
-  - Data compression and retention policies
 
 ### Utility Packages
 
@@ -132,7 +120,7 @@ The platform follows a distributed microservices architecture with the following
 
 - Node.js 18+ or Bun
 - Redis server
-- PostgreSQL with TimeScaleDB extension
+- PostgreSQL
 - Binance API access (for market data)
 
 ### Installation
@@ -172,13 +160,13 @@ bun run test
 4. **Order Processing**: Backend receives trade requests and forwards to Engine
 5. **Execution**: Engine processes orders in-memory for high performance
 6. **Persistence**: Database services handle data storage and retrieval
-7. **Historical Data**: Batch Upload processes and stores market data in TimeScaleDB
+7. **Historical Data**: Candle data fetched directly from Binance Kline API on-demand
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: Next.js, React, Tailwind CSS, TradingView Charts
 - **Backend**: Express.js, Node.js, TypeScript
-- **Database**: PostgreSQL, TimeScaleDB, Prisma ORM
+- **Database**: PostgreSQL, Prisma ORM
 - **Caching**: Redis (Streams, Pub/Sub, Queues)
 - **Real-time**: WebSockets, Redis Pub/Sub
 - **Market Data**: Binance WebSocket API
@@ -190,7 +178,7 @@ bun run test
 - **Real-time Trading**: Live market data and instant order execution
 - **High Performance**: In-memory processing for sub-millisecond latency
 - **Scalable Architecture**: Microservices with Redis for horizontal scaling
-- **Time-series Data**: Optimized storage for historical market data
+- **Time-series Data**: Historical candle data from Binance Kline API
 - **User Management**: Complete authentication and authorization system
 - **Market Analysis**: Advanced charting with multiple timeframes
 - **Risk Management**: Built-in order validation and balance checks
@@ -209,6 +197,6 @@ The platform uses environment variables for configuration. Key settings include:
 
 - **In-memory Processing**: Engine service for ultra-fast order execution
 - **Redis Streams**: Reliable message processing with backpressure handling
-- **TimeScaleDB**: Optimized time-series data storage with compression
-- **Continuous Aggregates**: Pre-computed candle data for fast chart loading
+- **Binance Kline API**: Direct access to historical candle data
+- **On-demand Fetching**: Real-time candle data without local storage overhead
 - **Connection Pooling**: Efficient database connection management

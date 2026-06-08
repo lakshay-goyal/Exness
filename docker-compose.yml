@@ -18,25 +18,6 @@ services:
     networks:
       - exness-network
 
-  timescaledb:
-    image: timescale/timescaledb:latest-pg16
-    container_name: exness-timescaledb
-    environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
-    ports:
-      - '5433:5432'
-    volumes:
-      - timescaledb_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U myuser -d mydb']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - exness-network
-
   redis:
     image: redis:7-alpine
     container_name: exness-redis
@@ -80,8 +61,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -110,8 +89,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -143,8 +120,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -152,8 +127,6 @@ services:
       - '8000:8000'
     depends_on:
       postgres:
-        condition: service_healthy
-      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -172,15 +145,11 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
     depends_on:
       postgres:
-        condition: service_healthy
-      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -199,8 +168,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       MONGODB_URL: mongodb://admin:admin123@mongodb:27017/exness_snapshots?authSource=admin
       FRONTEND_URL: http://localhost:3001
@@ -223,8 +190,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -244,37 +209,12 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
     ports:
       - '7070:7070'
     depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - exness-network
-    restart: unless-stopped
-
-  batch-upload:
-    build:
-      context: .
-      dockerfile: apps/docker/Batch_Upload.Dockerfile
-    container_name: exness-batch-upload
-    env_file:
-      - .env
-    environment:
-      REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
-      DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
-      FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
-    depends_on:
-      timescaledb:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -290,8 +230,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -310,18 +248,20 @@ services:
     build:
       context: .
       dockerfile: apps/docker/web.Dockerfile
+      args:
+        # The browser runs on the host, so it reaches the backend/websocket via
+        # the published host ports. These are baked into the client bundle at build.
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+        NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:7070/
     container_name: exness-web
     env_file:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
       PORT: 3001
-      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
     ports:
       - '3001:3001'
     depends_on:
@@ -342,8 +282,6 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
-      TIMESCALE_DB_HOST: timescaledb
-      TIMESCALE_DB_PORT: 5432
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://localhost:8000
@@ -356,7 +294,6 @@ services:
 
 volumes:
   postgres_data:
-  timescaledb_data:
   redis_data:
   mongodb_data:
 

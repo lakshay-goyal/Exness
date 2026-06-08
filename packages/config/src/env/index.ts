@@ -16,11 +16,6 @@ if (existsSync(envPath)) {
 const envSchema = z.object({
   REDIS_URL: z.string(),
   BINANCE_WS_URL: z.string(),
-  TIMESCALE_DB_USER: z.string(),
-  TIMESCALE_DB_PASSWORD: z.string(),
-  TIMESCALE_DB_HOST: z.string(),
-  TIMESCALE_DB_PORT: z.string().transform(Number),
-  TIMESCALE_DB_NAME: z.string(),
   DATABASE_URL: z.string(),
   MONGODB_URL: z.string(),
   JWT_SECRET: z.string(),
@@ -41,11 +36,6 @@ const env = envSchema.parse(process.env);
 const config = {
   REDIS_URL: env.REDIS_URL,
   BINANCE_WS_URL: env.BINANCE_WS_URL,
-  TIMESCALE_DB_USER: env.TIMESCALE_DB_USER,
-  TIMESCALE_DB_PASSWORD: env.TIMESCALE_DB_PASSWORD,
-  TIMESCALE_DB_HOST: env.TIMESCALE_DB_HOST,
-  TIMESCALE_DB_PORT: env.TIMESCALE_DB_PORT,
-  TIMESCALE_DB_NAME: env.TIMESCALE_DB_NAME,
   DATABASE_URL: env.DATABASE_URL,
   MONGODB_URL: env.MONGODB_URL,
   JWT_SECRET: env.JWT_SECRET,

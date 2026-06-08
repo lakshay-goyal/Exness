@@ -1,5 +1,0 @@
-{
-  "extends": "@repo/typescript-config/bun-package.json",
-  "include": ["index.ts", "timescale/**/*.ts"],
-  "exclude": ["node_modules"]
-}

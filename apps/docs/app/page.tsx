@@ -6,7 +6,6 @@ const SERVICES = [
   'Price Poller',
   'WebSocket Server',
   'DB Storage',
-  'Batch Upload',
   'Snapshotting',
 ];
 
@@ -16,7 +15,6 @@ const PACKAGES = [
   '@repo/api-client',
   '@repo/config',
   '@repo/db',
-  '@repo/timescaledb',
   '@repo/ui',
 ];
 

@@ -1,20 +1,11 @@
 import 'dotenv/config';
 import WebSocket from 'ws';
-import { pubsubClient, config, redisClient, redisStreams, constant } from '@repo/config';
+import { pubsubClient, config, redisStreams, constant } from '@repo/config';
 import type { PriceUpdate } from '@repo/types';
-
-interface TradeQueueMessage {
-  data: {
-    s: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
 
 export class MarketDataPoller {
   private readonly ws = new WebSocket(config.BINANCE_WS_URL);
   private readonly pubsub = pubsubClient(config.REDIS_URL);
-  private readonly redis = redisClient(config.REDIS_URL);
   private readonly streams = redisStreams(config.REDIS_URL);
   private readonly priceUpdates: PriceUpdate[] = [];
   private readonly cryptoTrades = ['ETH_USDC_PERP', 'SOL_USDC_PERP', 'BTC_USDC_PERP'];
@@ -23,7 +14,6 @@ export class MarketDataPoller {
 
   async start(): Promise<void> {
     await this.pubsub.connect();
-    await this.redis.connect();
     await this.streams.connect();
 
     this.ws.on('open', () => {
@@ -73,11 +63,9 @@ export class MarketDataPoller {
       if (!this.cryptoTrades.includes(asset)) return;
 
       if (eventData.e === 'trade' && eventData.p) {
-        await this.redis.pushData(
-          constant.redisQueue,
-          JSON.stringify(this.buildTradeQueueMessage(msg, eventData, asset)),
-        );
-
+        // Use the trade price as a fallback live price until a bookTicker
+        // (bid/ask) update arrives for this asset. Trade data is no longer
+        // persisted — historical candles are served from the Binance Kline API.
         if (!this.priceUpdates.some((update) => update.asset === asset)) {
           const tradePrice = Number(eventData.p);
           const fallbackSpread = tradePrice * 0.0001;
@@ -129,15 +117,5 @@ export class MarketDataPoller {
     } else {
       this.priceUpdates.push(update);
     }
-  }
-
-  private buildTradeQueueMessage(msg: Record<string, unknown>, data: Record<string, unknown>, asset: string): TradeQueueMessage {
-    return {
-      ...msg,
-      data: {
-        ...data,
-        s: asset,
-      },
-    };
   }
 }

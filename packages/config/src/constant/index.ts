@@ -62,7 +62,6 @@ export const REDIS_STREAMS = {
 // ============================================
 export const REDIS_KEYS = {
   PUBSUB_BINANCE: 'binance:pubsub',
-  QUEUE_TRADES: 'binance:trades',
 } as const;
 
 // ============================================
@@ -177,7 +176,6 @@ export const constant = {
   pubsubKey: REDIS_KEYS.PUBSUB_BINANCE,
   redisStream: REDIS_STREAMS.EXNESS,
   secondaryRedisStream: REDIS_STREAMS.EXNESS_RECEIVE,
-  redisQueue: REDIS_KEYS.QUEUE_TRADES,
   dbStorageStream: REDIS_STREAMS.DB_STORAGE,
 } as const;
 

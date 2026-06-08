@@ -119,7 +119,6 @@ app-example/, *.tgz, generated/prisma/, packages/snap-shotting/out/
 | `apps/Engine` | base | Node.js/Bun worker |
 | `apps/Price_Poller` | base | Node.js/Bun worker |
 | `apps/DBstorage` | base | Node.js/Bun worker |
-| `apps/Batch_Upload` | base | Node.js/Bun worker |
 | `apps/Websocket_Server` | base | Node.js/Bun worker |
 | `packages/ui` | react-internal | React components library |
 | `packages/types` | base | Type definitions |
@@ -128,7 +127,6 @@ app-example/, *.tgz, generated/prisma/, packages/snap-shotting/out/
 | `packages/api-client` | base | API client |
 | `packages/utils` | base | Utilities |
 | `packages/db` | base | Database client (ignores generated/prisma) |
-| `packages/timescaledb` | base | TimescaleDB client |
 | `packages/snap-shotting` | base | Snap-shotting (ignores out/, *.tgz) |
 
 ## Usage
