@@ -46,7 +46,13 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
 
           {showNavLinks && (
             <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-8">
+              <div className="ml-10 flex items-baseline space-x-6 lg:space-x-8">
+                <a
+                  href="#architecture"
+                  className="hover:text-primary text-sm font-medium transition-colors"
+                >
+                  Architecture
+                </a>
                 <a
                   href="#features"
                   className="hover:text-primary text-sm font-medium transition-colors"
@@ -54,22 +60,10 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
                   Features
                 </a>
                 <a
-                  href="#how-it-works"
+                  href="#developers"
                   className="hover:text-primary text-sm font-medium transition-colors"
                 >
-                  How it Works
-                </a>
-                <a
-                  href="#markets"
-                  className="hover:text-primary text-sm font-medium transition-colors"
-                >
-                  Markets
-                </a>
-                <a
-                  href="#security"
-                  className="hover:text-primary text-sm font-medium transition-colors"
-                >
-                  Security
+                  Developers
                 </a>
               </div>
             </div>
@@ -146,28 +140,22 @@ export const Navbar: React.FC<NavbarProps> = ({ showNavLinks = true }) => {
             {showNavLinks && (
               <div className="mb-4 flex flex-col space-y-4">
                 <a
+                  href="#architecture"
+                  className="hover:text-primary text-sm font-medium transition-colors"
+                >
+                  Architecture
+                </a>
+                <a
                   href="#features"
                   className="hover:text-primary text-sm font-medium transition-colors"
                 >
                   Features
                 </a>
                 <a
-                  href="#how-it-works"
+                  href="#developers"
                   className="hover:text-primary text-sm font-medium transition-colors"
                 >
-                  How it Works
-                </a>
-                <a
-                  href="#markets"
-                  className="hover:text-primary text-sm font-medium transition-colors"
-                >
-                  Markets
-                </a>
-                <a
-                  href="#security"
-                  className="hover:text-primary text-sm font-medium transition-colors"
-                >
-                  Security
+                  Developers
                 </a>
               </div>
             )}

@@ -3,9 +3,44 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { GuestRoute } from '@/components/GuestRoute';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { backendRequestHeaders, getBackendUrl } from '@/lib/backend-api';
+
+function LoginBackground() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="from-background via-background to-accent/10 absolute inset-0 bg-gradient-to-br" />
+      <div className="login-bg-shimmer bg-[radial-gradient(circle_at_50%_50%,var(--foreground)_0%,transparent_70%)] absolute inset-0 opacity-[0.03]" />
+      <div className="login-bg-orb bg-primary/8 absolute -left-24 top-1/4 h-72 w-72 rounded-full blur-3xl" />
+      <div className="login-bg-orb-delayed bg-foreground/5 absolute -right-20 bottom-1/4 h-80 w-80 rounded-full blur-3xl" />
+      <div className="login-bg-orb bg-accent/40 absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
+      <div
+        className="absolute inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            'linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)',
+          backgroundSize: '64px 64px',
+        }}
+      />
+    </div>
+  );
+}
+
+function LoginShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="from-background via-background to-accent/10 text-foreground relative min-h-screen overflow-hidden bg-gradient-to-br">
+      <LoginBackground />
+      <Navbar showNavLinks={false} />
+      <div className="relative flex min-h-screen items-center justify-center px-4 py-24">
+        <div className="w-full max-w-md">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -19,14 +54,10 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
+      await axios.post(
         `${getBackendUrl()}/api/v1/auth/login`,
-        {
-          email: email,
-        },
-        {
-          headers: backendRequestHeaders,
-        },
+        { email },
+        { headers: backendRequestHeaders },
       );
       setIsSubmitted(true);
     } catch (error) {
@@ -39,218 +70,100 @@ const Login: React.FC = () => {
   if (isSubmitted) {
     return (
       <GuestRoute>
-        <div className="bg-background min-h-screen">
-          <Navbar showNavLinks={false} />
-          <div className="flex min-h-screen items-center justify-center px-4 pt-16">
-            <div className="w-full max-w-md">
-              <div className="text-center">
-                <div className="bg-primary mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full">
-                  <svg
-                    className="text-primary-foreground h-8 w-8"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <h1 className="mb-4 text-3xl font-bold">Check Your Email</h1>
-                <p className="text-muted-foreground mb-8">
-                  We've sent a trading account setup link to <strong>{email}</strong>. Click the
-                  link in the email to complete your registration and start trading.
-                </p>
-                <div className="space-y-4">
-                  <button
-                    onClick={() => {
-                      setIsSubmitted(false);
-                      setEmail('');
-                    }}
-                    className="border-border hover:bg-accent w-full rounded-lg border px-6 py-3 font-medium transition-colors"
-                  >
-                    Use Different Email
-                  </button>
-                  <Link
-                    href="/"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 block w-full rounded-lg px-6 py-3 text-center font-medium transition-colors"
-                  >
-                    Back to Home
-                  </Link>
-                </div>
+        <LoginShell>
+          <div className="border-border/50 bg-card/80 animate-in fade-in zoom-in-95 relative rounded-2xl border p-8 shadow-2xl backdrop-blur-md duration-500">
+            <div className="text-center">
+              <div className="bg-primary mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full shadow-lg">
+                <Mail className="text-primary-foreground h-7 w-7" />
+              </div>
+              <h1 className="font-display mb-3 text-3xl font-bold tracking-tight">
+                Check Your Email
+              </h1>
+              <p className="text-muted-foreground mb-8 leading-relaxed">
+                We sent a sign-in link to{' '}
+                <span className="text-foreground font-medium">{email}</span>. Click the link to
+                access your trading account.
+              </p>
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setEmail('');
+                  }}
+                >
+                  Use Different Email
+                </Button>
+                <Button className="w-full" asChild>
+                  <Link href="/">Back to Home</Link>
+                </Button>
               </div>
             </div>
           </div>
-        </div>
+        </LoginShell>
       </GuestRoute>
     );
   }
 
   return (
     <GuestRoute>
-      <div className="bg-background min-h-screen">
-        <Navbar showNavLinks={false} />
-
-        <div className="flex min-h-screen items-center justify-center px-4 pt-16">
-          <div className="w-full max-w-md">
-            <div className="mb-8 text-center">
-              <h1 className="mb-4 text-4xl font-bold">Start Trading Today</h1>
-              <p className="text-muted-foreground text-xl">
-                Enter your email to get started with crypto CFD trading
-              </p>
-            </div>
-
-            <div className="bg-card border-border rounded-2xl border p-8 shadow-lg">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-background border-input focus:ring-ring w-full rounded-lg border px-4 py-3 transition-colors focus:border-transparent focus:outline-none focus:ring-2"
-                    placeholder="Enter your email address"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!email || isLoading}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center rounded-lg px-6 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg
-                        className="-ml-1 mr-3 h-5 w-5 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Get Started'
-                  )}
-                </button>
-              </form>
-
-              <div className="border-border mt-6 border-t pt-6">
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-4 text-sm">
-                    By continuing, you agree to our Terms of Service and Privacy Policy
-                  </p>
-                  <div className="text-muted-foreground flex items-center justify-center space-x-4 text-xs">
-                    <span>✓ No hidden fees</span>
-                    <span>✓ Bank-grade security</span>
-                    <span>✓ 24/7 support</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-12 space-y-4">
-              <h3 className="mb-6 text-center text-lg font-semibold">Why Choose CryptoCFD?</h3>
-
-              <div className="grid gap-4">
-                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
-                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
-                    <svg
-                      className="text-primary-foreground h-3 w-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">High Leverage Trading</h4>
-                    <p className="text-muted-foreground text-sm">
-                      Trade with up to 1:100 leverage on major cryptocurrencies
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
-                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
-                    <svg
-                      className="text-primary-foreground h-3 w-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Instant Execution</h4>
-                    <p className="text-muted-foreground text-sm">
-                      Lightning-fast order execution with 0.01s latency
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-accent/20 border-border flex items-start space-x-3 rounded-lg border p-4">
-                  <div className="bg-primary mt-0.5 flex h-6 w-6 items-center justify-center rounded-full">
-                    <svg
-                      className="text-primary-foreground h-3 w-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Regulated & Secure</h4>
-                    <p className="text-muted-foreground text-sm">
-                      FCA, CySEC regulated with $100M insurance coverage
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-muted mt-8 rounded-lg p-4">
-              <p className="text-muted-foreground text-xs">
-                <strong>Risk Warning:</strong> CFDs are complex instruments and come with a high
-                risk of losing money rapidly due to leverage. 76% of retail investor accounts lose
-                money when trading CFDs. You should consider whether you understand how CFDs work
-                and whether you can afford to take the high risk of losing your money.
-              </p>
-            </div>
-          </div>
+      <LoginShell>
+        <div className="mb-8 text-center">
+          <Link
+            href="/"
+            className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+          >
+            <ArrowLeft className="size-4" />
+            Back to home
+          </Link>
+          <h1 className="font-display mb-3 text-4xl font-bold tracking-tight md:text-5xl">
+            Welcome Back
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Sign in with your email to continue trading
+          </p>
         </div>
-      </div>
+
+        <div className="border-border/50 bg-card/80 animate-in fade-in slide-in-from-bottom-4 relative rounded-2xl border p-8 shadow-2xl backdrop-blur-md duration-700">
+          <div className="from-primary/5 pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r via-transparent to-transparent" />
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </label>
+              <Input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12 px-4 text-base"
+                placeholder="you@example.com"
+                required
+                autoComplete="email"
+                autoFocus
+              />
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!email || isLoading}
+              className="h-12 w-full text-base font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="size-5 animate-spin" />
+                  Sending link...
+                </>
+              ) : (
+                'Continue with Email'
+              )}
+            </Button>
+          </form>
+        </div>
+      </LoginShell>
     </GuestRoute>
   );
 };

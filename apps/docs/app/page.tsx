@@ -18,6 +18,12 @@ export default function Page() {
               <span className="ml-2 text-xs font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">DOCS</span>
             </div>
           </div>
+          <a
+            href={process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3001'}
+            className="text-sm text-slate-400 hover:text-white transition-colors border border-slate-800 hover:border-slate-600 rounded-lg px-4 py-2"
+          >
+            ← Back to CryptoCFD
+          </a>
         </div>
       </div>
 
