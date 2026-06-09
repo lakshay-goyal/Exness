@@ -63,7 +63,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     ports:
       - '5555:5555'
     command: >
@@ -91,7 +90,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     command: >
       sh -c "
         echo 'Waiting for PostgreSQL...' &&
@@ -122,7 +120,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     ports:
       - '8000:8000'
     depends_on:
@@ -147,7 +144,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,7 +167,6 @@ services:
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       MONGODB_URL: mongodb://admin:admin123@mongodb:27017/exness_snapshots?authSource=admin
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     depends_on:
       mongodb:
         condition: service_healthy
@@ -192,7 +187,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     depends_on:
       redis:
         condition: service_healthy
@@ -211,7 +205,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     ports:
       - '7070:7070'
     depends_on:
@@ -232,7 +225,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -249,8 +241,6 @@ services:
       context: .
       dockerfile: apps/docker/web.Dockerfile
       args:
-        # The browser runs on the host, so it reaches the backend/websocket via
-        # the published host ports. These are baked into the client bundle at build.
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
         NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:7070/
     container_name: exness-web
@@ -260,7 +250,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
       PORT: 3001
     ports:
       - '3001:3001'
@@ -284,7 +273,6 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
       FRONTEND_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:8000
       PORT: 3000
     ports:
       - '3000:3000'

@@ -1,4 +1,5 @@
 import { redisStreams, config, REDIS_STREAMS, DEFAULTS } from '@repo/config';
+import { marketSymbolMapper } from '@repo/trading-core';
 import { prisma } from '@repo/db';
 
 // Lazy initialization of Redis streams for sending responses
@@ -44,13 +45,12 @@ export const dbStorageFunction = async (result: StreamData): Promise<void> => {
     }
 
     try {
-      // Prepare order data matching Prisma schema
-      // Ensure symbol is lowercase to match enum (btc, sol, eth)
-      const symbol = (orderData.symbol as string | undefined)?.toLowerCase();
-      if (symbol === undefined || !['btc', 'sol', 'eth'].includes(symbol)) {
+      const supportedSymbol = marketSymbolMapper.toSupportedSymbol(String(orderData.symbol ?? ''));
+      if (!supportedSymbol) {
         console.error('createCloseOrder: Invalid symbol', orderData.symbol);
         return;
       }
+      const symbol = supportedSymbol;
 
       // Ensure type is lowercase to match OrderSide enum (buy, sell)
       const type = (orderData.type as string | undefined)?.toLowerCase();

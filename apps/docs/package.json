@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@repo/ui": "*",
+    "@scalar/api-reference-react": "^0.9.43",
     "next": "^15.4.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

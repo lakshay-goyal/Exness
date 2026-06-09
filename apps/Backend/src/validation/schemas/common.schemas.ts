@@ -69,8 +69,8 @@ export const OptionalPositiveNumberSchema = z
 export const SymbolSchema = z
   .string()
   .min(1, 'Symbol cannot be empty')
-  .max(20, 'Symbol must not exceed 20 characters')
-  .regex(/^[A-Z0-9]+(\/[A-Z0-9]+)?$/, ERROR_MESSAGES.INVALID_SYMBOL_FORMAT);
+  .max(30, 'Symbol must not exceed 30 characters')
+  .regex(/^[A-Z0-9_]+(\/[A-Z0-9_]+)?$/, ERROR_MESSAGES.INVALID_SYMBOL_FORMAT);
 
 /**
  * Trading order side validation schema

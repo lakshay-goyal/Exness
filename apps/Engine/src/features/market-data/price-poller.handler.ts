@@ -5,9 +5,11 @@ import { closeOpenOrder } from '../orders/close-order.handler.js';
 import { marketSymbolMapper, orderCalculator, priceNormalizer } from '@repo/trading-core';
 
 function updatePrices(newData: Prices[]) {
-  newData.forEach((item) => {
-    priceNormalizer.upsertPrice(prices, item);
-  });
+  let current = [...prices];
+  for (const item of newData) {
+    current = priceNormalizer.upsertPrice(current, item);
+  }
+  prices.splice(0, prices.length, ...current);
 }
 
 async function closeTriggeredOrders(updatedAssets: Set<string>) {

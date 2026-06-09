@@ -59,97 +59,86 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      try {
-        const config = {
-          headers: {
-            Authorization: `Bearer ${tokenToCheck}`,
-          },
-        };
+      const config = {
+        headers: {
+          ...backendRequestHeaders,
+          Authorization: `Bearer ${tokenToCheck}`,
+        },
+      };
 
-        const verifyUserResponse = await axios.post(
-          `${getBackendUrl()}/api/v1/auth/verify-user`,
-          {},
-          {
-            ...config,
-            headers: {
-              ...backendRequestHeaders,
-              ...config.headers,
-            },
-          },
-        );
+      const maxAttempts = 5;
 
-        if (verifyUserResponse.status === 200 && verifyUserResponse.data.exists) {
-          try {
-            const base64Url = tokenToCheck.split('.')[1];
-            const base64 = base64Url?.replace(/-/g, '+').replace(/_/g, '/');
-            if (!base64) {
-              console.error('Invalid token format: missing payload');
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const verifyUserResponse = await axios.post(
+            `${getBackendUrl()}/api/v1/auth/verify-user`,
+            {},
+            config,
+          );
+
+          const payload = verifyUserResponse.data?.data ?? verifyUserResponse.data;
+          const userExists = payload?.exists === true || verifyUserResponse.status === 200;
+
+          if (verifyUserResponse.status === 200 && userExists) {
+            try {
+              const base64Url = tokenToCheck.split('.')[1];
+              const base64 = base64Url?.replace(/-/g, '+').replace(/_/g, '/');
+              if (!base64) {
+                console.error('Invalid token format: missing payload');
+                return false;
+              }
+              const jsonPayload = decodeURIComponent(
+                atob(base64)
+                  .split('')
+                  .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                  .join(''),
+              );
+              const decoded = JSON.parse(jsonPayload);
+
+              setUser({
+                id: payload?.userId || decoded.userId || decoded.id,
+                email: decoded.email || '',
+              });
+
+              try {
+                await axios.post(`${getBackendUrl()}/api/v1/auth/ensure-user`, {}, config);
+              } catch (ensureError) {
+                console.error('Error ensuring user:', ensureError);
+              }
+
+              return true;
+            } catch (decodeError) {
+              console.error('Error decoding token:', decodeError);
               return false;
             }
-            const jsonPayload = decodeURIComponent(
-              atob(base64)
-                .split('')
-                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join(''),
-            );
-            const decoded = JSON.parse(jsonPayload);
-
-            setUser({
-              id: decoded.userId || decoded.id,
-              email: decoded.email || '',
-            });
-
-            try {
-              await axios.post(
-                `${getBackendUrl()}/api/v1/auth/ensure-user`,
-                {},
-                {
-                  ...config,
-                  headers: {
-                    ...backendRequestHeaders,
-                    ...config.headers,
-                  },
-                },
-              );
-            } catch (ensureError) {
-              console.error('Error ensuring user:', ensureError);
-            }
-
-            return true;
-          } catch (decodeError) {
-            console.error('Error decoding token:', decodeError);
-            return false;
           }
-        }
+        } catch (error: unknown) {
+          if (error instanceof AxiosError && error.response?.status === 404 && attempt < maxAttempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          }
 
-        if (verifyUserResponse.status === 404) {
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          delete axios.defaults.headers.common['Authorization'];
+          if (error instanceof AxiosError) {
+            if (
+              error.response?.status === 401 ||
+              error.response?.status === 403 ||
+              error.response?.status === 404
+            ) {
+              localStorage.removeItem('token');
+              setToken(null);
+              setUser(null);
+              setIsAuthenticated(false);
+              delete axios.defaults.headers.common['Authorization'];
+              return false;
+            }
+          }
+
+          console.error('Error verifying token:', error);
           return false;
         }
-
-        return false;
-      } catch (error: unknown) {
-        if (error instanceof AxiosError) {
-          if (error.response?.status === 401 ||
-            error.response?.status === 403 ||
-            error.response?.status === 404
-          ) {
-            localStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
-            setIsAuthenticated(false);
-            delete axios.defaults.headers.common['Authorization'];
-            return false;
-          }
-        }
-
-        console.error('Error verifying token:', error);
-        return false;
       }
+
+      return false;
     },
     [token],
   );
@@ -182,7 +171,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isValid) {
           setIsAuthenticated(true);
 
-          if (pathname === '/login' || pathname === '/') {
+          if (pathname === '/login' || pathname === '/' || tokenFromUrl) {
             router.push('/dashboard');
           }
         } else {
@@ -250,10 +239,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      if (response.data.status === 'success') {
+      if (response.data?.data?.status === 'success') {
+        setBalance(response.data.data.message);
+      } else if (response.data?.status === 'success') {
         setBalance(response.data.message);
       } else {
-        console.warn('Balance is unavailable:', response.data.message);
+        console.warn('Balance is unavailable:', response.data?.message);
         setBalance(null);
       }
     } catch (error: unknown) {

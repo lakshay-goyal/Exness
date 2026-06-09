@@ -3,6 +3,9 @@ import { binanceKlineService } from './binance-kline.service.js';
 const allowedIntervals = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
 
 const symbolMapping: Record<string, string> = {
+  BTC: 'BTCUSDT',
+  ETH: 'ETHUSDT',
+  SOL: 'SOLUSDT',
   BTCUSDT: 'BTCUSDT',
   ETHUSDT: 'ETHUSDT',
   SOLUSDT: 'SOLUSDT',

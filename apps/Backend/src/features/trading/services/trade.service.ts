@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { prisma } from '@repo/db';
 import { getEngineStreamClient } from '../../../infrastructure/redis/engine-stream.service.js';
 import { parseStreamMessage } from '../../../shared/streams/stream-message.js';
 import { tradeInputService } from './trade-input.service.js';
@@ -28,7 +29,7 @@ class TradeService {
       const requestId = await engineStreamClient.sendToEngine(orderPayload);
       const result = (await Promise.race([
         engineStreamClient.readEngineResponse(requestId, 5000),
-        timeoutAfter(3000, 'Order creation request timed out after 3 seconds'),
+        timeoutAfter(5000, 'Order creation request timed out after 5 seconds'),
       ])) as { function?: string; message?: unknown } | null;
 
       if (!result) {
@@ -159,26 +160,37 @@ class TradeService {
     }
   }
 
-  async getCloseOrders(req: Request, userId: string) {
+  async getCloseOrders(_req: Request, userId: string) {
     try {
-      const { response } = await getEngineStreamClient(req).request({
-        function: 'getCloseOrders',
-        userId,
+      const closeOrders = await prisma.orders.findMany({
+        where: { userId },
+        orderBy: { closeTime: 'desc' },
       });
 
-      if (response?.function !== 'getCloseOrders') {
-        return { ok: true as const, data: { message: [] } };
-      }
+      const formattedCloseOrders = closeOrders.map((order) => ({
+        orderId: order.orderId,
+        symbol: order.symbol,
+        type: order.type,
+        quantity: order.quantity,
+        leverage: order.leverage,
+        openPrice: order.openPrice,
+        closePrice: order.closePrice,
+        openTime: order.openTime.toISOString(),
+        closeTime: order.closeTime.toISOString(),
+        profitLoss: order.profitLoss,
+        takeProfit: order.takeProfit,
+        stopLoss: order.stopLoss,
+        stippage: order.stippage,
+        closeReason: order.closeReason ?? 'manual',
+        status: 'closed' as const,
+      }));
 
-      const closeOrders = parseStreamMessage<unknown[]>(response.message, []);
       return {
         ok: true as const,
-        data: {
-          message: Array.isArray(closeOrders) ? closeOrders : [],
-        },
+        data: { message: formattedCloseOrders },
       };
     } catch (error) {
-      console.error('Error reading from secondary Redis stream for close orders:', error);
+      console.error('Error fetching closed orders from database:', error);
       return {
         ok: false as const,
         error: 'Failed to fetch close orders',

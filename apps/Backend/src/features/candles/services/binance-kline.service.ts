@@ -23,6 +23,9 @@ const intervalMapping: Record<string, string> = {
 
 // Symbol mapping for Binance API
 const symbolMapping: Record<string, string> = {
+  BTC: 'BTCUSDT',
+  ETH: 'ETHUSDT',
+  SOL: 'SOLUSDT',
   BTCUSDT: 'BTCUSDT',
   ETHUSDT: 'ETHUSDT',
   SOLUSDT: 'SOLUSDT',
@@ -77,7 +80,13 @@ class BinanceKlineService {
 
   mapSymbol(inputSymbol: string): string {
     const upperSymbol = inputSymbol.toUpperCase();
-    return symbolMapping[upperSymbol] || upperSymbol;
+    if (symbolMapping[upperSymbol]) {
+      return symbolMapping[upperSymbol];
+    }
+    if (upperSymbol.includes('BTC')) return 'BTCUSDT';
+    if (upperSymbol.includes('ETH')) return 'ETHUSDT';
+    if (upperSymbol.includes('SOL')) return 'SOLUSDT';
+    return upperSymbol;
   }
 
   mapInterval(interval: string): string {

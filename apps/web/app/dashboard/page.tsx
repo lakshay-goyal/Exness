@@ -84,15 +84,35 @@ type CryptoAsset = {
 };
 
 type CandleResponse = {
-  data: Candle[];
+  data?: Candle[] | {
+    data?: Candle[];
+  };
 };
 
 type OpenOrdersResponse = {
+  success?: boolean;
+  data?: {
+    message?: string;
+  };
   message?: string;
 };
 
 type ClosedOrdersResponse = {
-  message?: BackendClosedOrder[];
+  success?: boolean;
+  data?: {
+    message?: BackendClosedOrder[];
+  };
+  message?: string | BackendClosedOrder[];
+};
+
+const getTradePayloadMessage = <T,>(response: {
+  data?: { data?: { message?: T }; message?: T };
+}): T | undefined => {
+  const nested = response.data?.data?.message;
+  if (nested !== undefined) return nested;
+  const topLevel = response.data?.message;
+  if (topLevel !== undefined && topLevel !== 'Success') return topLevel as T;
+  return undefined;
 };
 
 interface TradingViewChartProps {
@@ -326,7 +346,17 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
       );
 
       if (!Array.isArray(response.data.data)) {
-        throw new Error('Candle response did not include a data array');
+        const nested = response.data.data as { data?: Candle[] } | undefined;
+        if (!Array.isArray(nested?.data)) {
+          throw new Error('Candle response did not include a data array');
+        }
+        return nested.data.map((candle) => ({
+          open: Number(candle.open),
+          high: Number(candle.high),
+          low: Number(candle.low),
+          close: Number(candle.close),
+          time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp,
+        }));
       }
 
       return response.data.data.map((candle) => ({
@@ -629,15 +659,18 @@ const Dashboard = () => {
       const response = await axios.get<OpenOrdersResponse>(
         `${getBackendUrl()}/api/v1/trade/open/`,
         {
-          headers: backendRequestHeaders,
+          headers: {
+            ...backendRequestHeaders,
+            Authorization: `Bearer ${token}`,
+          },
           signal: controller.signal,
           timeout: 10000,
         },
       );
-      const data = response.data;
 
-      if (data.message) {
-        const parsedOrders = JSON.parse(data.message) as BackendOpenOrder[];
+      const ordersMessage = getTradePayloadMessage<string>(response);
+      if (ordersMessage) {
+        const parsedOrders = JSON.parse(ordersMessage) as BackendOpenOrder[];
 
         setOrders(
           parsedOrders.map((orderData) => {
@@ -707,11 +740,11 @@ const Dashboard = () => {
           timeout: 10000,
         },
       );
-      const data = response.data;
 
-      if (data.message && Array.isArray(data.message)) {
+      const closedOrders = getTradePayloadMessage<BackendClosedOrder[]>(response);
+      if (Array.isArray(closedOrders)) {
         setCloseOrdersData(
-          data.message.map((orderData) => ({
+          closedOrders.map((orderData) => ({
             id: orderData.orderId,
             symbol: orderData.symbol.toUpperCase(),
             type: orderData.type === 'buy' ? 'Buy' : 'Sell',
@@ -938,7 +971,7 @@ const Dashboard = () => {
         },
       );
 
-      if (response.data.message) {
+      if (response.data?.success || response.data?.data?.orderId || response.data?.message) {
         await fetchOpenOrders();
         await fetchBalance();
         alert('Order created successfully!');

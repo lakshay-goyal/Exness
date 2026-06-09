@@ -141,7 +141,8 @@ export const ERROR_MESSAGES = {
   POSITIVE_NUMBER: 'Value must be greater than 0',
   POSITIVE_INTEGER: 'Value must be a positive integer',
   NON_NEGATIVE_NUMBER: 'Value must be zero or greater',
-  INVALID_SYMBOL_FORMAT: 'Symbol must be 2-10 uppercase letters',
+  INVALID_SYMBOL_FORMAT:
+    'Symbol must be uppercase letters, numbers, or underscores (e.g. ETH_USDC_PERP, BTCUSDT)',
   ORDER_SIDE_INVALID: "Order type must be either 'buy' or 'sell'",
   INVALID_CANDLE_INTERVAL: 'Invalid candle interval',
 } as const;

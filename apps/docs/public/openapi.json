@@ -1,0 +1,982 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Exness Trading Platform API",
+    "description": "High-performance, low-latency financial trading platform backend services. Handles real-time assets, order management, balance tracking, and candlestick historical data.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Exness Engineering Team",
+      "email": "engineering@exness.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "API Base URL (pre-configured)"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Returns a running status message from the server to indicate its health.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_String"
+                },
+                "example": {
+                  "success": true,
+                  "data": "Server Running",
+                  "message": "Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mobile/session-token": {
+      "get": {
+        "summary": "Get Mobile Session Token",
+        "description": "Retrieves the current mobile session token.",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved session token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mobile/refresh-token": {
+      "post": {
+        "summary": "Refresh Mobile Token",
+        "description": "Generates a new access token using a refresh token for mobile clients.",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "The mobile refresh token.",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully refreshed access token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid token or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mobile/pin": {
+      "post": {
+        "summary": "Set Mobile PIN",
+        "description": "Sets a 4 to 6 digit PIN for mobile-based session verification.",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pin"],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{4,6}$",
+                    "description": "PIN of 4-6 digits.",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully set mobile PIN.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_String"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid PIN format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login Request",
+        "description": "Initiates a login process using an email address by generating a verification token or authenticating the user.",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User email address.",
+                    "example": "trader@exness.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login request processed or verification link dispatched.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid email formatting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "get": {
+        "summary": "Verify Email Link",
+        "description": "Validates the email verification link query token.",
+        "tags": ["Authentication"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "Verification link token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token validated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-user": {
+      "post": {
+        "summary": "Verify User Status",
+        "description": "Confirms user status and active authentication session.",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": {
+            "description": "User status is valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/ensure-user": {
+      "post": {
+        "summary": "Ensure User Registration",
+        "description": "Guarantees user exists in secondary models and database dependencies.",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": {
+            "description": "User confirmed/registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/supportedAssets": {
+      "get": {
+        "summary": "Get Supported Assets",
+        "description": "Retrieves information about supported trading assets, such as Bitcoin, Ethereum, and Solana.",
+        "tags": ["Market Data"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved assets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SupportedAsset"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Success",
+                  "data": [
+                    {
+                      "symbol": "BTC",
+                      "name": "Bitcoin",
+                      "imageUrl": "https://img.freepik.com/free-vector/cryptocurrency-bitcoin-golden-coin-background_1017-31505.jpg"
+                    },
+                    {
+                      "symbol": "ETH",
+                      "name": "Ethereum",
+                      "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJDn0ojTITvcdAzMsfBMJaZC4STaDHzduleQ&s"
+                    },
+                    {
+                      "symbol": "SOL",
+                      "name": "Solana",
+                      "imageUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/5426.png"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prices/latest": {
+      "get": {
+        "summary": "Get Latest Prices",
+        "description": "Fetches the latest real-time prices (mid-price, bids, asks, and decimals) sourced from the price stream and order books.",
+        "tags": ["Market Data"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved price data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LatestPrice"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Success",
+                  "data": [
+                    {
+                      "asset": "BTC",
+                      "price": 98450.25,
+                      "bid": 98448.1,
+                      "ask": 98452.4,
+                      "decimal": 8
+                    },
+                    {
+                      "asset": "ETH",
+                      "price": 3120.75,
+                      "bid": 3120.5,
+                      "ask": 3121.0,
+                      "decimal": 8
+                    },
+                    {
+                      "asset": "SOL",
+                      "price": 142.5,
+                      "bid": 142.45,
+                      "ask": 142.55,
+                      "decimal": 8
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Price service stream unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/candles": {
+      "get": {
+        "summary": "Get Candlestick Data",
+        "description": "Retrieves historical aggregate candle data (open, high, low, close, volume) for charts.",
+        "tags": ["Market Data"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "description": "Trading asset symbol (e.g. BTCUSDT, SOLUSDT).",
+            "schema": {
+              "type": "string"
+            },
+            "example": "SOLUSDT"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": true,
+            "description": "Candle aggregate interval.",
+            "schema": {
+              "type": "string",
+              "enum": ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+            },
+            "example": "1m"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of candle records to fetch (max 1000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "required": false,
+            "description": "Retrieve candles starting from this epoch millisecond.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "required": false,
+            "description": "Retrieve candles ending at this epoch millisecond.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved candlesticks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "$ref": "#/components/schemas/CandleDataResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or bad parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/candles/diagnostics": {
+      "get": {
+        "summary": "Get Candles Diagnostics",
+        "description": "Fetches internal runtime diagnostic indicators and metrics for candles sync services.",
+        "tags": ["Market Data"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Diagnostics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/candles/refresh": {
+      "post": {
+        "summary": "Refresh Aggregates",
+        "description": "Schedules a force sync/refresh on the specified symbol and interval candlestick database schema.",
+        "tags": ["Market Data"],
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "symbol": {
+                    "type": "string",
+                    "description": "Symbol to refresh.",
+                    "example": "BTCUSDT"
+                  },
+                  "interval": {
+                    "type": "string",
+                    "enum": ["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+                    "example": "1m"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Force database rewrite/overwriting.",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedule update dispatched successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balance": {
+      "get": {
+        "summary": "Get Balance",
+        "description": "Fetches the current account balance (in USDC/virtual dollars) for the authenticated trader user.",
+        "tags": ["User Profile"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved balance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": { "type": "string", "example": "success" },
+                        "message": { "type": "number", "description": "The current account balance.", "example": 500000 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Bearer token invalid or missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trade": {
+      "get": {
+        "summary": "Hello Trade",
+        "description": "Informative trade endpoint for server ping verification.",
+        "tags": ["Trading Operations"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successfully returned greeting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_String"
+                },
+                "example": {
+                  "success": true,
+                  "data": "Hello Trade",
+                  "message": "Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trade/create": {
+      "post": {
+        "summary": "Create Trade Order",
+        "description": "Submits a new long or short trade order to the execution engine. Evaluates limits, leverage ratios, and balances in real time through Redis streams.",
+        "tags": ["Trading Operations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order submitted and processed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": { "type": "string", "example": "Order created successfully" },
+                        "orderId": { "type": "string", "format": "uuid", "example": "7c489c62-e6bd-4e92-9694-813bebfce1ba" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Substandard margins, parameters, or validations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request timed out during Redis Engine execution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trade/open": {
+      "get": {
+        "summary": "Get Open Orders",
+        "description": "Retrieves the array of current open (pending execution or active) positions on the books for the authenticated trader.",
+        "tags": ["Trading Operations"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Limit of positions to return.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Number of items to skip.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved open orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ActiveOrder"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trade/close": {
+      "post": {
+        "summary": "Close Trade Position",
+        "description": "Immediately signals closing of a trade order and locks in profit or loss according to the ticker price.",
+        "tags": ["Trading Operations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId"],
+                "properties": {
+                  "orderId": {
+                    "type": "string",
+                    "description": "UUID of the active order to be liquidated.",
+                    "example": "7c489c62-e6bd-4e92-9694-813bebfce1ba"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully liquidated and closed order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": { "type": "string", "example": "Order closed successfully" },
+                        "order": {
+                          "$ref": "#/components/schemas/ClosedOrderDetails"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request, invalid order ID, or position already closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Closed Orders History",
+        "description": "Queries historical liquidated positions and orders for the authenticated profile.",
+        "tags": ["Trading Operations"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Count of records to return.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Skipped positions count.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved historical orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ClosedOrderDetails"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Authenticates requests to balance, order creation, order listing, and order closing endpoints."
+      }
+    },
+    "schemas": {
+      "SuccessResponse_String": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "string", "example": "Data payload" },
+          "message": { "type": "string", "example": "Success" }
+        }
+      },
+      "SuccessResponse_Object": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object", "example": {} },
+          "message": { "type": "string", "example": "Success" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "statusCode": { "type": "integer", "example": 400 },
+          "message": { "type": "string", "example": "Detailed exception or linter error message." }
+        }
+      },
+      "SupportedAsset": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "example": "BTC" },
+          "name": { "type": "string", "example": "Bitcoin" },
+          "imageUrl": { "type": "string", "format": "uri", "example": "https://img.freepik.com/free-vector/cryptocurrency-bitcoin-golden-coin-background_1017-31505.jpg" }
+        }
+      },
+      "LatestPrice": {
+        "type": "object",
+        "properties": {
+          "asset": { "type": "string", "example": "BTC" },
+          "price": { "type": "number", "example": 98450.25 },
+          "bid": { "type": "number", "example": 98448.1 },
+          "ask": { "type": "number", "example": 98452.4 },
+          "decimal": { "type": "integer", "example": 8 }
+        }
+      },
+      "CreateOrderPayload": {
+        "type": "object",
+        "required": ["symbol", "type", "quantity", "leverage"],
+        "properties": {
+          "symbol": { "type": "string", "description": "Asset code (e.g. BTC, ETH, SOL).", "example": "SOL" },
+          "type": { "type": "string", "enum": ["buy", "sell"], "description": "Long (buy) or Short (sell) side.", "example": "buy" },
+          "quantity": { "type": "number", "description": "Quantity to order.", "example": 2.5 },
+          "leverage": { "type": "integer", "description": "Ranging from 1 to 100x.", "example": 10 },
+          "slippage": { "type": "number", "description": "Max slippage percentage tolerated.", "example": 0.5 },
+          "takeProfit": { "type": "number", "description": "Automatic close profit point price.", "example": 150.0 },
+          "stopLoss": { "type": "number", "description": "Automatic protective stop price.", "example": 138.5 }
+        }
+      },
+      "ActiveOrder": {
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "string", "format": "uuid", "example": "7c489c62-e6bd-4e92-9694-813bebfce1ba" },
+          "symbol": { "type": "string", "example": "SOL" },
+          "type": { "type": "string", "enum": ["buy", "sell"], "example": "buy" },
+          "quantity": { "type": "number", "example": 2.5 },
+          "price": { "type": "number", "example": 142.5 },
+          "leverage": { "type": "integer", "example": 10 },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-06-08T18:22:45.000Z" }
+        }
+      },
+      "ClosedOrderDetails": {
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "string", "format": "uuid", "example": "7c489c62-e6bd-4e92-9694-813bebfce1ba" },
+          "symbol": { "type": "string", "example": "SOL" },
+          "type": { "type": "string", "enum": ["buy", "sell"], "example": "buy" },
+          "quantity": { "type": "number", "example": 2.5 },
+          "entryPrice": { "type": "number", "example": 142.5 },
+          "closePrice": { "type": "number", "example": 145.2 },
+          "pnl": { "type": "number", "description": "Realized profit or loss in virtual currency.", "example": 6.75 },
+          "closedAt": { "type": "string", "format": "date-time", "example": "2026-06-08T18:30:12.000Z" }
+        }
+      },
+      "CandleDataResponse": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "example": "SOLUSDT" },
+          "dbSymbol": { "type": "string", "example": "SOLUSDT" },
+          "interval": { "type": "string", "example": "1m" },
+          "from": { "type": "integer", "example": 1780000000000 },
+          "to": { "type": "integer", "example": 1780000060000 },
+          "count": { "type": "integer", "example": 1 },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "description": "Timestamp, Open, High, Low, Close, Volume",
+              "items": {
+                "type": "any"
+              },
+              "example": [1780000000000, "142.5", "143.1", "142.2", "142.9", "12500"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
