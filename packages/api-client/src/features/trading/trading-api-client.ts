@@ -9,8 +9,6 @@ import type {
   ClosedOrdersResponse,
   CreateTradePayload,
   CreateTradeResponse,
-  LatestPrice,
-  LatestPricesResponse,
   OpenOrdersResponse,
   TradingProfileData,
 } from '@repo/types';
@@ -71,11 +69,6 @@ export class TradingApiClient {
       `/api/v1/candles?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`,
     );
 
-    return Array.isArray(response.data) ? response.data : [];
-  }
-
-  async fetchLatestPrices(): Promise<LatestPrice[]> {
-    const response = await this.publicRequest<LatestPricesResponse>('/api/v1/prices/latest');
     return Array.isArray(response.data) ? response.data : [];
   }
 

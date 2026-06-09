@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "dev": "bun run --watch index.ts",
     "check-types": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0"
   },

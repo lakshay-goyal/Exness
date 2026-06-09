@@ -44,7 +44,6 @@ export const API_ROUTES = {
   BALANCE: '/api/v1/balance',
   ASSETS: '/api/v1/supportedAssets',
   CANDLES: '/api/v1/candles',
-  PRICES: '/api/v1/prices',
   TRADE: '/api/v1/trade',
 } as const;
 
@@ -55,13 +54,6 @@ export const REDIS_STREAMS = {
   EXNESS: 'stream:exness',
   EXNESS_RECEIVE: 'stream:exnessReceive',
   DB_STORAGE: 'stream:dbStorage',
-} as const;
-
-// ============================================
-// Redis Keys
-// ============================================
-export const REDIS_KEYS = {
-  PUBSUB_BINANCE: 'binance:pubsub',
 } as const;
 
 // ============================================
@@ -174,7 +166,6 @@ export const SUPPORTED_ASSETS = [
 // Legacy Export (for backwards compatibility)
 // ============================================
 export const constant = {
-  pubsubKey: REDIS_KEYS.PUBSUB_BINANCE,
   redisStream: REDIS_STREAMS.EXNESS,
   secondaryRedisStream: REDIS_STREAMS.EXNESS_RECEIVE,
   dbStorageStream: REDIS_STREAMS.DB_STORAGE,

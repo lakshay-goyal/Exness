@@ -6,7 +6,6 @@ export const streamFunctions = [
   'createCloseOrder',
   'getOpenOrder',
   'getCloseOrders',
-  'pricePoller',
 ] as const;
 
 export type StreamFunctionName = (typeof streamFunctions)[number];
@@ -29,6 +28,8 @@ export interface CreateOrderCommand extends CorrelatedStreamMessage {
   type: string;
   quantity: number | string;
   leverage: number | string;
+  bid: number | string;
+  ask: number | string;
   slippage?: number | string;
   takeProfit?: number | string;
   stopLoss?: number | string;
@@ -46,17 +47,11 @@ export interface GetUserOrdersCommand extends CorrelatedStreamMessage {
   userId: string;
 }
 
-export interface PricePollerCommand extends CorrelatedStreamMessage {
-  function: 'pricePoller';
-  message: string;
-}
-
 export type EngineCommand =
   | CreateUserCommand
   | CreateOrderCommand
   | CloseOrderCommand
-  | GetUserOrdersCommand
-  | PricePollerCommand;
+  | GetUserOrdersCommand;
 
 export type DbStorageCommand =
   | (CorrelatedStreamMessage & {

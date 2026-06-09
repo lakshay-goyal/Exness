@@ -54,10 +54,8 @@ const shared = {
   BACKEND_URL: DOCKER_BACKEND_URL,
   JWT_SECRET: requireKey('JWT_SECRET'),
   NODE_ENV: parsed.NODE_ENV?.trim() || 'production',
-  BINANCE_WS_URL: requireKey('BINANCE_WS_URL'),
   USER_EMAIL: requireKey('USER_EMAIL'),
   USER_PASSWORD: requireKey('USER_PASSWORD'),
-  WEBSOCKET_PORT: parsed.WEBSOCKET_PORT?.trim() || '7070',
   BETTER_AUTH_SECRET: parsed.BETTER_AUTH_SECRET?.trim() || requireKey('JWT_SECRET'),
   GOOGLE_CLIENT_ID: parsed.GOOGLE_CLIENT_ID?.trim() || '',
   GOOGLE_CLIENT_SECRET: parsed.GOOGLE_CLIENT_SECRET?.trim() || '',
@@ -98,7 +96,6 @@ const services: ServiceConfig[] = [
       GOOGLE_CLIENT_ID: shared.GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET: shared.GOOGLE_CLIENT_SECRET,
       NEXT_PUBLIC_BACKEND_URL: shared.BACKEND_URL,
-      NEXT_PUBLIC_WEBSOCKET_URL: `ws://localhost:${shared.WEBSOCKET_PORT}/`,
       NEXT_PUBLIC_DOCS_URL: 'http://localhost:3000',
     },
   },
@@ -109,11 +106,6 @@ const services: ServiceConfig[] = [
     extra: {
       NEXT_PUBLIC_FRONTEND_URL: shared.FRONTEND_URL,
     },
-  },
-  {
-    filename: '.env.Websocket_Server',
-    comment: 'Websocket Server Environment Variables',
-    port: shared.WEBSOCKET_PORT,
   },
   {
     filename: '.env.Engine',
@@ -130,11 +122,6 @@ const services: ServiceConfig[] = [
     comment: 'Snap Shotting Service Environment Variables',
     port: '8000',
   },
-  {
-    filename: '.env.Price_Poller',
-    comment: 'Price Poller Service Environment Variables',
-    port: '8000',
-  },
 ];
 
 mkdirSync(ENV_DIR, { recursive: true });
@@ -149,10 +136,8 @@ for (const service of services) {
     JWT_SECRET: shared.JWT_SECRET,
     PORT: service.port,
     NODE_ENV: shared.NODE_ENV,
-    BINANCE_WS_URL: shared.BINANCE_WS_URL,
     USER_EMAIL: shared.USER_EMAIL,
     USER_PASSWORD: shared.USER_PASSWORD,
-    WEBSOCKET_PORT: shared.WEBSOCKET_PORT,
     ...service.extra,
   };
 

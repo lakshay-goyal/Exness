@@ -82,37 +82,7 @@
         "@repo/db": "workspace:*",
         "@repo/trading-core": "workspace:*",
         "@repo/types": "workspace:*",
-      },
-      "devDependencies": {
-        "@repo/eslint-config": "workspace:*",
-        "@repo/typescript-config": "workspace:*",
-        "@types/bun": "latest",
-        "typescript": "^5.9.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "apps/Price_Poller": {
-      "name": "price_poller",
-      "dependencies": {
-        "@repo/config": "workspace:*",
-        "@repo/types": "workspace:*",
-      },
-      "devDependencies": {
-        "@repo/eslint-config": "workspace:*",
-        "@repo/typescript-config": "workspace:*",
-        "@types/bun": "latest",
-        "typescript": "^5.9.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "apps/Websocket_Server": {
-      "name": "websocket_server",
-      "dependencies": {
-        "@repo/config": "workspace:*",
+        "ws": "^8.18.3",
       },
       "devDependencies": {
         "@repo/eslint-config": "workspace:*",
@@ -2639,8 +2609,6 @@
 
     "pretty-ms": ["pretty-ms@9.3.0", "", { "dependencies": { "parse-ms": "^4.0.0" } }, "sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ=="],
 
-    "price_poller": ["price_poller@workspace:apps/Price_Poller"],
-
     "prisma": ["prisma@6.19.3", "", { "dependencies": { "@prisma/config": "6.19.3", "@prisma/engines": "6.19.3" }, "peerDependencies": { "typescript": ">=5.1.0" }, "optionalPeers": ["typescript"], "bin": { "prisma": "build/index.js" } }, "sha512-++ZJ0ijLrDJF6hNB4t4uxg2br3fC4H9Yc9tcbjr2fcNFP3rh/SBNrAgjhsqBU4Ght8JPrVofG/ZkXfnSfnYsFg=="],
 
     "proc-log": ["proc-log@4.2.0", "", {}, "sha512-g8+OnU/L2v+wyiVK+D5fA34J7EH8jZ8DDlvwhRCMxmMj7UCBvxiO1mGeN+36JXIKF4zevU4kRBd8lVgG9vLelA=="],
@@ -3120,8 +3088,6 @@
     "web-worker": ["web-worker@1.5.0", "", {}, "sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw=="],
 
     "webidl-conversions": ["webidl-conversions@7.0.0", "", {}, "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g=="],
-
-    "websocket_server": ["websocket_server@workspace:apps/Websocket_Server"],
 
     "whatwg-fetch": ["whatwg-fetch@3.6.20", "", {}, "sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg=="],
 

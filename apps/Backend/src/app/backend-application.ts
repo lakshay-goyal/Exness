@@ -12,7 +12,6 @@ import authRouter from '../routes/auth.routes.js';
 import balanceRouter from '../routes/balance.routes.js';
 import assetRouter from '../routes/assets.routes.js';
 import candleRouter from '../routes/candles.routes.js';
-import pricesRouter from '../routes/prices.routes.js';
 import tradeRouter from '../features/trading/trade.routes.js';
 import ResponseWriter from '../utils/response-writer.js';
 import { globalErrorHandler, notFoundHandler } from '../validation/error-handler.js';
@@ -84,7 +83,6 @@ export class BackendApplication {
     this.app.use(API_ROUTES.BALANCE, balanceRouter);
     this.app.use(API_ROUTES.ASSETS, assetRouter);
     this.app.use(API_ROUTES.CANDLES, candleRouter);
-    this.app.use(API_ROUTES.PRICES, pricesRouter);
     this.app.use(API_ROUTES.TRADE, tradeRouter);
 
     this.app.get('/', (_req, res) => {

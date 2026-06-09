@@ -10,6 +10,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,css}\"",
     "sync:docker-env": "bun scripts/sync-docker-env.ts",
+    "docker:sync": "bun scripts/docker-sync.ts",
     "test:api": "bun scripts/test-api.ts"
   },
   "devDependencies": {

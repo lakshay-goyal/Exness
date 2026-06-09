@@ -46,8 +46,6 @@ coverage/
 # Per-service Docker env files (keep .example files)
 apps/docker/env/.env.Backend
 apps/docker/env/.env.Engine
-apps/docker/env/.env.Websocket_Server
-apps/docker/env/.env.Price_Poller
 apps/docker/env/.env.Snap_Shotting
 apps/docker/env/.env.DBstorage
 apps/docker/env/.env.Web

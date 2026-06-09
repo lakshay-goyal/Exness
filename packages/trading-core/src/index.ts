@@ -1,3 +1,4 @@
+export * from './domain/binance-market-data';
 export * from './domain/orders';
 export * from './domain/prices';
 export * from './domain/symbols';

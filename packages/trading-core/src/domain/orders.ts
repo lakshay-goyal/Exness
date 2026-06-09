@@ -1,7 +1,11 @@
 import type { CloseReason, OpenOrder, PriceUpdate } from '@repo/types';
 
-const calculateMargin = (quantity: number, price: number, leverage: number): number =>
-  (quantity * price) / leverage;
+// Balance impact of opening a position. We reserve the full notional value
+// (quantity × entry price) so the user's balance reflects the actual cost of the
+// asset. Leverage is accepted for call-site compatibility but must NOT reduce the
+// amount removed from the balance — otherwise a SOL buy only removes cents.
+const calculateMargin = (quantity: number, price: number, _leverage?: number): number =>
+  quantity * price;
 
 const calculateProfitLoss = (
   order: Pick<OpenOrder, 'type' | 'quantity' | 'openPrice'>,

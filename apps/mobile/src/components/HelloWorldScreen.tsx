@@ -29,7 +29,12 @@ import { Link, Stack, router, useIsFocused, useLocalSearchParams } from 'expo-ro
 import { StatusBar } from 'expo-status-bar';
 import { cssInterop } from 'nativewind';
 import { LineChart } from 'react-native-gifted-charts';
-import { marketSymbolMapper, priceNormalizer } from '@repo/trading-core';
+import {
+  getBinanceCombinedBookTickerUrl,
+  marketSymbolMapper,
+  parseBinanceBookTickerMessage,
+  priceNormalizer,
+} from '@repo/trading-core';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EaseView, type EaseViewProps } from 'react-native-ease';
@@ -49,10 +54,8 @@ import {
   closeTrade,
   createTrade,
   fetchCandles,
-  fetchLatestPrices,
   fetchTradingProfileData,
 } from '@/lib/trading-api';
-import { BACKEND_URL } from '@/lib/auth-client';
 
 type HelloWorldScreenProps = {
   onLogout: () => void;
@@ -175,26 +178,6 @@ const hasNativeEaseView = () => {
   return Boolean(UIManager.getViewManagerConfig?.('EaseView'));
 };
 
-const getWebSocketUrl = () => {
-  const configuredUrl = process.env.EXPO_PUBLIC_WEBSOCKET_URL;
-
-  if (configuredUrl?.toLowerCase() === 'disabled') {
-    return null;
-  }
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
-
-  try {
-    const backendUrl = new URL(BACKEND_URL);
-    const protocol = backendUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${backendUrl.hostname}:7070`;
-  } catch {
-    return 'ws://localhost:7070';
-  }
-};
-
 const normalizeMarketPrice = (value?: number | string | null) =>
   priceNormalizer.normalizeStreamPriceValue(value);
 
@@ -207,12 +190,6 @@ const getMarketName = (symbol: string) => marketSymbolMapper.getMarketName(symbo
 
 const getLiveAssetCandidates = (symbol: string) =>
   marketSymbolMapper.getLiveAssetCandidates(symbol);
-
-const hasAllRequiredCryptoPrices = (livePrices: Record<string, LiveMarketPrice>) => {
-  return requiredCryptoMarketCodes.every((marketCode) =>
-    getLiveAssetCandidates(marketCode).some((candidate) => livePrices[candidate]),
-  );
-};
 
 const mergeLivePricePayloads = (
   previousPrices: Record<string, LiveMarketPrice>,
@@ -1068,6 +1045,19 @@ function MarketTradeDetailsView({
     const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
     const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
 
+    if (
+      !Number.isFinite(market.bid) ||
+      !Number.isFinite(market.ask) ||
+      market.bid <= 0 ||
+      market.ask <= 0
+    ) {
+      Alert.alert(
+        'Market data unavailable',
+        'Live bid and ask prices are not available yet. Please wait for market data.',
+      );
+      return;
+    }
+
     if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
       Alert.alert('Invalid volume', 'Volume must be greater than 0.');
       return;
@@ -1125,6 +1115,8 @@ function MarketTradeDetailsView({
         type,
         quantity: orderVolumeNumber,
         leverage: leverageNumber,
+        bid: market.bid,
+        ask: market.ask,
         slippage: slippageValue,
         takeProfit: takeProfitValue,
         stopLoss: stopLossValue,
@@ -2291,7 +2283,6 @@ export function DashboardTabsProvider({
   const [dashboardData, setDashboardData] = useState<DashboardData>(emptyDashboardData);
   const [livePrices, setLivePrices] = useState<Record<string, LiveMarketPrice>>({});
   const livePricesRef = useRef(livePrices);
-  const pricePollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [isClosingTrade, setIsClosingTrade] = useState(false);
@@ -2422,89 +2413,41 @@ export function DashboardTabsProvider({
 
   useEffect(() => {
     livePricesRef.current = livePrices;
-
-    if (hasAllRequiredCryptoPrices(livePrices) && pricePollingIntervalRef.current) {
-      clearInterval(pricePollingIntervalRef.current);
-      pricePollingIntervalRef.current = null;
-    }
   }, [livePrices]);
 
   useEffect(() => {
     if (!user) return;
 
-    const webSocketUrl = getWebSocketUrl();
-    if (!webSocketUrl) return;
-
-    const socket = new WebSocket(webSocketUrl);
+    const socket = new WebSocket(getBinanceCombinedBookTickerUrl());
 
     socket.onmessage = (event) => {
       try {
-        const parsedMessage = JSON.parse(String(event.data));
-        const data = typeof parsedMessage === 'string' ? JSON.parse(parsedMessage) : parsedMessage;
+        const parsed = parseBinanceBookTickerMessage(JSON.parse(String(event.data)));
+        if (!parsed) return;
 
         setLivePrices((previousPrices) => {
-          const nextPrices = mergeLivePricePayloads(previousPrices, [data]);
+          const nextPrices = mergeLivePricePayloads(previousPrices, [
+            {
+              asset: parsed.asset,
+              bid: parsed.bid,
+              ask: parsed.ask,
+              price: parsed.price,
+            },
+          ]);
           livePricesRef.current = nextPrices;
           return nextPrices;
         });
       } catch (error) {
-        console.warn('Unable to parse live price update', error);
+        console.warn('Unable to parse Binance bookTicker update', error);
       }
     };
 
     socket.onerror = () => {
-      console.warn('Mobile price websocket connection failed');
+      console.warn('Binance price websocket connection failed');
     };
 
     return () => {
       socket.close();
-    };
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    let isCancelled = false;
-    let requestInFlight = false;
-
-    const stopPollingIfComplete = () => {
-      if (hasAllRequiredCryptoPrices(livePricesRef.current) && pricePollingIntervalRef.current) {
-        clearInterval(pricePollingIntervalRef.current);
-        pricePollingIntervalRef.current = null;
-      }
-    };
-
-    const pollLatestPrices = async () => {
-      if (isCancelled || requestInFlight) return;
-
-      requestInFlight = true;
-
-      try {
-        const latestPrices = await fetchLatestPrices();
-        if (isCancelled || latestPrices.length === 0) return;
-
-        const nextPrices = mergeLivePricePayloads(livePricesRef.current, latestPrices);
-        livePricesRef.current = nextPrices;
-        setLivePrices(nextPrices);
-        stopPollingIfComplete();
-      } catch (error) {
-        console.warn('Unable to poll latest crypto prices', error);
-      } finally {
-        requestInFlight = false;
-      }
-    };
-
-    if (!hasAllRequiredCryptoPrices(livePricesRef.current)) {
-      void pollLatestPrices();
-      pricePollingIntervalRef.current = setInterval(pollLatestPrices, 1000);
-    }
-
-    return () => {
-      isCancelled = true;
-      if (pricePollingIntervalRef.current) {
-        clearInterval(pricePollingIntervalRef.current);
-        pricePollingIntervalRef.current = null;
-      }
     };
   }, [user]);
 

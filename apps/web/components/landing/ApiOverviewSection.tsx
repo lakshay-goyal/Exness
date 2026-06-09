@@ -15,7 +15,7 @@ const apiCategories = [
     title: 'Market Data',
     count: '5 endpoints',
     description: 'Supported assets, live prices, candlestick data, and aggregate refresh.',
-    endpoints: ['GET /supportedAssets', 'GET /prices/latest', 'GET /candles'],
+    endpoints: ['GET /supportedAssets', 'GET /candles'],
   },
   {
     title: 'User Profile',

@@ -23,6 +23,8 @@ export const CreateOrderSchema = z.object({
   type: OrderSideSchema,
   quantity: PositiveNumberSchema,
   leverage: PositiveIntegerSchema,
+  bid: PositiveNumberSchema,
+  ask: PositiveNumberSchema,
   slippage: NonNegativeNumberSchema.optional(),
   takeProfit: OptionalPositiveNumberSchema,
   stopLoss: OptionalPositiveNumberSchema,

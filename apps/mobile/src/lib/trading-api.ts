@@ -5,7 +5,6 @@ import type {
   Candle as BackendCandle,
   CandleInterval,
   CreateTradePayload,
-  LatestPrice as BackendLatestPrice,
   TradingProfileData,
 } from '@repo/types';
 import { BACKEND_URL } from './auth-client';
@@ -14,7 +13,6 @@ import { getMobileAccessToken } from './mobile-auth-api';
 export type {
   BackendCandle,
   BackendClosedTrade,
-  BackendLatestPrice,
   BackendOpenTrade,
   CandleInterval,
   CreateTradePayload,
@@ -53,8 +51,4 @@ export function createTrade(payload: CreateTradePayload) {
 
 export function fetchCandles(symbol: string, interval: CandleInterval): Promise<BackendCandle[]> {
   return tradingApiClient.fetchCandles(symbol, interval);
-}
-
-export function fetchLatestPrices(): Promise<BackendLatestPrice[]> {
-  return tradingApiClient.fetchLatestPrices();
 }

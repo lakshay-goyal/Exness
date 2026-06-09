@@ -339,73 +339,6 @@
         }
       }
     },
-    "/prices/latest": {
-      "get": {
-        "summary": "Get Latest Prices",
-        "description": "Fetches the latest real-time prices (mid-price, bids, asks, and decimals) sourced from the price stream and order books.",
-        "tags": ["Market Data"],
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Successfully retrieved price data.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "message": { "type": "string" },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/LatestPrice"
-                      }
-                    }
-                  }
-                },
-                "example": {
-                  "success": true,
-                  "message": "Success",
-                  "data": [
-                    {
-                      "asset": "BTC",
-                      "price": 98450.25,
-                      "bid": 98448.1,
-                      "ask": 98452.4,
-                      "decimal": 8
-                    },
-                    {
-                      "asset": "ETH",
-                      "price": 3120.75,
-                      "bid": 3120.5,
-                      "ask": 3121.0,
-                      "decimal": 8
-                    },
-                    {
-                      "asset": "SOL",
-                      "price": 142.5,
-                      "bid": 142.45,
-                      "ask": 142.55,
-                      "decimal": 8
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Price service stream unavailable.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/candles": {
       "get": {
         "summary": "Get Candlestick Data",
@@ -919,12 +852,14 @@
       },
       "CreateOrderPayload": {
         "type": "object",
-        "required": ["symbol", "type", "quantity", "leverage"],
+        "required": ["symbol", "type", "quantity", "leverage", "bid", "ask"],
         "properties": {
           "symbol": { "type": "string", "description": "Asset code (e.g. BTC, ETH, SOL).", "example": "SOL" },
           "type": { "type": "string", "enum": ["buy", "sell"], "description": "Long (buy) or Short (sell) side.", "example": "buy" },
           "quantity": { "type": "number", "description": "Quantity to order.", "example": 2.5 },
           "leverage": { "type": "integer", "description": "Ranging from 1 to 100x.", "example": 10 },
+          "bid": { "type": "number", "description": "Current bid price from the live Binance bookTicker feed at order time.", "example": 149.82 },
+          "ask": { "type": "number", "description": "Current ask price from the live Binance bookTicker feed at order time.", "example": 149.85 },
           "slippage": { "type": "number", "description": "Max slippage percentage tolerated.", "example": 0.5 },
           "takeProfit": { "type": "number", "description": "Automatic close profit point price.", "example": 150.0 },
           "stopLoss": { "type": "number", "description": "Automatic protective stop price.", "example": 138.5 }

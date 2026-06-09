@@ -49,24 +49,34 @@ export async function createOrderFunction(result: CreateOrderCommand) {
 
     // Normalize symbol (convert BTCUSDT to btc, etc.)
     const normalizedSymbol = marketSymbolMapper.normalizeSymbol(result.symbol);
-    const priceAssetName = marketSymbolMapper.getPriceAssetName(normalizedSymbol);
 
-    const priceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
+    const bidValue = tradeInputValidator.parsePositiveNumber(result.bid);
+    const askValue = tradeInputValidator.parsePositiveNumber(result.ask);
 
-    if (!priceData) {
-      console.error(
-        `Price data not found for symbol: ${result.symbol} (normalized: ${normalizedSymbol}, expected asset: ${priceAssetName})`,
-      );
-      console.error(
-        `Available price assets:`,
-        prices.map((p) => p.asset),
-      );
+    if (bidValue === null || askValue === null) {
       await sendCreateOrderResponse(result, {
-        error: `Price data not found for symbol: ${result.symbol}. Please ensure price data is available.`,
+        error: 'Bid and ask must be positive numbers',
         success: false,
       });
       return;
     }
+
+    if (askValue < bidValue) {
+      await sendCreateOrderResponse(result, {
+        error: 'Ask price must be greater than or equal to bid price',
+        success: false,
+      });
+      return;
+    }
+
+    const priceAssetName = marketSymbolMapper.getPriceAssetName(normalizedSymbol);
+    const priceData = {
+      asset: priceAssetName,
+      price: (bidValue + askValue) / 2,
+      bidValue,
+      askValue,
+      decimal: 8,
+    };
 
     // Validate order type
     const orderType = tradeInputValidator.parseOrderSide(result.type);
@@ -79,7 +89,6 @@ export async function createOrderFunction(result: CreateOrderCommand) {
       return;
     }
 
-    // Calculate expected open price based on order type
     const expectedPrice = priceNormalizer.getEntryPrice(orderType, priceData);
 
     // Validate quantity
@@ -199,22 +208,13 @@ export async function createOrderFunction(result: CreateOrderCommand) {
 
     openOrders.push(newOrder);
 
-    // Check slippage after order creation
-    // Re-fetch current price to check if it has moved beyond slippage tolerance
-    const currentPriceData = priceNormalizer.findPriceForSymbol(prices, result.symbol);
+    const currentExecutionPrice = expectedPrice;
 
-    if (!currentPriceData) {
-      console.error('Price data not found during slippage check');
-      removeOpenOrder(orderId);
-      await sendCreateOrderResponse(result, {
-        error: 'Price data not found during slippage check',
-        success: false,
-      });
-      return;
-    }
-
-    // Get current execution price
-    const currentExecutionPrice = priceNormalizer.getEntryPrice(orderType, currentPriceData);
+    prices.splice(
+      0,
+      prices.length,
+      ...priceNormalizer.upsertPrice(prices, priceData),
+    );
 
     const invalidTakeProfit =
       takeProfitValue !== undefined &&
@@ -242,35 +242,7 @@ export async function createOrderFunction(result: CreateOrderCommand) {
       return;
     }
 
-    // Check slippage if slippage value is provided
-    if (slippageValue !== undefined) {
-      // Calculate price difference percentage
-      const priceDifference = Math.abs(currentExecutionPrice - expectedPrice);
-      const priceDifferencePercent = (priceDifference / expectedPrice) * 100;
-
-      // If slippage exceeds tolerance, cancel the order
-      if (priceDifferencePercent > slippageValue) {
-        console.warn(
-          `Slippage exceeded! ${priceDifferencePercent.toFixed(4)}% > ${slippageValue}%. Cancelling order.`,
-        );
-
-        removeOpenOrder(orderId);
-
-        await sendCreateOrderResponse(result, {
-          error: `Order cancelled due to slippage. Expected price: ${expectedPrice}, Current price: ${currentExecutionPrice}, Slippage: ${priceDifferencePercent.toFixed(4)}% (Tolerance: ${slippageValue}%)`,
-          success: false,
-        });
-        return;
-      }
-    }
-
-    // Update order with actual execution price (in case it changed slightly but within slippage)
-    const orderIndex = openOrders.findIndex((o) => o.orderId === orderId);
-    if (orderIndex !== -1 && openOrders[orderIndex]) {
-      openOrders[orderIndex].openPrice = currentExecutionPrice;
-    }
-
-    // Recalculate margin with actual execution price
+    // Recalculate margin with execution price from client-provided bid/ask
     const actualMarginRequired = orderCalculator.getMargin(
       quantity,
       currentExecutionPrice,

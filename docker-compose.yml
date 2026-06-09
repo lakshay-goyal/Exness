@@ -176,44 +176,6 @@ services:
       - exness-network
     restart: unless-stopped
 
-  price-poller:
-    build:
-      context: .
-      dockerfile: apps/docker/Price_Poller.Dockerfile
-    container_name: exness-price-poller
-    env_file:
-      - apps/docker/env/.env.Price_Poller
-    environment:
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
-      FRONTEND_URL: http://localhost:3001
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - exness-network
-    restart: unless-stopped
-
-  websocket-server:
-    build:
-      context: .
-      dockerfile: apps/docker/Websocket_Server.Dockerfile
-    container_name: exness-websocket-server
-    env_file:
-      - apps/docker/env/.env.Websocket_Server
-    environment:
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
-      FRONTEND_URL: http://localhost:3001
-    ports:
-      - '7070:7070'
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - exness-network
-    restart: unless-stopped
-
   dbstorage:
     build:
       context: .
@@ -242,7 +204,6 @@ services:
       dockerfile: apps/docker/web.Dockerfile
       args:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
-        NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:7070/
         NEXT_PUBLIC_DOCS_URL: http://localhost:3000
     container_name: exness-web
     env_file:

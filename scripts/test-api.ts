@@ -98,12 +98,6 @@ await test('GET /api/v1/supportedAssets', async () => {
   return { ok, status: res.status, detail: ok ? `${body.data.length} assets` : undefined };
 });
 
-await test('GET /api/v1/prices/latest', async () => {
-  const res = await request('GET', '/api/v1/prices/latest');
-  const body = await res.json();
-  return jsonOk(res.status, body);
-});
-
 await test('GET /api/v1/candles', async () => {
   const res = await request('GET', '/api/v1/candles?symbol=BTCUSDT&interval=1m&limit=10');
   const body = await res.json();
@@ -186,6 +180,8 @@ await test('POST /api/v1/trade/create', async () => {
       type: 'buy',
       quantity: 0.001,
       leverage: 1,
+      bid: 64000,
+      ask: 64001,
     },
   });
   const body = await res.json();

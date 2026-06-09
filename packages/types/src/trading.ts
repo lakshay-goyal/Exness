@@ -131,6 +131,8 @@ export interface CreateTradePayload {
   type: OrderSide;
   quantity: number;
   leverage: number;
+  bid: number;
+  ask: number;
   slippage?: number;
   takeProfit?: number;
   stopLoss?: number;

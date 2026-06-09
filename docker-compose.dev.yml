@@ -1,0 +1,72 @@
+# Dev overlay: bind-mount source + bun --watch so host edits apply without rebuilds.
+# Applied by: bun run docker:sync
+
+services:
+  backend:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - ./apps/Backend:/app/apps/Backend
+      - /app/node_modules
+      - /app/apps/Backend/node_modules
+    command: bun run dev
+
+  engine:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - ./apps/Engine:/app/apps/Engine
+      - /app/node_modules
+      - /app/apps/Engine/node_modules
+    command: bun run dev
+
+  dbstorage:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - ./apps/DBstorage:/app/apps/DBstorage
+      - /app/node_modules
+      - /app/apps/DBstorage/node_modules
+    command: bun run dev
+
+  snap-shotting:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - /app/node_modules
+    command: bun run dev
+
+  web:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - ./apps/web:/app/apps/web
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    command: bun run dev
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+      NEXT_PUBLIC_DOCS_URL: http://localhost:3000
+
+  docs:
+    volumes:
+      - ./package.json:/app/package.json
+      - ./bun.lock:/app/bun.lock
+      - ./turbo.json:/app/turbo.json
+      - ./packages:/app/packages
+      - ./apps/docs:/app/apps/docs
+      - /app/node_modules
+      - /app/apps/docs/node_modules
+      - /app/apps/docs/.next
+    command: bun run dev

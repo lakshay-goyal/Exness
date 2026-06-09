@@ -18,10 +18,8 @@ WORKDIR /app/apps/web
 # must be provided as build args (runtime env in docker-compose has no effect on
 # an already-built Next.js app). These are the URLs the browser will call.
 ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-ARG NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:7070/
 ARG NEXT_PUBLIC_DOCS_URL=http://localhost:3000
 ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
-ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
 ENV NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL
 
 RUN bun run build

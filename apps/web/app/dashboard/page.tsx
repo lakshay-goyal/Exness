@@ -10,7 +10,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { createChart, ColorType } from 'lightweight-charts';
 import type { CandlestickData, IPriceLine, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import type { BackendClosedTrade, BackendOpenTrade, Candle } from '@repo/types';
-import { marketSymbolMapper, priceNormalizer } from '@repo/trading-core';
+import {
+  getBinanceCombinedBookTickerUrl,
+  marketSymbolMapper,
+  parseBinanceBookTickerMessage,
+  priceNormalizer,
+} from '@repo/trading-core';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
@@ -131,10 +136,6 @@ const intervalSeconds: Record<string, number> = {
   '1h': 60 * 60,
   '4h': 4 * 60 * 60,
   '1d': 24 * 60 * 60,
-};
-
-const getWebSocketUrl = () => {
-  return process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:7070/';
 };
 
 const formatCurrency = (value?: number | null, digits = 2) => {
@@ -803,23 +804,21 @@ const Dashboard = () => {
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
-    const ws = new WebSocket(getWebSocketUrl());
+    const ws = new WebSocket(getBinanceCombinedBookTickerUrl());
 
     ws.onmessage = (event) => {
       try {
-        const parsedData = JSON.parse(event.data);
-        const data = typeof parsedData === 'string' ? JSON.parse(parsedData) : parsedData;
+        const parsed = parseBinanceBookTickerMessage(JSON.parse(event.data));
+        if (!parsed) return;
 
-        if (!data.asset || !data.bid || !data.ask) return;
+        const symbol = parsed.asset;
+        const bidPrice = parsed.bid;
+        const askPrice = parsed.ask;
+        const newPrice = parsed.price;
 
         setRealTimeCryptoData((prevData) => {
-          const symbol = String(data.asset).toUpperCase();
           const prevAsset = prevData[symbol];
-          const bidPrice = normalizeMarketPrice(data.bid);
-          const askPrice = normalizeMarketPrice(data.ask);
-          if (bidPrice === null || askPrice === null) return prevData;
-
-          const newPrice = (bidPrice + askPrice) / 2;
+          const marketName = marketSymbolMapper.getMarketName(symbol);
 
           if (prevAsset) {
             const change = newPrice - prevAsset.price;
@@ -845,7 +844,7 @@ const Dashboard = () => {
             ...prevData,
             [symbol]: {
               symbol,
-              name: symbol.replace('USDT', ''),
+              name: marketName,
               price: newPrice,
               bid: bidPrice,
               ask: askPrice,
@@ -857,13 +856,8 @@ const Dashboard = () => {
           };
         });
 
-        setOrders((prevOrders) => {
-          const symbol = String(data.asset).toUpperCase();
-          const bidPrice = normalizeMarketPrice(data.bid);
-          const askPrice = normalizeMarketPrice(data.ask);
-          if (bidPrice === null || askPrice === null) return prevOrders;
-
-          return prevOrders.map((order) => {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
             const matchesMarket = getLiveAssetCandidates(order.symbol).includes(symbol);
             if (!matchesMarket) return order;
 
@@ -873,10 +867,10 @@ const Dashboard = () => {
               currentPrice,
               pnl: getOrderPnl(order, currentPrice),
             };
-          });
-        });
+          }),
+        );
       } catch (socketError) {
-        console.error('Unable to parse WebSocket tick:', socketError);
+        console.error('Unable to parse Binance bookTicker tick:', socketError);
       }
     };
 
@@ -888,7 +882,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (selectedCrypto || cryptoAssets.length === 0) return;
 
-    const nextAsset = realTimeCryptoData.BTCUSDT ?? cryptoAssets[0];
+    const nextAsset = realTimeCryptoData.BTC_USDC_PERP ?? cryptoAssets[0];
     if (nextAsset) setSelectedCrypto(nextAsset);
   }, [cryptoAssets, realTimeCryptoData, selectedCrypto]);
 
@@ -904,6 +898,16 @@ const Dashboard = () => {
     const takeProfitValue = takeProfit ? Number.parseFloat(takeProfit) : undefined;
     const stopLossValue = stopLoss ? Number.parseFloat(stopLoss) : undefined;
     const slippageValue = slippage ? Number.parseFloat(slippage) : undefined;
+
+    if (
+      !Number.isFinite(selectedCrypto.bid) ||
+      !Number.isFinite(selectedCrypto.ask) ||
+      selectedCrypto.bid <= 0 ||
+      selectedCrypto.ask <= 0
+    ) {
+      alert('Live bid and ask prices are not available yet. Please wait for market data.');
+      return;
+    }
 
     if (!Number.isFinite(orderVolumeNumber) || orderVolumeNumber <= 0) {
       alert('Volume must be greater than 0.');
@@ -962,6 +966,8 @@ const Dashboard = () => {
           type,
           quantity: orderVolumeNumber,
           leverage: leverageNumber,
+          bid: selectedCrypto.bid,
+          ask: selectedCrypto.ask,
           slippage: slippageValue,
           takeProfit: takeProfitValue,
           stopLoss: stopLossValue,
@@ -1543,19 +1549,6 @@ const Dashboard = () => {
                           Closed ({closedOrdersLoading ? '...' : closeOrdersData.length})
                         </TabsTrigger>
                       </TabsList>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-8 text-xs">
-                          Close all
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          aria-label="Order options"
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-hidden">

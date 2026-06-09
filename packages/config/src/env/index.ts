@@ -15,7 +15,6 @@ if (existsSync(envPath)) {
 
 const envSchema = z.object({
   REDIS_URL: z.string(),
-  BINANCE_WS_URL: z.string(),
   DATABASE_URL: z.string(),
   MONGODB_URL: z.string(),
   JWT_SECRET: z.string(),
@@ -24,7 +23,6 @@ const envSchema = z.object({
   NODE_ENV: z.string(),
   USER_EMAIL: z.string(),
   USER_PASSWORD: z.string(),
-  WEBSOCKET_PORT: z.string().transform(Number),
   BACKEND_URL: z.string(),
   BETTER_AUTH_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -35,7 +33,6 @@ const env = envSchema.parse(process.env);
 
 const config = {
   REDIS_URL: env.REDIS_URL,
-  BINANCE_WS_URL: env.BINANCE_WS_URL,
   DATABASE_URL: env.DATABASE_URL,
   MONGODB_URL: env.MONGODB_URL,
   JWT_SECRET: env.JWT_SECRET,
@@ -44,7 +41,6 @@ const config = {
   NODE_ENV: env.NODE_ENV,
   USER_EMAIL: env.USER_EMAIL,
   USER_PASSWORD: env.USER_PASSWORD,
-  WEBSOCKET_PORT: env.WEBSOCKET_PORT,
   BACKEND_URL: env.BACKEND_URL,
   BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
   GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,

@@ -13,7 +13,8 @@
     "./prices": "./src/domain/prices.ts",
     "./state": "./src/state/trading-state.ts",
     "./symbols": "./src/domain/symbols.ts",
-    "./validation": "./src/domain/validation.ts"
+    "./validation": "./src/domain/validation.ts",
+    "./binance": "./src/domain/binance-market-data.ts"
   },
   "dependencies": {
     "@repo/types": "workspace:*"

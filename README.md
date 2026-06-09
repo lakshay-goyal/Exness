@@ -12,9 +12,7 @@ The platform follows a distributed microservices architecture with the following
 
 - **Frontend (Web)**: Next.js-based trading interface with real-time market data
 - **Backend API**: Express.js REST API handling authentication, trading, and user management
-- **Engine**: In-memory processing unit for high-performance order execution
-- **WebSocket Server**: Real-time data distribution to frontend clients
-- **Price Poller**: Fetches live market data from Binance WebSocket API
+- **Engine**: In-memory processing unit for high-performance order execution and SL/TP monitoring
 - **Database Storage**: Handles user data and transaction persistence
 
 ## 📦 Applications
@@ -44,19 +42,9 @@ The platform follows a distributed microservices architecture with the following
 - **`Engine`**: High-performance trading engine
   - In-memory order processing
   - Real-time trade execution
+  - Binance bookTicker subscription for stop-loss and take-profit monitoring
   - User data management
   - Order lifecycle management
-
-- **`Websocket_Server`**: Real-time communication hub
-  - WebSocket connections for live data
-  - Redis Pub/Sub integration
-  - Bid/Ask price distribution
-
-- **`Price_Poller`**: Market data ingestion
-  - Binance WebSocket integration
-  - Real-time price processing
-  - Bid/Ask calculation with spreads
-  - Publishes live prices via Redis streams/pub-sub
 
 - **`DBstorage`**: Database operations service
   - User data persistence
@@ -69,7 +57,7 @@ The platform follows a distributed microservices architecture with the following
 
 - **`@repo/config`**: Centralized configuration management
   - Environment variables
-  - Redis connections (streams, pub/sub, client)
+  - Redis connections (streams, client)
   - Database configurations
   - Stream constants and keys
 
@@ -154,21 +142,20 @@ bun run test
 
 ## 🔄 Data Flow
 
-1. **Market Data Ingestion**: Price Poller fetches real-time data from Binance
-2. **Data Processing**: Raw data is processed and stored in Redis queues
-3. **Real-time Distribution**: WebSocket server distributes live prices to frontend
-4. **Order Processing**: Backend receives trade requests and forwards to Engine
-5. **Execution**: Engine processes orders in-memory for high performance
-6. **Persistence**: Database services handle data storage and retrieval
-7. **Historical Data**: Candle data fetched directly from Binance Kline API on-demand
+1. **Live Market Data**: Web and mobile clients stream bid/ask directly from Binance bookTicker WebSockets
+2. **Order Processing**: Backend receives trade requests (with client bid/ask) and forwards to Engine via Redis streams
+3. **Execution**: Engine processes orders in-memory for high performance
+4. **Risk Monitoring**: Engine subscribes to Binance bookTicker streams for stop-loss and take-profit triggers
+5. **Persistence**: Database services handle data storage and retrieval
+6. **Historical Data**: Candle data fetched directly from Binance Kline API on-demand
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: Next.js, React, Tailwind CSS, TradingView Charts
 - **Backend**: Express.js, Node.js, TypeScript
 - **Database**: PostgreSQL, Prisma ORM
-- **Caching**: Redis (Streams, Pub/Sub, Queues)
-- **Real-time**: WebSockets, Redis Pub/Sub
+- **Caching**: Redis Streams
+- **Real-time**: Binance WebSocket bookTicker streams
 - **Market Data**: Binance WebSocket API
 - **Build Tool**: Turborepo, Bun
 - **Deployment**: Docker-ready architecture
