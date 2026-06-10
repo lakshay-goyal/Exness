@@ -1,0 +1,46 @@
+# Copy to terraform.tfvars and adjust for your environment.
+#
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region   = "us-east-1"
+project_name = "exness-web"
+
+# Rebuild and redeploy OpenNext artifacts on every apply when env URLs change.
+build_on_apply = true
+
+# Set true in non-production sandboxes so `terraform destroy` can remove the bucket.
+force_destroy_bucket = false
+
+# ---------------------------------------------------------------------------
+# Web service environment (apps/web)
+# ---------------------------------------------------------------------------
+# NEXT_PUBLIC_* values are baked into the client bundle at build time.
+# Point them at URLs the user's browser can reach (not internal Docker hosts).
+
+web_env = {
+  next_public_backend_url = "https://api.example.com"
+  next_public_docs_url    = "https://docs.example.com"
+
+  lambda_env = {
+    NODE_ENV = "production"
+  }
+}
+
+# Optional custom domain — omit or leave commented to use the CloudFront default URL.
+# domain = {
+#   hosted_zone_name    = "example.com"
+#   subdomain           = "app"
+#   acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+#   include_www         = false
+# }
+
+server_function = {
+  memory_size = 1024
+  timeout     = 30
+}
+
+image_optimisation_function = {
+  enabled     = true
+  memory_size = 1536
+  timeout     = 25
+}

@@ -10,6 +10,7 @@ dist/
 build/
 out/
 .next/
+.open-next/
 .swc/
 .turbo/
 *.tsbuildinfo
@@ -35,6 +36,13 @@ expo-env.d.ts
 # ========== TESTING ==========
 coverage/
 *.lcov
+
+# ========== TERRAFORM ==========
+.terraform/
+*.tfstate
+*.tfstate.*
+infra/web/terraform.tfvars
+infra/web/.env
 
 # ========== ENVIRONMENT FILES ==========
 .env

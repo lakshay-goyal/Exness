@@ -1,0 +1,257 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'apps/mobile/**'
+      - '**.md'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'apps/mobile/**'
+      - '**.md'
+
+permissions:
+  id-token: write # OIDC -> AWS, no static keys
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  TF_DIR: infra/aws
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Build & type-check everything except the mobile (Expo) app
+  # -------------------------------------------------------------------------
+  checks:
+    name: Lint & build (mobile excluded)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type-check and build (skip mobile)
+        run: bunx turbo run check-types build --filter='!mobile'
+
+  # -------------------------------------------------------------------------
+  # Terraform: plan on PRs, apply on main
+  # -------------------------------------------------------------------------
+  terraform:
+    name: Terraform ${{ github.event_name == 'push' && 'apply' || 'plan' }}
+    runs-on: ubuntu-latest
+    needs: checks
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+      TF_VAR_better_auth_secret: ${{ secrets.BETTER_AUTH_SECRET }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      TF_VAR_user_email: ${{ secrets.USER_EMAIL }}
+      TF_VAR_user_password: ${{ secrets.USER_PASSWORD }}
+    outputs:
+      web_url: ${{ steps.tf_outputs.outputs.web_url }}
+      backend_url: ${{ steps.tf_outputs.outputs.backend_url }}
+      docs_url: ${{ steps.tf_outputs.outputs.docs_url }}
+      ecr_registry: ${{ steps.tf_outputs.outputs.ecr_registry }}
+      instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
+      artifacts_bucket: ${{ steps.tf_outputs.outputs.artifacts_bucket }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.10'
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=exness/prod.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
+
+      - name: Terraform plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        if: github.event_name == 'push'
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Export Terraform outputs
+        if: github.event_name == 'push'
+        id: tf_outputs
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          {
+            echo "web_url=$(terraform output -raw web_url)"
+            echo "backend_url=$(terraform output -raw backend_url)"
+            echo "docs_url=$(terraform output -raw docs_url)"
+            echo "ecr_registry=$(terraform output -raw ecr_registry)"
+            echo "instance_id=$(terraform output -raw instance_id)"
+            echo "artifacts_bucket=$(terraform output -raw artifacts_bucket)"
+          } >> "$GITHUB_OUTPUT"
+
+  # -------------------------------------------------------------------------
+  # Build & push one image per service (mobile has no image — never built)
+  # -------------------------------------------------------------------------
+  build-push:
+    name: Image — ${{ matrix.service }}
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: terraform
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            dockerfile: apps/docker/Backend.Dockerfile
+          - service: engine
+            dockerfile: apps/docker/Engine.Dockerfile
+          - service: snap-shotting
+            dockerfile: apps/docker/Snap_Shotting.Dockerfile
+          - service: dbstorage
+            dockerfile: apps/docker/DBstorage.Dockerfile
+          - service: web
+            dockerfile: apps/docker/web.Dockerfile
+          - service: docs
+            dockerfile: apps/docker/docs.Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          REGISTRY: ${{ needs.terraform.outputs.ecr_registry }}
+          IMAGE: ${{ needs.terraform.outputs.ecr_registry }}/exness-${{ matrix.service }}
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ matrix.service }}" = "web" ]; then
+            # NEXT_PUBLIC_* are inlined into the client bundle at build time
+            EXTRA_ARGS="--build-arg NEXT_PUBLIC_BACKEND_URL=${{ needs.terraform.outputs.backend_url }} \
+                        --build-arg NEXT_PUBLIC_DOCS_URL=${{ needs.terraform.outputs.docs_url }}"
+          fi
+          docker build -f ${{ matrix.dockerfile }} \
+            -t "$IMAGE:${{ github.sha }}" \
+            -t "$IMAGE:latest" \
+            $EXTRA_ARGS .
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  # -------------------------------------------------------------------------
+  # Roll the stack on the instance via SSM (no SSH), then publish URLs
+  # -------------------------------------------------------------------------
+  deploy:
+    name: Deploy stack
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [terraform, build-push]
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for instance to register with SSM
+        env:
+          INSTANCE_ID: ${{ needs.terraform.outputs.instance_id }}
+        run: |
+          # On the very first run the instance may still be booting/running
+          # user_data when this job starts.
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+              --query 'InstanceInformationList[0].PingStatus' --output text 2>/dev/null || true)
+            [ "$STATUS" = "Online" ] && echo "Instance online in SSM." && exit 0
+            echo "Waiting for SSM agent ($i/30, status=$STATUS) ..."
+            sleep 10
+          done
+          echo "Instance never registered with SSM." >&2
+          exit 1
+
+      - name: Trigger deploy via SSM Run Command
+        id: ssm
+        env:
+          INSTANCE_ID: ${{ needs.terraform.outputs.instance_id }}
+          BUCKET: ${{ needs.terraform.outputs.artifacts_bucket }}
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy ${{ github.sha }}" \
+            --timeout-seconds 1800 \
+            --parameters commands="aws s3 cp s3://$BUCKET/deploy/deploy.sh /opt/exness/deploy.sh && chmod +x /opt/exness/deploy.sh && /opt/exness/deploy.sh ${{ github.sha }}" \
+            --query 'Command.CommandId' --output text)
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+          echo "Waiting for SSM command $COMMAND_ID ..."
+          # First deploy pulls ~6 images; allow up to 20 minutes.
+          for i in $(seq 1 120); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success) echo "Deploy succeeded."; exit 0 ;;
+              Failed|Cancelled|TimedOut) echo "Deploy $STATUS." >&2; exit 1 ;;
+              *) echo "Status: $STATUS ($i/120)"; sleep 10 ;;
+            esac
+          done
+          echo "Timed out waiting for deploy." >&2
+          exit 1
+
+      - name: Show deploy logs
+        if: always()
+        env:
+          INSTANCE_ID: ${{ needs.terraform.outputs.instance_id }}
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "$INSTANCE_ID" \
+            --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}' \
+            --output json
+
+      - name: Publish service URLs
+        run: |
+          {
+            echo "## 🚀 Exness deployed"
+            echo ""
+            echo "| Service | URL |"
+            echo "| --- | --- |"
+            echo "| Web app | ${{ needs.terraform.outputs.web_url }} |"
+            echo "| Backend API | ${{ needs.terraform.outputs.backend_url }} |"
+            echo "| Docs | ${{ needs.terraform.outputs.docs_url }} |"
+            echo ""
+            echo "Image tag: \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
