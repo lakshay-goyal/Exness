@@ -41,6 +41,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Generate Prisma client
+        # packages/db/generated is gitignored; @repo/db type-checks need it
+        working-directory: packages/db
+        run: bun run db:generate
+
       - name: Type-check and build (skip mobile)
         run: bunx turbo run check-types build --filter='!mobile'
 

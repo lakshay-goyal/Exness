@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@repo/config": "workspace:*",
-    "@repo/db": "workspace:*"
+    "@repo/db": "workspace:*",
+    "@repo/trading-core": "workspace:*"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

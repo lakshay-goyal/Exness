@@ -2,6 +2,12 @@ import { constant, redisStreams } from '@repo/config';
 
 type RedisStreamsType = ReturnType<typeof redisStreams>;
 
+export interface EngineResponse {
+  function?: string;
+  message?: unknown;
+  [key: string]: unknown;
+}
+
 class EngineStreamClient {
   constructor(private readonly redisStreams: RedisStreamsType) {}
 
@@ -19,7 +25,7 @@ class EngineStreamClient {
   async readEngineResponse(requestId: string, timeoutMs = 5000) {
     return this.redisStreams.readNextFromRedisStream(constant.secondaryRedisStream, timeoutMs, {
       requestId,
-    });
+    }) as Promise<EngineResponse | null>;
   }
 
   async request(command: Record<string, unknown>, timeoutMs = 5000) {
@@ -29,18 +35,18 @@ class EngineStreamClient {
   }
 }
 
-interface ExpressAppLocals {
-  redisStreams: RedisStreamsType;
-}
-
-interface ExpressApp {
-  locals: ExpressAppLocals;
-}
-
 interface ExpressRequestWithApp {
-  app: ExpressApp;
+  app: {
+    locals: {
+      redisStreams?: RedisStreamsType;
+    } & Record<string, unknown>;
+  };
 }
 
 export function getEngineStreamClient(req: ExpressRequestWithApp) {
-  return new EngineStreamClient(req.app.locals.redisStreams);
+  const streams = req.app.locals.redisStreams;
+  if (!streams) {
+    throw new Error('redisStreams is not initialized on app.locals');
+  }
+  return new EngineStreamClient(streams);
 }

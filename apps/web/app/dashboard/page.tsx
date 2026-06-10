@@ -111,10 +111,10 @@ type ClosedOrdersResponse = {
 };
 
 const getTradePayloadMessage = <T,>(response: {
-  data?: { data?: { message?: T }; message?: T };
+  data?: { data?: { message?: unknown }; message?: unknown };
 }): T | undefined => {
   const nested = response.data?.data?.message;
-  if (nested !== undefined) return nested;
+  if (nested !== undefined) return nested as T;
   const topLevel = response.data?.message;
   if (topLevel !== undefined && topLevel !== 'Success') return topLevel as T;
   return undefined;

@@ -95,7 +95,7 @@ export class TradingApiClient {
     return this.request<T>(path);
   }
 
-  private async mutate<T>(path: string, token: string, body: Record<string, unknown>): Promise<T> {
+  private async mutate<T>(path: string, token: string, body: unknown): Promise<T> {
     return this.request<T>(path, {
       method: 'POST',
       headers: {

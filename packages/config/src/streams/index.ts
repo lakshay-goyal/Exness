@@ -20,8 +20,9 @@ interface MessageData {
 const parseMessageData = (message: Record<string, string>): unknown => {
   const payload: Record<string, string> = {};
   for (const key in message) {
-    if (Object.prototype.hasOwnProperty.call(message, key)) {
-      payload[key] = message[key];
+    const value = message[key];
+    if (Object.prototype.hasOwnProperty.call(message, key) && value !== undefined) {
+      payload[key] = value;
     }
   }
   const jsonString = Object.values(payload).join('');
@@ -48,8 +49,9 @@ const parseStreamEntry = (entry: unknown): unknown => {
     }
   } else if (rawFields !== undefined && rawFields !== null && typeof rawFields === 'object') {
     for (const key in rawFields) {
-      if (Object.prototype.hasOwnProperty.call(rawFields, key)) {
-        payload[key] = rawFields[key];
+      const value = rawFields[key];
+      if (Object.prototype.hasOwnProperty.call(rawFields, key) && value !== undefined) {
+        payload[key] = value;
       }
     }
   }
@@ -140,9 +142,8 @@ class RedisStreams {
         { BLOCK: 0, COUNT: 1 },
       ) as StreamResponse[] | null;
 
-      if (response !== null && response.length > 0) {
-        const [firstResponse] = response;
-        const { messages } = firstResponse;
+      if (response !== null && response.length > 0 && response[0] !== undefined) {
+        const { messages } = response[0];
 
         for (const msg of messages) {
           const { id, message } = msg;
@@ -178,6 +179,7 @@ class RedisStreams {
     if (
       response === null ||
       response.length === 0 ||
+      response[0] === undefined ||
       response[0].messages.length === 0
     ) {
       response = await this.client.xReadGroup(
@@ -193,13 +195,16 @@ class RedisStreams {
     }
 
     const [firstResponse] = response;
+    if (firstResponse === undefined) {
+      return null;
+    }
     const { messages } = firstResponse;
     if (messages.length === 0) {
       return null;
     }
 
     const [firstMessage] = messages;
-    if (typeof firstMessage !== 'object' || !('id' in firstMessage) || !('message' in firstMessage)) {
+    if (firstMessage === undefined || typeof firstMessage !== 'object' || !('id' in firstMessage) || !('message' in firstMessage)) {
       return null;
     }
 
@@ -215,7 +220,7 @@ class RedisStreams {
     if (requestIdFilter !== undefined) {
       const resultRequestId = extractRequestId(result);
       if (resultRequestId !== requestIdFilter) {
-        return this.readWithConsumerGroup(streamName, blockMs, consumerGroup, consumerName, requestIdFilter);
+        return this.readWithConsumerGroup({ streamName, blockMs, consumerGroup, consumerName, requestIdFilter });
       }
     }
 
@@ -234,9 +239,9 @@ class RedisStreams {
         { BLOCK: 100, COUNT: 10 },
       ) as StreamResponse[] | null;
 
-      if (newMsgResponse !== null && newMsgResponse.length > 0) {
+      if (newMsgResponse !== null && newMsgResponse.length > 0 && newMsgResponse[0] !== undefined) {
         const [firstResponse] = newMsgResponse;
-        for (const msg of firstResponse.messages) {
+        for (const msg of firstResponse?.messages ?? []) {
           const result = parseMessageData(msg.message);
           const resultRequestId = extractRequestId(result);
           if (resultRequestId === requestId) {
@@ -265,6 +270,9 @@ class RedisStreams {
       }
 
       const [firstResponse] = response;
+      if (firstResponse === undefined) {
+        return null;
+      }
       const { messages } = firstResponse;
       if (messages.length === 0) {
         return null;
@@ -318,13 +326,16 @@ class RedisStreams {
     }
 
     const [firstResponse] = response;
+    if (firstResponse === undefined) {
+      return null;
+    }
     const { messages } = firstResponse;
     if (messages.length === 0) {
       return null;
     }
 
     const [firstMessage] = messages;
-    if (typeof firstMessage !== 'object' || !('id' in firstMessage) || !('message' in firstMessage)) {
+    if (firstMessage === undefined || typeof firstMessage !== 'object' || !('id' in firstMessage) || !('message' in firstMessage)) {
       return null;
     }
 
