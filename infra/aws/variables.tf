@@ -22,6 +22,31 @@ variable "root_volume_gb" {
   default     = 30
 }
 
+variable "web_domain" {
+  description = "Public hostname for the web app, served by the nginx reverse proxy."
+  type        = string
+  default     = "exness.lakshaygoyal.in"
+}
+
+variable "letsencrypt_email" {
+  description = "Email registered with Let's Encrypt for certificate expiry notices."
+  type        = string
+  default     = "lakshaygoyal201@gmail.com"
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with DNS:Edit on the zone. Empty disables Terraform-managed DNS (see dns.tf)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for the apex domain. Empty disables Terraform-managed DNS (see dns.tf)."
+  type        = string
+  default     = ""
+}
+
 # ---------------------------------------------------------------------------
 # Application secrets — injected by CI as TF_VAR_* from GitHub secrets,
 # stored in SSM Parameter Store (SecureString), never exposed as outputs.

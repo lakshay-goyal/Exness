@@ -22,7 +22,8 @@ concurrency:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
-  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'ap-south-1' }}
+  # State bucket was bootstrapped in us-east-1 (see infra/bootstrap); app region stays ap-south-1
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'us-east-1' }}
   TF_DIR: infra/aws
 
 jobs:
@@ -59,6 +60,10 @@ jobs:
       TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       TF_VAR_user_email: ${{ secrets.USER_EMAIL }}
       TF_VAR_user_password: ${{ secrets.USER_PASSWORD }}
+      # DNS automation — empty until the Cloudflare secrets exist, which keeps
+      # the cloudflare_record in dns.tf at count 0 (see infra/aws/dns.tf).
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
     outputs:
       web_url: ${{ steps.tf_outputs.outputs.web_url }}
       backend_url: ${{ steps.tf_outputs.outputs.backend_url }}

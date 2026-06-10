@@ -30,8 +30,11 @@ locals {
   ecr_registry = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
 
   backend_url = "http://${aws_eip.app.public_ip}:8000"
-  web_url     = "http://${aws_eip.app.public_ip}:3001"
-  docs_url    = "http://${aws_eip.app.public_ip}:3000"
+  # nginx terminates TLS at the origin with a Let's Encrypt cert (deploy.sh
+  # issues it before the stack starts), so https holds with or without the
+  # Cloudflare proxy in front.
+  web_url  = "https://${var.web_domain}"
+  docs_url = "http://${aws_eip.app.public_ip}:3000"
 }
 
 resource "aws_s3_object" "compose_file" {
@@ -49,15 +52,28 @@ resource "aws_s3_object" "compose_file" {
   content_type = "text/yaml"
 }
 
+resource "aws_s3_object" "nginx_conf" {
+  bucket = aws_s3_bucket.artifacts.id
+  key    = "deploy/nginx.conf"
+
+  content = templatefile("${path.module}/templates/nginx.conf.tpl", {
+    server_name = var.web_domain
+  })
+
+  content_type = "text/plain"
+}
+
 resource "aws_s3_object" "deploy_script" {
   bucket = aws_s3_bucket.artifacts.id
   key    = "deploy/deploy.sh"
 
   content = templatefile("${path.module}/templates/deploy.sh.tpl", {
-    region           = var.aws_region
-    registry         = local.ecr_registry
-    ssm_prefix       = local.ssm_prefix
-    artifacts_bucket = aws_s3_bucket.artifacts.bucket
+    region            = var.aws_region
+    registry          = local.ecr_registry
+    ssm_prefix        = local.ssm_prefix
+    artifacts_bucket  = aws_s3_bucket.artifacts.bucket
+    web_domain        = var.web_domain
+    letsencrypt_email = var.letsencrypt_email
   })
 
   content_type = "text/x-shellscript"

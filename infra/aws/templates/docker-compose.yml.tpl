@@ -156,6 +156,35 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: exness-nginx
+    # periodic reload picks up certificates renewed by the certbot service
+    command: /bin/sh -c "while :; do sleep 6h; nginx -s reload; done & exec nginx -g 'daemon off;'"
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # deploy.sh fetches this from S3 alongside the compose file
+      - /opt/exness/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # deploy.sh runs the first certbot issuance into these host dirs
+      - /opt/exness/letsencrypt:/etc/letsencrypt:ro
+      - /opt/exness/certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    container_name: exness-certbot
+    # renew loop; nginx reloads on its own schedule to pick up new certs
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h; done"
+    volumes:
+      - /opt/exness/letsencrypt:/etc/letsencrypt
+      - /opt/exness/certbot-webroot:/var/www/certbot
+    restart: unless-stopped
+
   docs:
     image: ${registry}/${project}-docs:$${IMAGE_TAG}
     container_name: exness-docs
