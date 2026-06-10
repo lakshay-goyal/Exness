@@ -32,9 +32,6 @@ async function getRequiredMobileAccessToken() {
 const tradingApiClient = new TradingApiClient({
   baseUrl: BACKEND_URL,
   accessToken: getRequiredMobileAccessToken,
-  headers: {
-    'ngrok-skip-browser-warning': 'true',
-  },
 });
 
 export function fetchTradingProfileData(): Promise<TradingProfileData> {
