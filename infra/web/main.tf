@@ -29,7 +29,7 @@ provider "aws" {
 
 provider "aws" {
   alias  = "global"
-  region = "us-east-1"
+  region = "ap-south-1"
 }
 
 resource "null_resource" "build_web_opennext" {

@@ -103,7 +103,7 @@ aws configure                        # admin credentials, only needed locally fo
 cd infra/bootstrap
 terraform init
 # owner/repo form — NOT the full https:// URL
-terraform apply -var "github_repository=lakshay-goyal/Exness-Kline"
+terraform apply -var "github_repository=<YOUR-GITHUB-URL>"
 ```
 
 Copy the two outputs:
@@ -129,7 +129,7 @@ gh secret set USER_EMAIL           --body "<nodemailer sender gmail>"
 gh secret set USER_PASSWORD        --body "<gmail app password>"
 ```
 
-Optional repository **variable** (not secret): `AWS_REGION` — defaults to `us-east-1`.
+Optional repository **variable** (not secret): `AWS_REGION` — defaults to `ap-south-1`.
 
 ```sh
 gh variable set AWS_REGION --body "ap-south-1"   # example override
@@ -157,7 +157,7 @@ export TF_VAR_jwt_secret=... TF_VAR_better_auth_secret=... \
 terraform init \
   -backend-config="bucket=<TF_STATE_BUCKET>" \
   -backend-config="key=exness/prod.tfstate" \
-  -backend-config="region=us-east-1"
+  -backend-config="region=ap-south-1"
 terraform plan
 terraform apply
 terraform output        # URLs only — never secrets

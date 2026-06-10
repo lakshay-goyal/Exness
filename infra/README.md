@@ -59,7 +59,7 @@ GitHub push (main, apps/mobile/** ignored)
    | `USER_EMAIL` | nodemailer sender address |
    | `USER_PASSWORD` | nodemailer app password |
 
-   Optional repository **variable**: `AWS_REGION` (defaults to `us-east-1`).
+   Optional repository **variable**: `AWS_REGION` (defaults to `ap-south-1`).
 
 3. **Push to `main`.** The pipeline provisions everything and prints the
    service URLs in the workflow run summary:

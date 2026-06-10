@@ -2,7 +2,7 @@
 #
 # cp terraform.tfvars.example terraform.tfvars
 
-aws_region   = "us-east-1"
+aws_region   = "ap-south-1"
 project_name = "exness-web"
 
 # Rebuild and redeploy OpenNext artifacts on every apply when env URLs change.
@@ -30,7 +30,7 @@ web_env = {
 # domain = {
 #   hosted_zone_name    = "example.com"
 #   subdomain           = "app"
-#   acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+#   acm_certificate_arn = "arn:aws:acm:ap-south-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 #   include_www         = false
 # }
 

@@ -21,15 +21,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  # Region of the bootstrap state bucket — independent of where app resources live
-  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'us-east-1' }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'ap-south-1' }}
   TF_DIR: infra/aws
 
 jobs:
-  # -------------------------------------------------------------------------
-  # Build & type-check everything except the mobile (Expo) app
-  # -------------------------------------------------------------------------
   checks:
     name: Lint & build (mobile excluded)
     runs-on: ubuntu-latest
@@ -44,23 +40,19 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Generate Prisma client
-        # packages/db/generated is gitignored; @repo/db type-checks need it
         working-directory: packages/db
         run: bun run db:generate
 
       - name: Type-check and build (skip mobile)
         run: bunx turbo run check-types build --filter='!mobile'
 
-  # -------------------------------------------------------------------------
-  # Terraform: plan on PRs, apply on main
-  # -------------------------------------------------------------------------
   terraform:
     name: Terraform ${{ github.event_name == 'push' && 'apply' || 'plan' }}
     runs-on: ubuntu-latest
     needs: checks
     env:
       TF_IN_AUTOMATION: 'true'
-      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'ap-south-1' }}
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
       TF_VAR_better_auth_secret: ${{ secrets.BETTER_AUTH_SECRET }}
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -123,9 +115,6 @@ jobs:
             echo "artifacts_bucket=$(terraform output -raw artifacts_bucket)"
           } >> "$GITHUB_OUTPUT"
 
-  # -------------------------------------------------------------------------
-  # Build & push one image per service (mobile has no image — never built)
-  # -------------------------------------------------------------------------
   build-push:
     name: Image — ${{ matrix.service }}
     if: github.event_name == 'push'
@@ -159,7 +148,7 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push
+      - name: Build and push images to ECR
         env:
           REGISTRY: ${{ needs.terraform.outputs.ecr_registry }}
           IMAGE: ${{ needs.terraform.outputs.ecr_registry }}/exness-${{ matrix.service }}
@@ -177,9 +166,6 @@ jobs:
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
 
-  # -------------------------------------------------------------------------
-  # Roll the stack on the instance via SSM (no SSH), then publish URLs
-  # -------------------------------------------------------------------------
   deploy:
     name: Deploy stack
     if: github.event_name == 'push'

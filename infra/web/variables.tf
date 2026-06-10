@@ -1,13 +1,13 @@
 variable "aws_region" {
   description = "AWS region for regional Lambda, S3, and supporting resources."
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "project_name" {
   description = "Prefix attached to created AWS resources."
   type        = string
-  default     = "exness-web"
+  default     = "exness"
 }
 
 variable "build_on_apply" {

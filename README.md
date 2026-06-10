@@ -224,7 +224,7 @@ Note the two outputs: `tf_state_bucket` and `github_deploy_role_arn`. This is th
 | `USER_EMAIL` | nodemailer sender address |
 | `USER_PASSWORD` | nodemailer app password |
 
-Optional repository **variable**: `AWS_REGION` (defaults to `us-east-1`). The EC2 instance type and other knobs live in [`infra/aws/variables.tf`](infra/aws/variables.tf).
+Optional repository **variable**: `AWS_REGION` (defaults to `ap-south-1`). The EC2 instance type and other knobs live in [`infra/aws/variables.tf`](infra/aws/variables.tf).
 
 **3. Push to `main`.** The pipeline provisions everything and prints your service URLs in the workflow run summary:
 
