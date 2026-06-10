@@ -11,9 +11,9 @@ variable "project_name" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type. The full stack (6 app containers + Postgres/Redis/Mongo) needs ~4 GB RAM; t3.medium is the floor. Downsize at your own risk."
+  description = "EC2 instance type. The full stack (6 app containers + Postgres/Redis/Mongo) needs ~4 GB RAM. Default is free-tier-eligible on new AWS Free Plan accounts, which reject non-eligible types (t3.medium etc.) until upgraded to a paid plan."
   type        = string
-  default     = "t3.medium"
+  default     = "c7i-flex.large"
 }
 
 variable "root_volume_gb" {

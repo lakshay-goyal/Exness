@@ -22,6 +22,8 @@ concurrency:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  # Region of the bootstrap state bucket — independent of where app resources live
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'us-east-1' }}
   TF_DIR: infra/aws
 
 jobs:
@@ -92,7 +94,7 @@ jobs:
           terraform init -input=false \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
             -backend-config="key=exness/prod.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
+            -backend-config="region=${{ env.TF_STATE_REGION }}"
 
       - name: Terraform validate
         working-directory: ${{ env.TF_DIR }}

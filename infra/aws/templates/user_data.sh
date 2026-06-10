@@ -15,4 +15,11 @@ curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSIO
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# 2G swap — headroom for image pulls and Next.js memory spikes
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
 mkdir -p /opt/exness
