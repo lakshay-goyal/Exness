@@ -51,6 +51,9 @@ data "aws_iam_policy_document" "instance_permissions" {
       "ssm:GetParametersByPath",
     ]
     resources = [
+      # Both forms required: GetParametersByPath authorizes against the bare
+      # path, GetParameter against individual parameter names under it.
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}",
       "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*",
     ]
   }

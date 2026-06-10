@@ -2,6 +2,26 @@
 # Dollar-brace placeholders resolve at runtime from /opt/exness/.env (written
 # by deploy.sh from SSM Parameter Store); everything else is baked in by
 # Terraform at render time.
+#
+# Every app service gets the full env set: the shared zod schema in
+# packages/config/src/env/index.ts requires REDIS_URL, DATABASE_URL,
+# MONGODB_URL, JWT_SECRET, PORT, FRONTEND_URL, NODE_ENV, USER_EMAIL,
+# USER_PASSWORD, and BACKEND_URL in every consumer.
+
+x-app-env: &app-env
+  NODE_ENV: production
+  PORT: '8000'
+  REDIS_URL: redis://redis:6379
+  DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
+  MONGODB_URL: mongodb://admin:$${MONGO_PASSWORD}@mongodb:27017/exness_snapshots?authSource=admin
+  FRONTEND_URL: ${web_url}
+  BACKEND_URL: ${backend_url}
+  JWT_SECRET: $${JWT_SECRET}
+  BETTER_AUTH_SECRET: $${BETTER_AUTH_SECRET}
+  GOOGLE_CLIENT_ID: $${GOOGLE_CLIENT_ID}
+  GOOGLE_CLIENT_SECRET: $${GOOGLE_CLIENT_SECRET}
+  USER_EMAIL: $${USER_EMAIL}
+  USER_PASSWORD: $${USER_PASSWORD}
 
 services:
   postgres:
@@ -52,7 +72,7 @@ services:
     image: ${registry}/${project}-backend:$${IMAGE_TAG}
     container_name: exness-db-migrate
     environment:
-      DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
+      <<: *app-env
     command: >
       sh -c "
         cd /app/packages/db &&
@@ -69,18 +89,8 @@ services:
     image: ${registry}/${project}-backend:$${IMAGE_TAG}
     container_name: exness-backend
     environment:
-      NODE_ENV: production
-      PORT: 8000
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
-      FRONTEND_URL: ${web_url}
-      BACKEND_URL: ${backend_url}
-      JWT_SECRET: $${JWT_SECRET}
-      BETTER_AUTH_SECRET: $${BETTER_AUTH_SECRET}
-      GOOGLE_CLIENT_ID: $${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: $${GOOGLE_CLIENT_SECRET}
-      USER_EMAIL: $${USER_EMAIL}
-      USER_PASSWORD: $${USER_PASSWORD}
+      <<: *app-env
+      PORT: '8000'
     ports:
       - '8000:8000'
     depends_on:
@@ -96,10 +106,7 @@ services:
     image: ${registry}/${project}-engine:$${IMAGE_TAG}
     container_name: exness-engine
     environment:
-      NODE_ENV: production
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
-      FRONTEND_URL: ${web_url}
+      <<: *app-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,11 +120,7 @@ services:
     image: ${registry}/${project}-snap-shotting:$${IMAGE_TAG}
     container_name: exness-snap-shotting
     environment:
-      NODE_ENV: production
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
-      MONGODB_URL: mongodb://admin:$${MONGO_PASSWORD}@mongodb:27017/exness_snapshots?authSource=admin
-      FRONTEND_URL: ${web_url}
+      <<: *app-env
     depends_on:
       mongodb:
         condition: service_healthy
@@ -129,10 +132,7 @@ services:
     image: ${registry}/${project}-dbstorage:$${IMAGE_TAG}
     container_name: exness-dbstorage
     environment:
-      NODE_ENV: production
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:$${POSTGRES_PASSWORD}@postgres:5432/exness
-      FRONTEND_URL: ${web_url}
+      <<: *app-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,9 +147,8 @@ services:
     image: ${registry}/${project}-web:$${IMAGE_TAG}
     container_name: exness-web
     environment:
-      NODE_ENV: production
-      PORT: 3001
-      FRONTEND_URL: ${web_url}
+      <<: *app-env
+      PORT: '3001'
     ports:
       - '3001:3001'
     depends_on:
@@ -161,8 +160,8 @@ services:
     image: ${registry}/${project}-docs:$${IMAGE_TAG}
     container_name: exness-docs
     environment:
-      NODE_ENV: production
-      PORT: 3000
+      <<: *app-env
+      PORT: '3000'
       NEXT_PUBLIC_FRONTEND_URL: ${web_url}
     ports:
       - '3000:3000'
