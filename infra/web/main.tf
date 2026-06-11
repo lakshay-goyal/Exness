@@ -4,7 +4,6 @@ locals {
   build_script       = "${local.repo_root}/scripts/build-web-opennext.sh"
   build_trigger_hash = sha256(jsonencode({
     backend_url = var.web_env.next_public_backend_url
-    docs_url    = var.web_env.next_public_docs_url
   }))
 }
 
@@ -45,7 +44,6 @@ resource "null_resource" "build_web_opennext" {
 
     environment = {
       NEXT_PUBLIC_BACKEND_URL = var.web_env.next_public_backend_url
-      NEXT_PUBLIC_DOCS_URL    = var.web_env.next_public_docs_url
     }
   }
 }

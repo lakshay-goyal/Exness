@@ -6,7 +6,6 @@ locals {
     snap-shotting = "apps/docker/Snap_Shotting.Dockerfile"
     dbstorage     = "apps/docker/DBstorage.Dockerfile"
     web           = "apps/docker/web.Dockerfile"
-    docs          = "apps/docker/docs.Dockerfile"
   }
 }
 

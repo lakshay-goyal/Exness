@@ -33,8 +33,7 @@ locals {
   # nginx terminates TLS at the origin with a Let's Encrypt cert (deploy.sh
   # issues it before the stack starts), so https holds with or without the
   # Cloudflare proxy in front.
-  web_url  = "https://${var.web_domain}"
-  docs_url = "http://${aws_eip.app.public_ip}:3000"
+  web_url = "https://${var.web_domain}"
 }
 
 resource "aws_s3_object" "compose_file" {
@@ -46,7 +45,6 @@ resource "aws_s3_object" "compose_file" {
     project     = var.project_name
     backend_url = local.backend_url
     web_url     = local.web_url
-    docs_url    = local.docs_url
   })
 
   content_type = "text/yaml"

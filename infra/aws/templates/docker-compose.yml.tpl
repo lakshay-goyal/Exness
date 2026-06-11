@@ -185,17 +185,6 @@ services:
       - /opt/exness/certbot-webroot:/var/www/certbot
     restart: unless-stopped
 
-  docs:
-    image: ${registry}/${project}-docs:$${IMAGE_TAG}
-    container_name: exness-docs
-    environment:
-      <<: *app-env
-      PORT: '3000'
-      NEXT_PUBLIC_FRONTEND_URL: ${web_url}
-    ports:
-      - '3000:3000'
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   redis_data:

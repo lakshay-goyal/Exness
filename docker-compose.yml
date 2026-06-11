@@ -204,7 +204,6 @@ services:
       dockerfile: apps/docker/web.Dockerfile
       args:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
-        NEXT_PUBLIC_DOCS_URL: http://localhost:3000
     container_name: exness-web
     env_file:
       - apps/docker/env/.env.Web
@@ -220,25 +219,6 @@ services:
         condition: service_started
       db-migrate:
         condition: service_completed_successfully
-    networks:
-      - exness-network
-    restart: unless-stopped
-
-  docs:
-    build:
-      context: .
-      dockerfile: apps/docker/docs.Dockerfile
-    container_name: exness-docs
-    env_file:
-      - apps/docker/env/.env.Docs
-    environment:
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgresql:postgresql@postgres:5432/exness
-      FRONTEND_URL: http://localhost:3001
-      NEXT_PUBLIC_FRONTEND_URL: http://localhost:3001
-      PORT: 3000
-    ports:
-      - '3000:3000'
     networks:
       - exness-network
     restart: unless-stopped

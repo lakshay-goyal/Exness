@@ -8,11 +8,9 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { ArchitectureSection } from '@/components/landing/ArchitectureSection';
 import { InfrastructureSection } from '@/components/landing/InfrastructureSection';
 import { ApiOverviewSection } from '@/components/landing/ApiOverviewSection';
-import { getDocsUrl } from '@/lib/docs-url';
+import { ApiReferenceSection } from '@/components/landing/ApiReferenceSection';
 
 export default function Page(): ReactElement {
-  const docsUrl = getDocsUrl();
-
   return (
     <div className="from-background via-background to-accent/10 text-foreground min-h-screen bg-gradient-to-br">
       <Navbar />
@@ -23,8 +21,7 @@ export default function Page(): ReactElement {
 
       <ApiOverviewSection />
 
-
-
+      <ApiReferenceSection />
 
       <section className="bg-primary text-primary-foreground px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
@@ -49,9 +46,7 @@ export default function Page(): ReactElement {
               className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 border-2 px-8 py-6 text-lg font-semibold"
               asChild
             >
-              <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-                View Documentation
-              </a>
+              <a href="#api-reference">View Documentation</a>
             </Button>
           </div>
         </div>
@@ -118,12 +113,7 @@ export default function Page(): ReactElement {
                   </a>
                 </li>
                 <li>
-                  <a
-                    href={docsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <a href="#api-reference" className="hover:text-foreground transition-colors">
                     Documentation
                   </a>
                 </li>

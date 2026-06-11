@@ -18,7 +18,6 @@ output "web_env_applied" {
   value = {
     build_time = {
       NEXT_PUBLIC_BACKEND_URL = var.web_env.next_public_backend_url
-      NEXT_PUBLIC_DOCS_URL    = var.web_env.next_public_docs_url
     }
     lambda_runtime = var.web_env.lambda_env
   }

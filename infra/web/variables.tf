@@ -38,7 +38,6 @@ variable "web_env" {
   description = "Environment configuration for the apps/web Next.js service."
   type = object({
     next_public_backend_url = string
-    next_public_docs_url    = string
     lambda_env = optional(map(string), {
       NODE_ENV = "production"
     })
@@ -47,11 +46,6 @@ variable "web_env" {
   validation {
     condition     = can(regex("^https?://", var.web_env.next_public_backend_url))
     error_message = "web_env.next_public_backend_url must be an http(s) URL reachable from the browser."
-  }
-
-  validation {
-    condition     = can(regex("^https?://", var.web_env.next_public_docs_url))
-    error_message = "web_env.next_public_docs_url must be an http(s) URL reachable from the browser."
   }
 }
 

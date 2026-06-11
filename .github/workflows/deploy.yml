@@ -67,7 +67,6 @@ jobs:
     outputs:
       web_url: ${{ steps.tf_outputs.outputs.web_url }}
       backend_url: ${{ steps.tf_outputs.outputs.backend_url }}
-      docs_url: ${{ steps.tf_outputs.outputs.docs_url }}
       ecr_registry: ${{ steps.tf_outputs.outputs.ecr_registry }}
       instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
       artifacts_bucket: ${{ steps.tf_outputs.outputs.artifacts_bucket }}
@@ -114,7 +113,6 @@ jobs:
           {
             echo "web_url=$(terraform output -raw web_url)"
             echo "backend_url=$(terraform output -raw backend_url)"
-            echo "docs_url=$(terraform output -raw docs_url)"
             echo "ecr_registry=$(terraform output -raw ecr_registry)"
             echo "instance_id=$(terraform output -raw instance_id)"
             echo "artifacts_bucket=$(terraform output -raw artifacts_bucket)"
@@ -139,8 +137,6 @@ jobs:
             dockerfile: apps/docker/DBstorage.Dockerfile
           - service: web
             dockerfile: apps/docker/web.Dockerfile
-          - service: docs
-            dockerfile: apps/docker/docs.Dockerfile
     steps:
       - uses: actions/checkout@v5
 
@@ -161,8 +157,7 @@ jobs:
           EXTRA_ARGS=""
           if [ "${{ matrix.service }}" = "web" ]; then
             # NEXT_PUBLIC_* are inlined into the client bundle at build time
-            EXTRA_ARGS="--build-arg NEXT_PUBLIC_BACKEND_URL=${{ needs.terraform.outputs.backend_url }} \
-                        --build-arg NEXT_PUBLIC_DOCS_URL=${{ needs.terraform.outputs.docs_url }}"
+            EXTRA_ARGS="--build-arg NEXT_PUBLIC_BACKEND_URL=${{ needs.terraform.outputs.backend_url }}"
           fi
           docker build -f ${{ matrix.dockerfile }} \
             -t "$IMAGE:${{ github.sha }}" \
@@ -215,7 +210,7 @@ jobs:
             --query 'Command.CommandId' --output text)
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
           echo "Waiting for SSM command $COMMAND_ID ..."
-          # First deploy pulls ~6 images; allow up to 20 minutes.
+          # First deploy pulls ~5 images; allow up to 20 minutes.
           for i in $(seq 1 120); do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
@@ -249,7 +244,6 @@ jobs:
             echo "| --- | --- |"
             echo "| Web app | ${{ needs.terraform.outputs.web_url }} |"
             echo "| Backend API | ${{ needs.terraform.outputs.backend_url }} |"
-            echo "| Docs | ${{ needs.terraform.outputs.docs_url }} |"
             echo ""
             echo "Image tag: \`${{ github.sha }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

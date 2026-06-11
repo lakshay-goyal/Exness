@@ -12,8 +12,8 @@ infra/
 
 ## Architecture
 
-Cost-first, production-sane. All six services (backend, engine, snap-shotting,
-dbstorage, web, docs) plus Postgres, Redis, and MongoDB run as Docker Compose
+Cost-first, production-sane. All five services (backend, engine, snap-shotting,
+dbstorage, web) plus Postgres, Redis, and MongoDB run as Docker Compose
 on a single EC2 instance. Images live in ECR.
 
 | Choice | Why |
@@ -29,7 +29,7 @@ on a single EC2 instance. Images live in ECR.
 GitHub push (main, apps/mobile/** ignored)
   → checks: turbo check-types + build  --filter='!mobile'
   → terraform apply (infra/aws)        → creates/updates ECR, EC2, EIP, SSM params
-  → docker build & push ×6             → ECR, tagged <git-sha> + latest
+  → docker build & push ×5             → ECR, tagged <git-sha> + latest
   → SSM Run Command on the instance    → deploy.sh: fetch secrets + compose file, pull, up -d
   → job summary                        → service URLs
 ```
@@ -66,7 +66,6 @@ GitHub push (main, apps/mobile/** ignored)
 
    - Web app → `http://<elastic-ip>:3001`
    - Backend API → `http://<elastic-ip>:8000`
-   - Docs → `http://<elastic-ip>:3000`
 
    Pull requests run checks + `terraform plan` only; nothing is applied.
 
@@ -97,7 +96,5 @@ EAS instead.
 - Plain HTTP on the Elastic IP. For HTTPS, point a domain at the EIP and put
   Caddy/nginx (or CloudFront) in front — also required before Google OAuth
   will work on a non-localhost origin.
-- `docs.Dockerfile` still runs `next dev`; switch its CMD to `build` + `start`
-  for lower memory and faster responses.
 - Single instance = single point of failure. Acceptable at this budget; the
   whole stack is reproducible from Terraform + ECR in minutes.

@@ -96,15 +96,6 @@ const services: ServiceConfig[] = [
       GOOGLE_CLIENT_ID: shared.GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET: shared.GOOGLE_CLIENT_SECRET,
       NEXT_PUBLIC_BACKEND_URL: shared.BACKEND_URL,
-      NEXT_PUBLIC_DOCS_URL: 'http://localhost:3000',
-    },
-  },
-  {
-    filename: '.env.Docs',
-    comment: 'Docs Service Environment Variables',
-    port: '3000',
-    extra: {
-      NEXT_PUBLIC_FRONTEND_URL: shared.FRONTEND_URL,
     },
   },
   {

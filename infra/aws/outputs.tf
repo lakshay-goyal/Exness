@@ -10,11 +10,6 @@ output "backend_url" {
   value       = local.backend_url
 }
 
-output "docs_url" {
-  description = "Docs site."
-  value       = local.docs_url
-}
-
 output "ecr_registry" {
   description = "ECR registry host for docker push."
   value       = local.ecr_registry

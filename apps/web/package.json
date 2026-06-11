@@ -16,6 +16,7 @@
     "@repo/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@scalar/api-reference-react": "^0.9.43",
     "axios": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

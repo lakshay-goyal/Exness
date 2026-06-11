@@ -2,7 +2,6 @@ import type { ReactElement } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDocsUrl } from '@/lib/docs-url';
 
 const apiCategories = [
   {
@@ -32,8 +31,6 @@ const apiCategories = [
 ] as const;
 
 export function ApiOverviewSection(): ReactElement {
-  const docsUrl = getDocsUrl();
-
   return (
     <section id="developers" className="px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-12">
@@ -85,9 +82,7 @@ export function ApiOverviewSection(): ReactElement {
 
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button size="lg" className="px-8 py-6 text-lg font-semibold" asChild>
-            <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-              Explore Full API Documentation
-            </a>
+            <a href="#api-reference">Explore Full API Documentation</a>
           </Button>
           <Button variant="outline" size="lg" className="border-2 px-8 py-6 text-lg font-semibold" asChild>
             <a href="#architecture">View Architecture Details</a>

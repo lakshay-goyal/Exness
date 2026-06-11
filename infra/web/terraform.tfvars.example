@@ -19,7 +19,6 @@ force_destroy_bucket = false
 
 web_env = {
   next_public_backend_url = "https://api.example.com"
-  next_public_docs_url    = "https://docs.example.com"
 
   lambda_env = {
     NODE_ENV = "production"
