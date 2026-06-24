@@ -36,9 +36,10 @@ ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 # Node (not Bun). --no-install keeps it offline (next is already installed).
 RUN npx --no-install next build
 
-# Runtime stage. `next start` runs fine under Bun (only the build was affected),
-# so the shipped image stays Node-free and small.
-FROM oven/bun:1.2.18 AS runner
+# Runtime stage. `next start` does SSR by running the app in the JS runtime,
+# which hits the same Bun CommonJS-wrapper bug as the build (root page 500s).
+# So serve with Node too. Debian/bookworm both stages -> Prisma engine matches.
+FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 COPY --from=build /app /app
@@ -48,4 +49,5 @@ WORKDIR /app/apps/web
 EXPOSE 3001
 ENV PORT=3001
 
-CMD ["bun", "run", "next", "start", "-p", "3001"]
+# npx resolves next from the hoisted workspace node_modules, run under Node.
+CMD ["npx", "--no-install", "next", "start", "-p", "3001"]
