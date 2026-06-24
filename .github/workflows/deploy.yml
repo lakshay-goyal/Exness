@@ -159,8 +159,11 @@ jobs:
         run: |
           EXTRA_ARGS=""
           if [ "${{ matrix.service }}" = "web" ]; then
-            # NEXT_PUBLIC_* are inlined into the client bundle at build time
-            EXTRA_ARGS="--build-arg NEXT_PUBLIC_BACKEND_URL=${{ needs.terraform.outputs.backend_url }}"
+            # NEXT_PUBLIC_* are inlined into the client bundle at build time.
+            # Point the browser at the HTTPS origin (web_url) — nginx proxies
+            # /api/* to the backend container. Using the raw http://IP:8000
+            # backend_url would trip the browser mixed-content block.
+            EXTRA_ARGS="--build-arg NEXT_PUBLIC_BACKEND_URL=${{ needs.terraform.outputs.web_url }}"
           fi
           docker build -f ${{ matrix.dockerfile }} \
             -t "$IMAGE:${{ github.sha }}" \

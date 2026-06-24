@@ -27,6 +27,18 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/${server_name}/privkey.pem;
     ssl_protocols       TLSv1.2 TLSv1.3;
 
+    # Backend API + better-auth. Browser calls https://${server_name}/api/...
+    # (same origin) so there is no mixed-content block; nginx forwards to the
+    # backend container. Covers /api/v1/* and /api/auth/*.
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         proxy_pass http://web:3001;
         proxy_http_version 1.1;
