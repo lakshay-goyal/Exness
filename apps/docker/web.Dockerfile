@@ -34,20 +34,25 @@ ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 # npx resolves next from the hoisted workspace node_modules and runs it with
 # Node (not Bun). --no-install keeps it offline (next is already installed).
+# Emits a standalone server (see next.config.ts: output: 'standalone').
 RUN npx --no-install next build
 
-# Runtime stage. `next start` does SSR by running the app in the JS runtime,
-# which hits the same Bun CommonJS-wrapper bug as the build (root page 500s).
-# So serve with Node too. Debian/bookworm both stages -> Prisma engine matches.
+# Runtime stage. The standalone build is a self-contained server.js plus only
+# the node_modules Next traced — ~200 MB instead of copying the whole monorepo.
+# Still served with Node (the Bun CommonJS-wrapper bug also breaks SSR at
+# runtime). Debian/bookworm in both stages keeps the Prisma engine ABI matched.
 FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
-COPY --from=build /app /app
 
-WORKDIR /app/apps/web
+# outputFileTracingRoot=<repo root> makes the standalone tree mirror the
+# monorepo layout: apps/web/server.js with node_modules hoisted at the root.
+COPY --from=build /app/apps/web/.next/standalone ./
+COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /app/apps/web/public ./apps/web/public
 
 EXPOSE 3001
-ENV PORT=3001
+ENV PORT=3001 \
+    HOSTNAME=0.0.0.0
 
-# npx resolves next from the hoisted workspace node_modules, run under Node.
-CMD ["npx", "--no-install", "next", "start", "-p", "3001"]
+CMD ["node", "apps/web/server.js"]

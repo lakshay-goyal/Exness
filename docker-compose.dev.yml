@@ -3,6 +3,10 @@
 
 services:
   backend:
+    # Prod images ship a bundled dist with no node_modules; dev needs the full
+    # install + source, so build the `development` stage instead of `production`.
+    build:
+      target: development
     volumes:
       - ./package.json:/app/package.json
       - ./bun.lock:/app/bun.lock
@@ -14,6 +18,8 @@ services:
     command: bun run dev
 
   engine:
+    build:
+      target: development
     volumes:
       - ./package.json:/app/package.json
       - ./bun.lock:/app/bun.lock
@@ -25,6 +31,8 @@ services:
     command: bun run dev
 
   dbstorage:
+    build:
+      target: development
     volumes:
       - ./package.json:/app/package.json
       - ./bun.lock:/app/bun.lock
@@ -36,6 +44,8 @@ services:
     command: bun run dev
 
   snap-shotting:
+    build:
+      target: development
     volumes:
       - ./package.json:/app/package.json
       - ./bun.lock:/app/bun.lock
@@ -45,6 +55,10 @@ services:
     command: bun run dev
 
   web:
+    # The `build` stage carries the full install + source for hot reload; the
+    # `runner` stage is the slim standalone output and has neither.
+    build:
+      target: build
     volumes:
       - ./package.json:/app/package.json
       - ./bun.lock:/app/bun.lock
