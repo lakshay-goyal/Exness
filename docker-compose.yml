@@ -80,9 +80,11 @@ services:
     restart: unless-stopped
 
   db-migrate:
+    # Service images are bundled with no Prisma CLI; migrations run from the
+    # dedicated full-toolchain migrate image.
     build:
       context: .
-      dockerfile: apps/docker/Backend.Dockerfile
+      dockerfile: apps/docker/Migrate.Dockerfile
     container_name: exness-db-migrate
     env_file:
       - apps/docker/env/.env.Backend
