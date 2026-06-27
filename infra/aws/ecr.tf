@@ -6,6 +6,8 @@ locals {
     snap-shotting = "apps/docker/Snap_Shotting.Dockerfile"
     dbstorage     = "apps/docker/DBstorage.Dockerfile"
     web           = "apps/docker/web.Dockerfile"
+    # One-shot Prisma migration runner (full toolchain); used by db-migrate.
+    migrate = "apps/docker/Migrate.Dockerfile"
   }
 }
 

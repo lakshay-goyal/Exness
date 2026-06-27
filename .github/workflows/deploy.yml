@@ -140,6 +140,8 @@ jobs:
             dockerfile: apps/docker/DBstorage.Dockerfile
           - service: web
             dockerfile: apps/docker/web.Dockerfile
+          - service: migrate
+            dockerfile: apps/docker/Migrate.Dockerfile
     steps:
       - uses: actions/checkout@v5
 

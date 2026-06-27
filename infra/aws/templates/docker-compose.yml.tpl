@@ -69,7 +69,9 @@ services:
     restart: unless-stopped
 
   db-migrate:
-    image: ${registry}/${project}-backend:$${IMAGE_TAG}
+    # Dedicated migration image: the service images are bundled and ship no
+    # Prisma CLI, so migrations run from the full-toolchain migrate image.
+    image: ${registry}/${project}-migrate:$${IMAGE_TAG}
     container_name: exness-db-migrate
     environment:
       <<: *app-env
